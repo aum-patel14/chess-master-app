@@ -1,0 +1,220 @@
+.app-shell {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--bg-base);
+}
+
+.sidebar {
+  width: 240px;
+  min-width: 240px;
+  height: 100vh;
+  position: fixed;
+  top: 0; left: 0;
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  z-index: 200;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.main-area {
+  margin-left: 240px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.topbar {
+  height: 52px;
+  min-height: 52px;
+  background: var(--bg-sidebar);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 24px;
+  gap: 10px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.page-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Sidebar Nav Items */
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  margin-bottom: 2px;
+}
+.nav-item:hover, .nav-item.active {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+.nav-item.active .nav-icon {
+  color: var(--gold);
+}
+.nav-icon {
+  font-size: 18px;
+  width: 24px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* Sidebar Buttons */
+.sidebar-btn-primary {
+  width: 100%; height: 38px;
+  background: var(--gold);
+  color: #fff; font-weight: 700; font-size: 14px;
+  border-radius: 6px; border: none; cursor: pointer;
+  transition: all 0.15s;
+}
+.sidebar-btn-primary:hover {
+  background: var(--gold-hover);
+  filter: brightness(1.08);
+}
+.sidebar-btn-ghost {
+  width: 100%; height: 38px; margin-top: 6px;
+  background: transparent; border: 1px solid var(--border-hover);
+  color: var(--text-primary); border-radius: 6px; font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: background 0.15s;
+}
+.sidebar-btn-ghost:hover {
+  background: var(--bg-hover);
+}
+
+.pill {
+  border: 1px solid var(--border);
+  border-radius: 4px; padding: 4px 8px;
+  font-size: 10px; color: var(--text-muted);
+  cursor: pointer; transition: border-color 0.15s;
+  flex: 1; text-align: center; font-weight: 600;
+}
+.pill:hover {
+  border-color: var(--border-hover);
+}
+
+/* Flyout Menu */
+.sidebar-flyout {
+  position: fixed;
+  /* top is set via JS inline styles */
+  left: 240px;
+  width: 240px;
+  height: max-content;
+  max-height: calc(100vh - 20px);
+  background: var(--bg-sidebar);
+  border: 1px solid var(--border);
+  border-left: none;
+  border-radius: 0 8px 8px 0;
+  box-shadow: 8px 4px 20px rgba(0,0,0,0.5);
+  padding: 12px 8px;
+  display: flex;
+  flex-direction: column;
+  z-index: 199;
+  overflow-y: auto;
+  animation: slideRight 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideRight {
+  from { transform: translateX(-10px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.flyout-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  margin-bottom: 2px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.flyout-item:hover {
+  background: var(--bg-hover);
+}
+
+.flyout-icon {
+  font-size: 20px;
+  width: 24px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.flyout-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 8px 12px;
+}
+
+/* Active click animations */
+.nav-item:active, .flyout-item:active, .pill:active, 
+.sidebar-btn-primary:active, .sidebar-btn-ghost:active {
+  transform: scale(0.97);
+  transition: transform 0.05s;
+}
+
+/* Mobile Accordion */
+.mobile-submenu {
+  background: rgba(0, 0, 0, 0.2);
+  margin: 0 8px 4px 8px;
+  border-radius: 6px;
+  padding: 4px 0;
+  display: flex;
+  flex-direction: column;
+}
+.mobile-flyout-item {
+  padding: 8px 12px;
+  margin-bottom: 0;
+}
+
+/* Mobile */
+@media (max-width: 900px) {
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+  }
+  .sidebar.mobile-open {
+    transform: translateX(0);
+  }
+  .sidebar-flyout {
+    display: none;
+  }
+  .main-area {
+    margin-left: 0;
+  }
+  .topbar {
+    justify-content: space-between;
+    padding: 0 16px;
+  }
+  .mobile-menu-btn {
+    display: flex !important;
+    background: transparent; border: none; padding: 4px; cursor: pointer;
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "appId": "com.chessmaster.pro",
+  "appName": "ChessMaster Pro",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https",
+    "cleartext": false
+  },
+  "android": {
+    "buildOptions": {
+      "keystorePath": "android/chess-release.jks",
+      "keystoreAlias": "chess-key",
+      "releaseType": "APK"
+    },
+    "minSdkVersion": 24,
+    "targetSdkVersion": 34,
+    "compileSdkVersion": 34,
+    "allowMixedContent": false,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false
+  },
+  "ios": {
+    "contentInset": "automatic"
+  },
+  "plugins": {
+    "App": {
+      "launchShowDuration": 0
+    },
+    "StatusBar": {
+      "style": "Dark",
+      "backgroundColor": "#0a0a14"
+    }
+  }
+}

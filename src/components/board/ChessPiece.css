@@ -1,0 +1,74 @@
+/* Chess Piece Styles */
+
+.chess-piece {
+  position: relative;
+  z-index: 2;
+  width: 80%;
+  height: 80%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1),
+              filter 0.12s ease;
+  will-change: transform;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.chess-piece svg {
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)) drop-shadow(0 1px 2px rgba(0,0,0,0.3));
+}
+
+/* Hover lift */
+.chess-piece:hover {
+  transform: scale(1.08) translateY(-2px);
+  filter: brightness(1.1);
+}
+
+.chess-piece:hover svg {
+  filter: drop-shadow(0 6px 12px rgba(0,0,0,0.6)) drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+}
+
+/* Selected piece */
+.chess-piece.piece-selected {
+  transform: scale(1.15) translateY(-4px);
+  filter: brightness(1.15);
+  cursor: grabbing;
+}
+
+.chess-piece.piece-selected svg {
+  filter: drop-shadow(0 8px 16px rgba(0,0,0,0.7)) drop-shadow(0 0 12px rgba(255,215,0,0.5));
+}
+
+/* Dragging */
+.chess-piece.piece-dragging {
+  opacity: 0.6;
+  cursor: grabbing;
+  transform: scale(1.2);
+}
+
+/* Animated (entrance) */
+.chess-piece.piece-animated {
+  animation: pieceEntrance 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes pieceEntrance {
+  from { transform: scale(0.6); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* Move animation - piece slides */
+.piece-moving {
+  animation: pieceMove 0.25s cubic-bezier(0.4, 0, 0.2, 1) both;
+  z-index: 20 !important;
+  pointer-events: none;
+}
+
+@keyframes pieceMove {
+  from { transform: scale(1.12); }
+  to { transform: scale(1); }
+}

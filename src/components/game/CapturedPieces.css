@@ -1,0 +1,33 @@
+.captured-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  min-height: 28px;
+}
+
+.captured-pieces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1px;
+}
+
+.cap-piece {
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0.85;
+}
+
+.cap-w { color: #ffffff; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.6)); }
+.cap-b { color: #555; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3)); }
+
+.advantage {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gold-300);
+  background: rgba(196,160,40,0.1);
+  padding: 1px 6px;
+  border-radius: 10px;
+  border: 1px solid rgba(196,160,40,0.2);
+  flex-shrink: 0;
+}

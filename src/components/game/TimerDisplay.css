@@ -1,0 +1,23 @@
+.timer {
+  font-size: 13px;
+  font-weight: 700;
+  font-family: 'Courier New', monospace;
+  color: var(--text-muted);
+  padding: 2px 8px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  transition: all 0.3s ease;
+}
+
+.timer-active {
+  color: var(--text-primary);
+  background: rgba(255,255,255,0.06);
+  border-color: var(--border);
+}
+
+.timer-low {
+  color: #ff4444 !important;
+  background: rgba(255,60,60,0.1) !important;
+  border-color: rgba(255,60,60,0.3) !important;
+  animation: pulse 0.7s ease-in-out infinite;
+}
