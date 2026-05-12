@@ -1,4 +1,4 @@
-import { createContext, useContext, useReducer, useCallback, useRef, useEffect } from 'react';
+import { createContext, useContext, useReducer, useCallback, useRef, useEffect, useState } from 'react';
 import { Chess } from 'chess.js';
 import { getGameStatus, getBestMove as getFallbackBestMove } from '../engine/chessEngine';
 import { soundManager } from '../engine/soundManager';
