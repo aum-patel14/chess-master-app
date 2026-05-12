@@ -5,11 +5,12 @@ import { Chess } from 'chess.js';
 import { useGame } from '../context/GameContext';
 import ChessBoard from '../components/board/ChessBoard';
 import PlayAIModal from '../components/modals/PlayAIModal';
+import GameOverModal from '../components/GameOverModal';
 
 const DIFFICULTY_NAMES = { 1:'Beginner', 2:'Easy', 3:'Medium', 4:'Hard', 5:'Expert' };
 
 export default function GamePage() {
-  const { state, dispatch, resign, offerDraw, undoMove, startNewGame } = useGame();
+  const { state, dispatch, resign, offerDraw, undoMove, startNewGame, playerElo } = useGame();
   const {
     fen, status, isAIThinking, gameMode, playerColor,
     aiDifficulty, capturedPieces, history,
@@ -60,6 +61,14 @@ export default function GamePage() {
   const isGameOver = status.type !== 'playing' && status.type !== 'check';
   const [confirmResign, setConfirmResign] = useState(false);
   const scrollRef = useRef(null);
+
+  // Auto-reset confirmResign after 5 seconds
+  useEffect(() => {
+    if (confirmResign) {
+      const t = setTimeout(() => setConfirmResign(false), 5000);
+      return () => clearTimeout(t);
+    }
+  }, [confirmResign]);
 
   // Auto scroll moves
   useEffect(() => {
@@ -129,7 +138,10 @@ export default function GamePage() {
           <div className="player-card">
             <div className="player-left">
               <div className="avatar you">♙</div>
-              <span className="player-name">{bottomPlayer.name} <span className="you-badge">You</span></span>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <span className="player-name">{bottomPlayer.name} <span className="you-badge">You</span></span>
+                <span style={{ fontSize: '11px', color: 'var(--gold)', fontWeight: 'bold' }}>ELO: {playerElo}</span>
+              </div>
               <div className="captured-mini">
                 {bottomPlayer.captured.map((p, i) => <span key={i}>{p.type === 'p'?'♙':p.type==='n'?'♘':p.type==='b'?'♗':p.type==='r'?'♖':'♕'}</span>)}
               </div>
@@ -188,7 +200,14 @@ export default function GamePage() {
           </div>
 
           {confirmResign ? (
-            <button className="resign-btn confirm" onClick={() => { resign(); setConfirmResign(false); }}>Sure? Yes</button>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button className="resign-btn confirm" onClick={() => { resign(); setConfirmResign(false); }} style={{ flex: 1 }}>
+                Yes, Resign
+              </button>
+              <button className="resign-btn" onClick={() => setConfirmResign(false)} style={{ flex: 1 }}>
+                Cancel
+              </button>
+            </div>
           ) : (
             <button className="resign-btn" onClick={() => setConfirmResign(true)} disabled={isGameOver}>🏳 Resign</button>
           )}
@@ -199,7 +218,11 @@ export default function GamePage() {
       <div className="mobile-game-controls">
         <button onClick={undoMove} disabled={history.length === 0 || isGameOver || isAIThinking}>↩ Undo</button>
         <button onClick={offerDraw} disabled={isGameOver}>🤝 Draw</button>
-        <button onClick={() => setConfirmResign(true)} disabled={isGameOver} style={{ color: 'var(--red)' }}>🏳 Resign</button>
+        {confirmResign ? (
+          <button className="confirm" onClick={() => { resign(); setConfirmResign(false); }} style={{ color: 'var(--red)' }}>Sure? Yes</button>
+        ) : (
+          <button onClick={() => setConfirmResign(true)} disabled={isGameOver} style={{ color: 'var(--red)' }}>🏳 Resign</button>
+        )}
       </div>
 
       <PlayAIModal 
@@ -207,6 +230,7 @@ export default function GamePage() {
         onClose={handleCloseAISetup} 
         onStart={handleStartAI} 
       />
+      <GameOverModal />
     </div>
   );
 }

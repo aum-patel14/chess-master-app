@@ -61,11 +61,11 @@ export class StockfishService {
 
   get difficultySettings() {
     return {
-      1: { depth: 1,  movetime: 150,  skillLevel: 0  },
-      2: { depth: 2,  movetime: 400,  skillLevel: 5  },
-      3: { depth: 4,  movetime: 800,  skillLevel: 10 },
-      4: { depth: 6,  movetime: 1500, skillLevel: 15 },
-      5: { depth: 8,  movetime: 2000, skillLevel: 20 },
+      1: { depth: 1, movetime: 150,  skillLevel: 0  },
+      2: { depth: 2, movetime: 400,  skillLevel: 5  },
+      3: { depth: 4, movetime: 800,  skillLevel: 10 },
+      4: { depth: 6, movetime: 1500, skillLevel: 15 },
+      5: { depth: 8, movetime: 2500, skillLevel: 20 },
     };
   }
 
@@ -135,13 +135,11 @@ export class StockfishService {
       `go depth ${settings.depth} movetime ${settings.movetime}`
     );
 
-    // Safety timeout — force stop if Stockfish hangs
     this.timeoutId = setTimeout(() => {
       if (this.isThinking) {
-        console.warn('Stockfish timeout — forcing stop');
         this.worker.postMessage('stop');
       }
-    }, settings.movetime + 500);
+    }, settings.movetime + 1000);
   }
 
   terminate() {

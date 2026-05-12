@@ -4,7 +4,7 @@ import { Chess } from 'chess.js';
 import { useGame } from '../../context/GameContext';
 import ChessPiece from './ChessPiece';
 import MoveIndicator from './MoveIndicator';
-import PromotionDialog from './PromotionDialog';
+import PromotionModal from './PromotionModal';
 import ParticleCanvas, { triggerCaptureEffect, triggerMoveEffect } from './ParticleCanvas';
 
 const FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
@@ -21,7 +21,12 @@ export default function ChessBoard() {
   const chess = useMemo(() => new Chess(fen), [fen]);
   const board = chess.board();
 
-  const flipped = gameMode === 'vsAI' && playerColor === 'b';
+  const [flipped, setFlipped] = useState(false);
+
+  useEffect(() => {
+    setFlipped(playerColor === 'b');
+  }, [playerColor]);
+
   const ranks = flipped ? [...RANKS].reverse() : RANKS;
   const files = flipped ? [...FILES].reverse() : FILES;
 
@@ -31,6 +36,18 @@ export default function ChessBoard() {
   const showMoveIndicators = !isMultiplayer && !isHardAI;
 
   const boardRef = useRef(null);
+  const [boardSize, setBoardSize] = useState(
+    Math.min(window.innerWidth - 32, window.innerHeight - 200, 620)
+  );
+
+  useEffect(() => {
+    const handleResize = () => setBoardSize(
+      Math.min(window.innerWidth - 32, window.innerHeight - 200, 620)
+    );
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const [draggedFrom, setDraggedFrom] = useState(null);
   const [dragOver, setDragOver] = useState(null);
   const [movingPiece, setMovingPiece] = useState(null); // { from, to }
@@ -94,11 +111,45 @@ export default function ChessBoard() {
     setDraggedFrom(null);
   };
 
+  const handleTouchStart = (e, square) => {
+    // We prevent default inside if we don't want scrolling, but handled by touch-action: none
+    handleSquareClick(square);
+  };
+
+  const handleTouchEnd = (e, square) => {
+    e.preventDefault();
+    const touch = e.changedTouches[0];
+    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    const targetSquare = el?.dataset?.square || el?.closest('[data-square]')?.dataset?.square;
+    if (targetSquare && targetSquare !== square) {
+      handleSquareClick(targetSquare);
+    }
+  };
+
   // Neon glow overlay for neon theme
   const isNeonTheme = currentTheme.name === 'Neon' || currentTheme.name === 'Midnight';
 
   return (
     <div className="board-container">
+      <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%', marginBottom: '4px' }}>
+        <div className="icon-btn-wrapper">
+          <button 
+            className="small-icon-btn"
+            onClick={() => setFlipped(!flipped)} 
+            title="Flip board"
+            style={{
+              width: '32px', height: '32px', background: 'transparent', border: '1px solid var(--border)',
+              borderRadius: '6px', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex',
+              alignItems: 'center', justifyContent: 'center', fontSize: '18px', transition: 'all 0.2s'
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--gold)'; e.currentTarget.style.borderColor = 'var(--gold)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
+          >
+            ⇅
+          </button>
+        </div>
+      </div>
+
       {/* Ambient glow based on theme */}
       <div className="board-glow" style={{ '--theme-accent': currentTheme.accent }} />
 
@@ -133,6 +184,9 @@ export default function ChessBoard() {
               ref={boardRef}
               className={`chess-board ${isNeonTheme ? 'board-neon' : ''}`}
               style={{
+                width: boardSize + 'px',
+                height: boardSize + 'px',
+                touchAction: 'none',
                 '--board-light': currentTheme.light,
                 '--board-dark': currentTheme.dark,
                 '--theme-accent': currentTheme.accent,
@@ -151,12 +205,20 @@ export default function ChessBoard() {
                     <div
                       key={squareName}
                       id={`sq-${squareName}`}
+                      data-square={squareName}
                       className={getSquareClasses(squareName)}
-                      style={{ backgroundColor: sqColor === 'light' ? currentTheme.light : currentTheme.dark }}
+                      style={{ 
+                        backgroundColor: sqColor === 'light' ? currentTheme.light : currentTheme.dark,
+                        width: (boardSize / 8) + 'px',
+                        height: (boardSize / 8) + 'px',
+                        fontSize: (boardSize / 10) + 'px'
+                      }}
                       onClick={() => handleSquareClick(squareName)}
                       onDragOver={(e) => { e.preventDefault(); setDragOver(squareName); }}
                       onDragLeave={() => setDragOver(null)}
                       onDrop={(e) => handleDrop(e, squareName)}
+                      onTouchStart={(e) => handleTouchStart(e, squareName)}
+                      onTouchEnd={(e) => handleTouchEnd(e, squareName)}
                     >
                       {/* Piece */}
                       {cell && (
@@ -167,6 +229,7 @@ export default function ChessBoard() {
                           isLanding={movingPiece === squareName}
                           animationsEnabled={animationsEnabled}
                           onDragStart={handleDragStart}
+                          animStyle={{ animation: (movingPiece === squareName) ? 'slideIn 0.2s ease' : 'none' }}
                         />
                       )}
 
@@ -206,7 +269,14 @@ export default function ChessBoard() {
       </div>
 
       {/* Promotion dialog */}
-      {promotionPending && <PromotionDialog color={chess.turn()} />}
+      {promotionPending && (
+        <PromotionModal 
+          color={chess.turn()} 
+          file={promotionPending.to[0]} 
+          rank={promotionPending.to[1]} 
+          flipped={flipped} 
+        />
+      )}
     </div>
   );
 }

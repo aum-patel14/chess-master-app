@@ -7,12 +7,16 @@ import HomePage from './pages/HomePage';
 import GamePage from './pages/GamePage';
 import DemoPage from './pages/DemoPage';
 import SettingsScreen from './screens/SettingsScreen';
+import GameHistoryPage from './pages/GameHistoryPage';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 import SplashScreen from './components/SplashScreen';
+import Onboarding from './components/Onboarding';
 import { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route } from 'react-router-dom';
 
 export default function App() {
   const [showSplash, setShowSplash] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(!localStorage.getItem('onboarded'));
 
   useEffect(() => {
     const t = setTimeout(() => setShowSplash(false), 2200);
@@ -21,6 +25,7 @@ export default function App() {
 
   return (
     <div className="app-root">
+      {showOnboarding && !showSplash && <Onboarding onFinish={() => setShowOnboarding(false)} />}
       <AuthProvider>
         <GameProvider>
           <ToastProvider>
@@ -63,7 +68,8 @@ export default function App() {
                   <Route path="/stats" element={<DemoPage />} />
                   <Route path="/tournaments" element={<DemoPage />} />
                   <Route path="/variants" element={<DemoPage />} />
-                  <Route path="/history" element={<DemoPage />} />
+                  <Route path="/history" element={<GameHistoryPage />} />
+                  <Route path="/privacy" element={<PrivacyPolicy />} />
 
                   <Route path="/settings" element={<SettingsScreen />} />
                   <Route path="*" element={<HomePage />} />

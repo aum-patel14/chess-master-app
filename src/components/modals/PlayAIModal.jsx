@@ -10,9 +10,11 @@ export default function PlayAIModal({ show, onClose, onStart }) {
   return (
     <div style={overlayStyle}>
       <div style={cardStyle}>
-        <button onClick={onClose} style={closeBtnStyle}>
-          <X size={20} />
-        </button>
+        <div className="icon-btn-wrapper" style={{ position: 'absolute', top: '8px', right: '8px' }}>
+          <button className="small-icon-btn" onClick={onClose} style={closeBtnStyle}>
+            <X size={20} />
+          </button>
+        </div>
         
         <div style={{ textAlign: 'center', margin: '16px 0 24px' }}>
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}>
@@ -101,7 +103,6 @@ const cardStyle = {
 };
 
 const closeBtnStyle = {
-  position: 'absolute', top: '12px', right: '12px',
   width: '28px', height: '28px', borderRadius: '50%',
   background: 'var(--bg-hover)', border: 'none', color: 'var(--text-muted)', cursor: 'pointer',
   display: 'flex', alignItems: 'center', justifyContent: 'center'
@@ -112,7 +113,7 @@ const labelStyle = {
 };
 
 const levelBtnStyle = {
-  flex: 1, height: '40px', borderRadius: '6px', border: '1px solid',
+  flex: 1, minHeight: '44px', borderRadius: '6px', border: '1px solid',
   fontSize: '16px', fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s'
 };
 

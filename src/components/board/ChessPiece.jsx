@@ -101,7 +101,7 @@ const PIECE_SVGS = {
   </svg>`,
 };
 
-export default function ChessPiece({ piece, square, isSelected, animationsEnabled, onDragStart }) {
+export default function ChessPiece({ piece, square, isSelected, animationsEnabled, onDragStart, animStyle }) {
   const [isDragging, setIsDragging] = useState(false);
   const key = `${piece.color}${piece.type.toUpperCase()}`;
   const svg = PIECE_SVGS[key];
@@ -119,7 +119,7 @@ export default function ChessPiece({ piece, square, isSelected, animationsEnable
       draggable
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
-      style={{ zIndex: isSelected ? 10 : 2 }}
+      style={{ zIndex: isSelected ? 10 : 2, ...animStyle }}
       dangerouslySetInnerHTML={{ __html: svg }}
     />
   );

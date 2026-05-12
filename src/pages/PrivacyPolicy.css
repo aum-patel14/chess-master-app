@@ -1,0 +1,125 @@
+.privacy-page {
+  padding: 40px;
+  max-width: 800px;
+  margin: 0 auto;
+  color: var(--text-primary);
+  height: 100%;
+  overflow-y: auto;
+}
+
+.privacy-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 48px;
+  position: relative;
+}
+
+.back-btn {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.back-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  transform: translateX(-4px);
+}
+
+.privacy-icon {
+  color: var(--gold);
+  margin-bottom: 16px;
+  filter: drop-shadow(0 0 16px rgba(212, 175, 55, 0.3));
+}
+
+.privacy-header h1 {
+  font-family: 'Cinzel', serif;
+  font-size: 36px;
+  color: #fff;
+  margin: 0 0 8px 0;
+}
+
+.last-updated {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.privacy-content {
+  background: var(--bg-card);
+  padding: 40px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  box-shadow: 0 16px 48px rgba(0,0,0,0.4);
+}
+
+.privacy-section {
+  margin-bottom: 32px;
+}
+
+.privacy-section:last-child {
+  margin-bottom: 0;
+}
+
+.privacy-section h2 {
+  font-family: 'Cinzel', serif;
+  font-size: 20px;
+  color: var(--gold);
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.privacy-section p {
+  color: var(--text-secondary);
+  line-height: 1.7;
+  font-size: 15px;
+  margin: 0;
+}
+
+.privacy-section strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.contact-link {
+  color: var(--gold);
+  text-decoration: none;
+  font-weight: 600;
+  transition: opacity 0.2s;
+  display: inline-block;
+  margin-top: 8px;
+}
+
+.contact-link:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}
+
+@media (max-width: 600px) {
+  .privacy-page {
+    padding: 24px 16px;
+  }
+  
+  .privacy-content {
+    padding: 24px;
+  }
+  
+  .back-btn {
+    position: static;
+    margin-bottom: 24px;
+    align-self: flex-start;
+  }
+}

@@ -1,5 +1,5 @@
 {
-  "appId": "com.chessmaster.pro",
+  "appId": "com.aumpatel.chessmasterpro",
   "appName": "ChessMaster Pro",
   "webDir": "dist",
   "bundledWebRuntime": false,
@@ -16,7 +16,7 @@
     "minSdkVersion": 24,
     "targetSdkVersion": 34,
     "compileSdkVersion": 34,
-    "allowMixedContent": false,
+    "allowMixedContent": true,
     "captureInput": true,
     "webContentsDebuggingEnabled": false
   },

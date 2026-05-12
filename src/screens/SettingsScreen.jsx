@@ -1,9 +1,11 @@
 import './HomeScreen.css';
 import { useGame } from '../context/GameContext';
 import LightNavbar from '../components/LightNavbar';
-
+import { Link } from 'react-router-dom';
+import { ACHIEVEMENTS, getUnlockedAchievements } from '../utils/achievements';
 export default function SettingsScreen() {
   const { state, dispatch, boardThemes } = useGame();
+  const unlockedAchievements = getUnlockedAchievements();
 
   const toggle = (type) => dispatch({ type });
 
@@ -97,6 +99,35 @@ export default function SettingsScreen() {
               </div>
             </div>
 
+            {/* Achievements */}
+            <div className="config-row" style={{ flexDirection: 'column', alignItems: 'flex-start', marginTop: '24px' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '16px', color: '#1a1a1a' }}>🏆 Achievements</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '16px', width: '100%' }}>
+                {ACHIEVEMENTS.map((ach) => {
+                  const isUnlocked = unlockedAchievements.includes(ach.id);
+                  return (
+                    <div 
+                      key={ach.id} 
+                      style={{ 
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center',
+                        opacity: isUnlocked ? 1 : 0.4, filter: isUnlocked ? 'none' : 'grayscale(100%)',
+                        background: '#f9f9f9', padding: '12px', borderRadius: '8px', border: '1px solid #eee'
+                      }}
+                      title={ach.desc}
+                    >
+                      <div style={{ fontSize: '32px', marginBottom: '8px' }}>{ach.icon}</div>
+                      <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#1a1a1a', lineHeight: 1.2 }}>{ach.title}</div>
+                      {isUnlocked && <div style={{ fontSize: '10px', color: '#b71c1c', marginTop: '4px', fontWeight: 'bold' }}>UNLOCKED</div>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+          </div>
+          
+          <div style={{ marginTop: '32px', textAlign: 'center' }}>
+            <Link to="/privacy" style={{ color: '#b71c1c', textDecoration: 'none', fontSize: '14px', fontWeight: 'bold' }}>Privacy Policy</Link>
           </div>
         </div>
       </div>

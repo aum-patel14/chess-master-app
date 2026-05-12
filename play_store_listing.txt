@@ -1,0 +1,27 @@
+APP NAME: ChessMaster Pro — Chess Game
+
+SHORT DESCRIPTION (80 chars):
+Play chess vs AI or friends. 5 levels. Beautiful themes. Free!
+
+FULL DESCRIPTION:
+ChessMaster Pro is the most beautiful chess game on Android.
+Whether you're a beginner or an experienced player, ChessMaster Pro 
+offers the perfect chess experience.
+
+FEATURES:
+• Play vs Powerful AI — 5 difficulty levels (Beginner to Expert)
+• Stockfish Engine — world's strongest chess AI
+• Local 2-Player — play with a friend on same device
+• 6 Board Themes — Classic, Walnut, Neon, Emerald, Marble, Midnight
+• Move History — full game notation in real time
+• Sound Effects — immersive audio for moves, captures and wins
+• ELO Rating — track your improvement over time
+• Game History — review your last 10 games
+• Achievements — unlock badges as you improve
+• Portrait Mode — optimized for one-handed mobile play
+• Offline Play — no internet required
+
+CATEGORY: Board Games
+CONTENT RATING: Everyone
+PRICE: Free
+PRIVACY POLICY: https://aum-patel14.github.io/chess-master-app/privacy

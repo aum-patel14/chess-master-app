@@ -128,6 +128,36 @@ body {
   to { transform: translate(3%, 5%) scale(1.1); }
 }
 
+button, a, .clickable-card, .nav-item, .pill, [role="button"], .action-btn, .nav-btn, .resign-btn, .sidebar-btn-primary, .sidebar-btn-ghost, .game-card {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:not(.small-icon-btn), .action-btn, .nav-btn, .resign-btn, .sidebar-btn-primary, .sidebar-btn-ghost {
+  min-height: 44px; /* Ensure touch targets are at least 44px */
+}
+
+/* Fix any buttons that should be strictly icons */
+.icon-btn-wrapper, .mobile-menu-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  padding: 8px;
+}
+
+button:active, a:active, .clickable-card:active, .icon-btn-wrapper:active, .nav-item:active, .action-btn:active, .nav-btn:active, .resign-btn:active, .pill:active {
+  transform: scale(0.96) !important;
+  opacity: 0.8 !important;
+}
+
+#root {
+  display: flex;
+}
+
 /* Button styles */
 .btn {
   display: inline-flex;

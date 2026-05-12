@@ -50,7 +50,9 @@ export default function AuthModal({ show, onClose }) {
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="auth-modal" onClick={e => e.stopPropagation()}>
-        <button className="modal-close" onClick={onClose}><X size={20} /></button>
+        <div className="icon-btn-wrapper" style={{ position: 'absolute', top: '8px', right: '8px' }}>
+          <button className="modal-close small-icon-btn" onClick={onClose}><X size={20} /></button>
+        </div>
         
         <h2>{isLogin ? 'Welcome Back' : 'Create an Account'}</h2>
         <p className="auth-subtitle">

@@ -217,4 +217,7 @@
     display: flex !important;
     background: transparent; border: none; padding: 4px; cursor: pointer;
   }
+  .mobile-logo {
+    display: flex !important;
+  }
 }

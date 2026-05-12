@@ -4,6 +4,10 @@ import { getGameStatus, getBestMove as getFallbackBestMove } from '../engine/che
 import { soundManager } from '../engine/soundManager';
 import { auth, db } from '../services/firebase';
 import { collection, addDoc, doc, updateDoc, increment } from 'firebase/firestore';
+import { calculateElo, getAIElo } from '../utils/eloSystem';
+import { saveGame, getHistory } from '../utils/gameHistory';
+import { checkAchievements } from '../utils/achievements';
+import AchievementToast from '../components/AchievementToast';
 
 const GameContext = createContext(null);
 
@@ -138,6 +142,12 @@ function computeCaptured(history) {
 
 export function GameProvider({ children }) {
   const [state, dispatch] = useReducer(gameReducer, initialState);
+  const [playerElo, setPlayerElo] = useState(
+    parseInt(localStorage.getItem('playerElo')) || 1200
+  );
+  const [eloChange, setEloChange] = useState(0);
+  const [unlockedAchievements, setUnlockedAchievements] = useState([]);
+
   const aiTimerRef = useRef(null);
   const timerIntervalRef = useRef(null);
   const aiWorkerRef = useRef(null);
@@ -215,9 +225,52 @@ async function saveGameToCloud(state, finalStatus, history, fen) {
 
     dispatch({ type: 'APPLY_MOVE', move: moveObj, chess, capturedPieces, status, checkSquare });
 
-    // If game is over, save to cloud
+    // If game is over
     if (status.type !== 'playing' && status.type !== 'check') {
       saveGameToCloud(state, status, chess.history(), chess.fen());
+      
+      // Update local ELO if playing AI
+      if (state.gameMode === 'vsAI') {
+        let result = 'draw';
+        if (status.winner) {
+          result = status.winner === (state.playerColor === 'w' ? 'White' : 'Black') ? 'win' : 'loss';
+        }
+        
+        const newElo = calculateElo(playerElo, getAIElo(state.aiDifficulty), result);
+        const change = newElo - playerElo;
+        setEloChange(change);
+        setPlayerElo(newElo);
+        localStorage.setItem('playerElo', newElo);
+      }
+
+      // Save local history
+      let localResult = 'draw';
+      if (status.winner) localResult = status.winner === (state.playerColor === 'w' ? 'White' : 'Black') ? 'win' : 'loss';
+      
+      saveGame({
+        result: localResult,
+        opponent: state.gameMode === 'vsAI' ? `AI Lvl ${state.aiDifficulty}` : 'Local',
+        difficulty: state.aiDifficulty,
+        moveCount: state.moveCount,
+        duration: state.gameStartTime ? Math.floor((Date.now() - state.gameStartTime) / 1000) : 0,
+        playerColor: state.playerColor
+      });
+
+      // Check achievements
+      let lostQueen = false;
+      if (state.playerColor === 'w') lostQueen = capturedPieces.b.some(p => p.type === 'q');
+      else lostQueen = capturedPieces.w.some(p => p.type === 'q');
+      
+      const newUnlocks = checkAchievements({
+        result: localResult,
+        totalGames: getHistory().length,
+        difficulty: state.aiDifficulty,
+        moveCount: state.moveCount,
+        lostQueen
+      });
+      if (newUnlocks.length > 0) {
+        setUnlockedAchievements(newUnlocks);
+      }
     }
 
     return status;
@@ -351,7 +404,25 @@ async function saveGameToCloud(state, finalStatus, history, fen) {
   const resign = useCallback(() => {
     soundManager.playDraw();
     dispatch({ type: 'RESIGN' });
-  }, []);
+    
+    if (state.gameMode === 'vsAI') {
+      const newElo = calculateElo(playerElo, getAIElo(state.aiDifficulty), 'loss');
+      const change = newElo - playerElo;
+      setEloChange(change);
+      setPlayerElo(newElo);
+      localStorage.setItem('playerElo', newElo);
+    }
+
+    // Save local history
+    saveGame({
+      result: 'loss',
+      opponent: state.gameMode === 'vsAI' ? `AI Lvl ${state.aiDifficulty}` : 'Local',
+      difficulty: state.aiDifficulty,
+      moveCount: state.moveCount,
+      duration: state.gameStartTime ? Math.floor((Date.now() - state.gameStartTime) / 1000) : 0,
+      playerColor: state.playerColor
+    });
+  }, [state.gameMode, state.aiDifficulty, playerElo, state.moveCount, state.gameStartTime, state.playerColor]);
 
   const offerDraw = useCallback(() => {
     soundManager.playDraw();
@@ -397,8 +468,11 @@ async function saveGameToCloud(state, finalStatus, history, fen) {
       undoMove,
       boardThemes,
       currentTheme,
+      playerElo,
+      eloChange,
     }}>
       {children}
+      <AchievementToast unlockedIds={unlockedAchievements} />
     </GameContext.Provider>
   );
 }
