@@ -8,15 +8,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
-    sourcemap: false,
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          react: ['react', 'react-dom'],
-          chess: ['chess.js'],
-        },
-      },
-    },
+    sourcemap: false
   },
   server: {
     host: true,

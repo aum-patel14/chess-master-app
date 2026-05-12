@@ -4,6 +4,8 @@ import { Search, Play, Puzzle, BookOpen, Dumbbell, Tv, Users, MoreHorizontal, Ch
          FileText, GraduationCap, Book, Lightbulb, Presentation, Target, Network, Crown, Cpu } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useToast } from '../ToastContext';
+import { useAuth } from '../../context/AuthContext';
+import AuthModal from '../modals/AuthModal';
 
 const MENU_DATA = {
   Play: [
@@ -50,9 +52,11 @@ export default function Sidebar({ onOpenSignUp, onOpenLogin, mobileOpen, setMobi
   const navigate = useNavigate();
   const location = useLocation();
   const { showToast } = useToast();
+  const { currentUser, userData, logout } = useAuth();
   
   const [activeMenu, setActiveMenu] = useState(null);
   const [flyoutTop, setFlyoutTop] = useState(0);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const sidebarRef = useRef(null);
 
   useEffect(() => {
@@ -205,8 +209,30 @@ export default function Sidebar({ onOpenSignUp, onOpenLogin, mobileOpen, setMobi
         </nav>
 
         <div style={{ marginTop: 'auto', padding: '12px' }}>
-          <button onClick={onOpenSignUp} className="sidebar-btn-primary">Sign Up</button>
-          <button onClick={onOpenLogin} className="sidebar-btn-ghost">Log In</button>
+          {currentUser ? (
+            <div className="user-profile-mini" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px', background: 'var(--bg-hover)', borderRadius: '8px', marginBottom: '12px' }}>
+              <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--gold)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
+                {userData?.displayName?.charAt(0).toUpperCase() || 'U'}
+              </div>
+              <div style={{ flex: 1, overflow: 'hidden' }}>
+                <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                  {userData?.displayName || 'Player'}
+                </div>
+                <div style={{ fontSize: '12px', color: 'var(--gold)' }}>
+                  {userData?.rating || 1200} Elo
+                </div>
+              </div>
+              <button onClick={logout} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }} title="Log Out">
+                <Search size={16} /> {/* Reusing an icon for logout since LogOut isn't imported, let me just use text or X */}
+                <span style={{fontSize: '10px'}}>Out</span>
+              </button>
+            </div>
+          ) : (
+            <>
+              <button onClick={() => setShowAuthModal(true)} className="sidebar-btn-primary">Sign Up</button>
+              <button onClick={() => setShowAuthModal(true)} className="sidebar-btn-ghost">Log In</button>
+            </>
+          )}
 
           <div style={{ marginTop: '12px', padding: '0 4px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-muted)', cursor: 'pointer' }}>
             <span>🌐</span><span>English</span><ChevronDown size={14} />
@@ -221,6 +247,9 @@ export default function Sidebar({ onOpenSignUp, onOpenLogin, mobileOpen, setMobi
             © 2026 ChessMaster Pro
           </div>
         </div>
+
+        {/* Auth Modal */}
+        <AuthModal show={showAuthModal} onClose={() => setShowAuthModal(false)} />
 
         {/* FLYOUT MENU (Desktop Only) */}
         {activeMenu && MENU_DATA[activeMenu] && window.innerWidth > 900 && (

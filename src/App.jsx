@@ -1,6 +1,7 @@
 import './App.css';
 import { GameProvider } from './context/GameContext';
 import { ToastProvider } from './components/ToastContext';
+import { AuthProvider } from './context/AuthContext';
 import AppShell from './components/layout/AppShell';
 import HomePage from './pages/HomePage';
 import GamePage from './pages/GamePage';
@@ -20,13 +21,14 @@ export default function App() {
 
   return (
     <div className="app-root">
-      <GameProvider>
-        <ToastProvider>
-          <HashRouter>
-            {showSplash ? (
-              <SplashScreen />
-            ) : (
-              <AppShell>
+      <AuthProvider>
+        <GameProvider>
+          <ToastProvider>
+            <HashRouter>
+              {showSplash ? (
+                <SplashScreen />
+              ) : (
+                <AppShell>
                 <Routes>
                   <Route path="/" element={<HomePage />} />
                   <Route path="/play" element={<GamePage />} />
@@ -68,9 +70,10 @@ export default function App() {
                 </Routes>
               </AppShell>
             )}
-          </HashRouter>
-        </ToastProvider>
-      </GameProvider>
+            </HashRouter>
+          </ToastProvider>
+        </GameProvider>
+      </AuthProvider>
     </div>
   );
 }

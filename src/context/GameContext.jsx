@@ -2,6 +2,8 @@ import { createContext, useContext, useReducer, useCallback, useRef, useEffect }
 import { Chess } from 'chess.js';
 import { getGameStatus, getBestMove as getFallbackBestMove } from '../engine/chessEngine';
 import { soundManager } from '../engine/soundManager';
+import { auth, db } from '../services/firebase';
+import { collection, addDoc, doc, updateDoc, increment } from 'firebase/firestore';
 
 const GameContext = createContext(null);
 
@@ -138,6 +140,8 @@ export function GameProvider({ children }) {
   const [state, dispatch] = useReducer(gameReducer, initialState);
   const aiTimerRef = useRef(null);
   const timerIntervalRef = useRef(null);
+  const aiWorkerRef = useRef(null);
+  const applyMoveRef = useRef(null);
 
   // Update sound manager when settings change
   useEffect(() => {
@@ -153,6 +157,39 @@ export function GameProvider({ children }) {
     }
     return () => clearInterval(timerIntervalRef.current);
   }, [state.timerRunning, state.timeControl, state.fen]);
+
+async function saveGameToCloud(state, finalStatus, history, fen) {
+  if (!auth?.currentUser || !db) return;
+  
+  let result = 'draw';
+  if (finalStatus.winner) {
+    if (state.gameMode === 'vsAI') {
+      result = finalStatus.winner === (state.playerColor === 'w' ? 'White' : 'Black') ? 'win' : 'loss';
+    } else {
+      result = finalStatus.winner === 'White' ? 'win_white' : 'win_black';
+    }
+  }
+
+  try {
+    await addDoc(collection(db, 'games'), {
+      userId: auth.currentUser.uid,
+      opponent: state.gameMode === 'vsAI' ? `AI Level ${state.aiDifficulty}` : 'Local',
+      result,
+      movesCount: history.length,
+      fen,
+      timestamp: new Date().toISOString()
+    });
+
+    // Update Elo rating if playing against AI
+    if (state.gameMode === 'vsAI') {
+      const userRef = doc(db, 'users', auth.currentUser.uid);
+      if (result === 'win') await updateDoc(userRef, { rating: increment(15) });
+      else if (result === 'loss') await updateDoc(userRef, { rating: increment(-10) });
+    }
+  } catch(e) {
+    console.error("Failed to save game to cloud:", e);
+  }
+}
 
   const applyMove = useCallback((moveObj, chessInstance) => {
     const chess = chessInstance;
@@ -177,34 +214,64 @@ export function GameProvider({ children }) {
     if (status.type === 'draw' || status.type === 'stalemate') soundManager.playDraw();
 
     dispatch({ type: 'APPLY_MOVE', move: moveObj, chess, capturedPieces, status, checkSquare });
+
+    // If game is over, save to cloud
+    if (status.type !== 'playing' && status.type !== 'check') {
+      saveGameToCloud(state, status, chess.history(), chess.fen());
+    }
+
     return status;
+  }, [state]);
+
+  // Keep a stable ref to applyMove for the worker callback
+  useEffect(() => {
+    applyMoveRef.current = applyMove;
+  }, [applyMove]);
+
+  // Initialize AI Web Worker
+  useEffect(() => {
+    aiWorkerRef.current = new Worker(new URL('../engine/aiWorker.js', import.meta.url), { type: 'module' });
+    
+    aiWorkerRef.current.onmessage = (e) => {
+      const { success, bestMove, fen, error } = e.data;
+      
+      if (success && bestMove && applyMoveRef.current) {
+        const chess = new Chess(fen);
+        const moveResult = chess.move(bestMove);
+        if (moveResult) {
+          applyMoveRef.current(moveResult, chess);
+        } else {
+          dispatch({ type: 'SET_AI_THINKING', payload: false });
+        }
+      } else {
+        console.error('AI Worker error:', error);
+        dispatch({ type: 'SET_AI_THINKING', payload: false });
+      }
+    };
+
+    return () => {
+      if (aiWorkerRef.current) aiWorkerRef.current.terminate();
+    };
   }, []);
 
   const requestAIMoveStockfish = useCallback((fen, difficulty) => {
     dispatch({ type: 'SET_AI_THINKING', payload: true });
     
-    // 50ms lets React paint "AI is thinking..." before AI blocks thread
-    setTimeout(() => {
-      try {
+    if (aiWorkerRef.current) {
+      aiWorkerRef.current.postMessage({ fen, difficulty });
+    } else {
+      // Fallback if worker isn't ready
+      setTimeout(() => {
         const aiChess = new Chess(fen);
-        // Use our lightweight, fast pure-JS minimax AI which guarantees a fast move < 2s
         const bestMoveObj = getFallbackBestMove(aiChess, difficulty);
-        
-        if (bestMoveObj) {
+        if (bestMoveObj && applyMoveRef.current) {
           const aiResult = aiChess.move(bestMoveObj);
-          if (aiResult) {
-             applyMove(aiResult, aiChess);
-             return;
-          }
+          if (aiResult) applyMoveRef.current(aiResult, aiChess);
         }
-      } catch (e) {
-        console.error('AI error:', e);
-      }
-      
-      // Fallback if failed
-      dispatch({ type: 'SET_AI_THINKING', payload: false });
-    }, 50);
-  }, [applyMove]);
+        dispatch({ type: 'SET_AI_THINKING', payload: false });
+      }, 50);
+    }
+  }, []);
 
   // Auto-trigger AI if it's the AI's turn
   useEffect(() => {

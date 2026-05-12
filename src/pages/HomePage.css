@@ -133,6 +133,15 @@
   border: 1px solid var(--border);
 }
 
+.feature-img {
+  width: 100%;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  border: 1px solid var(--border);
+  object-fit: cover;
+  aspect-ratio: 4/3;
+}
+
 .feature-text {
   flex: 50;
 }

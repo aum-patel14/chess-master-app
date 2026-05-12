@@ -15,7 +15,7 @@ export default function ChessBoard() {
   const {
     fen, selectedSquare, validMoves, lastMove,
     checkSquare, showCoords, playerColor, promotionPending,
-    gameMode, animationsEnabled, history,
+    gameMode, aiDifficulty, animationsEnabled, history,
   } = state;
 
   const chess = useMemo(() => new Chess(fen), [fen]);
@@ -24,6 +24,11 @@ export default function ChessBoard() {
   const flipped = gameMode === 'vsAI' && playerColor === 'b';
   const ranks = flipped ? [...RANKS].reverse() : RANKS;
   const files = flipped ? [...FILES].reverse() : FILES;
+
+  // Determine if we should show move indicators
+  const isMultiplayer = gameMode === 'local';
+  const isHardAI = gameMode === 'vsAI' && aiDifficulty > 3;
+  const showMoveIndicators = !isMultiplayer && !isHardAI;
 
   const boardRef = useRef(null);
   const [draggedFrom, setDraggedFrom] = useState(null);
@@ -166,7 +171,7 @@ export default function ChessBoard() {
                       )}
 
                       {/* Move dot / capture ring */}
-                      {isValidTarget && (
+                      {showMoveIndicators && isValidTarget && (
                         <MoveIndicator hasCapture={!!cell} themeAccent={currentTheme.accent} />
                       )}
                     </div>

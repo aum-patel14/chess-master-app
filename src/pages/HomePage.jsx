@@ -43,9 +43,7 @@ export default function HomePage() {
       {/* FEATURE 1 */}
       <section className="feature-section">
         <div className="feature-image">
-          <div className="placeholder-card">
-            <div style={{ fontSize: '64px', color: 'var(--gold)' }}>🧩</div>
-          </div>
+          <img src="/images/lessons.png" alt="Chess Lessons" className="feature-img" />
         </div>
         <div className="feature-text">
           <h2>Improve Your Game with Lessons</h2>
@@ -62,18 +60,14 @@ export default function HomePage() {
           <button className="btn-feature outline" onClick={() => navigate('/play')}>Challenge a Bot →</button>
         </div>
         <div className="feature-image">
-          <div className="placeholder-card">
-            <div style={{ fontSize: '64px', color: 'var(--blue)' }}>🤖</div>
-          </div>
+          <img src="/images/bots.png" alt="Chess Bots" className="feature-img" />
         </div>
       </section>
 
       {/* FEATURE 3 */}
       <section className="feature-section">
         <div className="feature-image">
-          <div className="placeholder-card">
-            <div style={{ fontSize: '64px', color: 'var(--purple)' }}>🎯</div>
-          </div>
+          <img src="/images/puzzles.png" alt="Chess Puzzles" className="feature-img" />
         </div>
         <div className="feature-text">
           <h2>Level Up with Chess Puzzles</h2>
