@@ -21,6 +21,13 @@ const BOARD_THEMES = {
   midnight: { light: '#2a2a4a', dark: '#12121f', name: 'Midnight', accent: '#8866ff' },
 };
 
+const initialDifficulty = parseInt(localStorage.getItem('chess_difficulty')) || 3;
+const initialTheme = localStorage.getItem('chess_theme') || 'classic';
+const initialSound = localStorage.getItem('chess_sound') !== 'false';
+const initialAnimations = localStorage.getItem('chess_animations') !== 'false';
+const initialCoords = localStorage.getItem('chess_coords') !== 'false';
+const initialTime = localStorage.getItem('chess_time') ? parseInt(localStorage.getItem('chess_time')) : null;
+
 const initialState = {
   fen: new Chess().fen(),
   history: [],
@@ -30,16 +37,16 @@ const initialState = {
   status: { type: 'playing', message: '', winner: null },
   gameMode: 'menu',          // 'menu' | 'vsAI' | 'local' | 'puzzle'
   playerColor: 'w',          // player is white by default
-  aiDifficulty: 3,
+  aiDifficulty: initialDifficulty,
   isAIThinking: false,
   capturedPieces: { w: [], b: [] },
-  theme: 'classic',
-  showCoords: true,
-  soundEnabled: true,
-  animationsEnabled: true,
-  timeControl: null,          // null = unlimited
-  whiteTime: 600,
-  blackTime: 600,
+  theme: initialTheme,
+  showCoords: initialCoords,
+  soundEnabled: initialSound,
+  animationsEnabled: initialAnimations,
+  timeControl: initialTime,          // null = unlimited
+  whiteTime: initialTime ? initialTime * 60 : 600,
+  blackTime: initialTime ? initialTime * 60 : 600,
   timerRunning: false,
   promotionPending: null,     // { from, to } when pawn reaches last rank
   checkSquare: null,
@@ -73,6 +80,15 @@ function gameReducer(state, action) {
       const turn = chess.turn();
       if (turn === 'w') return { ...state, whiteTime: Math.max(0, state.whiteTime - 1) };
       return { ...state, blackTime: Math.max(0, state.blackTime - 1) };
+    }
+    case 'TIMEOUT': {
+      if (state.status.type === 'timeout') return state;
+      const winner = state.whiteTime === 0 ? 'Black' : 'White';
+      return {
+        ...state,
+        status: { type: 'timeout', message: `Time's up! ${winner} wins!`, winner },
+        timerRunning: false,
+      };
     }
     case 'APPLY_MOVE': {
       const { move, chess, capturedPieces, status, checkSquare } = action;
@@ -168,20 +184,41 @@ export function GameProvider({ children }) {
     return () => clearInterval(interval);
   }, []);
 
+  // Sync settings to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('chess_difficulty', state.aiDifficulty);
+    localStorage.setItem('chess_theme', state.theme);
+    localStorage.setItem('chess_sound', state.soundEnabled);
+    localStorage.setItem('chess_animations', state.animationsEnabled);
+    localStorage.setItem('chess_coords', state.showCoords);
+    if (state.timeControl !== null) {
+      localStorage.setItem('chess_time', state.timeControl);
+    } else {
+      localStorage.removeItem('chess_time');
+    }
+  }, [state.aiDifficulty, state.theme, state.soundEnabled, state.animationsEnabled, state.showCoords, state.timeControl]);
+
   // Update sound manager when settings change
   useEffect(() => {
     soundManager.enabled = state.soundEnabled;
   }, [state.soundEnabled]);
 
-  // Game timer
+  // Game timer - explicitly paused if AI is thinking
   useEffect(() => {
-    if (state.timerRunning && state.timeControl) {
+    if (state.timerRunning && state.timeControl && !state.isAIThinking && (state.status.type === 'playing' || state.status.type === 'check')) {
       timerIntervalRef.current = setInterval(() => {
         dispatch({ type: 'TICK_TIMER' });
       }, 1000);
     }
     return () => clearInterval(timerIntervalRef.current);
-  }, [state.timerRunning, state.timeControl, state.fen]);
+  }, [state.timerRunning, state.timeControl, state.isAIThinking, state.status.type, state.fen]);
+
+  // Check for timeout
+  useEffect(() => {
+    if (state.timeControl && (state.whiteTime === 0 || state.blackTime === 0)) {
+      dispatch({ type: 'TIMEOUT' });
+    }
+  }, [state.whiteTime, state.blackTime, state.timeControl]);
 
 async function saveGameToCloud(state, finalStatus, history, fen) {
   if (!auth?.currentUser || !db) return;

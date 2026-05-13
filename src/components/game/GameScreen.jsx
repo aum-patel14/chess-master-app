@@ -96,7 +96,7 @@ export default function GameScreen() {
         <div className="board-container-wrapper">
           {/* Top Player Info */}
           <div className="player-bar top">
-            <PlayerCard player={topPlayer} timeControl={timeControl} isGameOver={isGameOver} />
+            <PlayerCard player={topPlayer} timeControl={timeControl} isGameOver={isGameOver} isAIThinking={isAIThinking} />
           </div>
 
           {/* The Board */}
@@ -106,7 +106,7 @@ export default function GameScreen() {
 
           {/* Bottom Player Info */}
           <div className="player-bar bottom">
-            <PlayerCard player={bottomPlayer} timeControl={timeControl} isGameOver={isGameOver} />
+            <PlayerCard player={bottomPlayer} timeControl={timeControl} isGameOver={isGameOver} isAIThinking={isAIThinking} />
           </div>
         </div>
       </div>
@@ -199,7 +199,7 @@ export default function GameScreen() {
   );
 }
 
-function PlayerCard({ player, timeControl, isGameOver }) {
+function PlayerCard({ player, timeControl, isGameOver, isAIThinking }) {
   return (
     <div className="player-info-container">
       <div className="player-profile">
@@ -209,6 +209,11 @@ function PlayerCard({ player, timeControl, isGameOver }) {
         <div className="player-name">
           {player.name}
           {player.isAI && <span className="ai-badge">Bot</span>}
+          {player.isAI && isAIThinking && player.isActive && (
+            <span style={{ fontSize: '11px', color: '#ff9800', marginLeft: '8px', animation: 'pulse 1s infinite' }}>
+              Thinking...
+            </span>
+          )}
         </div>
       </div>
       
@@ -216,7 +221,7 @@ function PlayerCard({ player, timeControl, isGameOver }) {
         <CapturedPieces pieces={player.captured} color={player.color} />
         {timeControl && (
            <div className={`player-timer ${player.isActive && !isGameOver ? 'active' : ''}`}>
-             <TimerDisplay seconds={player.time} isActive={player.isActive && !isGameOver} />
+             <TimerDisplay seconds={player.time} isActive={player.isActive && !isGameOver && !(player.isAI && isAIThinking)} />
            </div>
         )}
       </div>
