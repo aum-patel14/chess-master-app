@@ -2,6 +2,9 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
+const isGitHub = process.env.npm_lifecycle_event === 'predeploy' || process.env.npm_lifecycle_event === 'deploy';
+const basePath = isGitHub ? '/chess-master-app/' : '/';
+
 export default defineConfig({
   plugins: [
     react(),
@@ -22,16 +25,16 @@ export default defineConfig({
         background_color: '#0f0f1a',
         display: 'standalone',
         orientation: 'portrait',
-        start_url: '/chess-master-app/',
-        scope: '/chess-master-app/',
+        start_url: basePath,
+        scope: basePath,
         icons: [
-          { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/icon-512.png', sizes: '512x512', type: 'image/png' }
+          { src: `${basePath}icon-192.png`, sizes: '192x192', type: 'image/png' },
+          { src: `${basePath}icon-512.png`, sizes: '512x512', type: 'image/png' }
         ]
       }
     })
   ],
-  base: '/chess-master-app/',
+  base: basePath,
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
