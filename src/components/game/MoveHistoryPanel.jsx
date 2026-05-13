@@ -5,7 +5,9 @@ export default function MoveHistoryPanel({ history }) {
   const bottomRef = useRef(null);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    setTimeout(() => {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 50);
   }, [history]);
 
   const pairs = [];

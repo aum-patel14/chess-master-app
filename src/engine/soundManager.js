@@ -4,6 +4,18 @@ class SoundManager {
     this.ctx = null;
     this.enabled = true;
     this.volume = 0.6;
+
+    // Mobile Safari/Android requires a user gesture to unlock the Web Audio API
+    const unlockAudio = () => {
+      if (!this.ctx) this.init();
+      if (this.ctx && this.ctx.state === 'suspended') {
+        this.ctx.resume();
+      }
+      document.removeEventListener('click', unlockAudio);
+      document.removeEventListener('touchstart', unlockAudio);
+    };
+    document.addEventListener('click', unlockAudio);
+    document.addEventListener('touchstart', unlockAudio);
   }
 
   init() {

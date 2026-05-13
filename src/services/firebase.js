@@ -3,13 +3,13 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCAad5VOBByva5FwyZ_Meg7IfxksI-U4dw",
-  authDomain: "chess-masterpro.firebaseapp.com",
-  projectId: "chess-masterpro",
-  storageBucket: "chess-masterpro.firebasestorage.app",
-  messagingSenderId: "30288731669",
-  appId: "1:30288731669:web:6d064374d1ef46acfbf81c",
-  measurementId: "G-1C7KH8ZV1M"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 // Initialize Firebase only if keys are provided (prevents crashing if not set yet)

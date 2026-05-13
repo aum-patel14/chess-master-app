@@ -434,6 +434,14 @@ async function saveGameToCloud(state, finalStatus, history, fen) {
 
   const startNewGame = useCallback((config = {}) => {
     if (aiTimerRef.current) clearTimeout(aiTimerRef.current);
+    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    
+    // Force stockfish to stop thinking if it is
+    if (stockfishEngine.isThinking) {
+      stockfishEngine.worker?.postMessage('stop');
+      stockfishEngine.isThinking = false;
+    }
+    
     dispatch({ type: 'NEW_GAME', ...config });
   }, []);
 

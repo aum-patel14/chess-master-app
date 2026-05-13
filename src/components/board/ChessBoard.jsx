@@ -36,18 +36,6 @@ export default function ChessBoard() {
   const showMoveIndicators = !isMultiplayer && !isHardAI;
 
   const boardRef = useRef(null);
-  const [boardSize, setBoardSize] = useState(
-    Math.min(window.innerWidth - 32, window.innerHeight - 200, 620)
-  );
-
-  useEffect(() => {
-    const handleResize = () => setBoardSize(
-      Math.min(window.innerWidth - 32, window.innerHeight - 200, 620)
-    );
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
   const [draggedFrom, setDraggedFrom] = useState(null);
   const [dragOver, setDragOver] = useState(null);
   const [movingPiece, setMovingPiece] = useState(null); // { from, to }
@@ -203,8 +191,9 @@ export default function ChessBoard() {
               ref={boardRef}
               className={`chess-board ${isNeonTheme ? 'board-neon' : ''}`}
               style={{
-                width: boardSize + 'px',
-                height: boardSize + 'px',
+                width: '100%',
+                maxWidth: '620px',
+                aspectRatio: '1 / 1',
                 touchAction: 'none',
                 '--board-light': currentTheme.light,
                 '--board-dark': currentTheme.dark,
@@ -228,9 +217,9 @@ export default function ChessBoard() {
                       className={getSquareClasses(squareName)}
                       style={{ 
                         backgroundColor: sqColor === 'light' ? currentTheme.light : currentTheme.dark,
-                        width: (boardSize / 8) + 'px',
-                        height: (boardSize / 8) + 'px',
-                        fontSize: (boardSize / 10) + 'px'
+                        width: '12.5%',
+                        height: '12.5%',
+                        fontSize: 'clamp(24px, 6vw, 48px)'
                       }}
                       onClick={() => handleSquareClick(squareName)}
                       onDragOver={(e) => { e.preventDefault(); setDragOver(squareName); }}
@@ -266,6 +255,16 @@ export default function ChessBoard() {
 
               {/* Neon grid lines */}
               {isNeonTheme && <div className="neon-grid" style={{ '--accent': currentTheme.accent }} />}
+
+              {/* Promotion dialog */}
+              {promotionPending && (
+                <PromotionModal 
+                  color={chess.turn()} 
+                  file={promotionPending.to[0]} 
+                  rank={promotionPending.to[1]} 
+                  flipped={flipped} 
+                />
+              )}
             </div>
 
             {/* Right rank labels */}
@@ -287,15 +286,6 @@ export default function ChessBoard() {
         </div>
       </div>
 
-      {/* Promotion dialog */}
-      {promotionPending && (
-        <PromotionModal 
-          color={chess.turn()} 
-          file={promotionPending.to[0]} 
-          rank={promotionPending.to[1]} 
-          flipped={flipped} 
-        />
-      )}
     </div>
   );
 }

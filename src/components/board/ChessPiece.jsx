@@ -1,5 +1,6 @@
 import './ChessPiece.css';
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 
 // SVG chess pieces rendered inline for zero-dependency, crisp rendering at any size
 const PIECE_SVGS = {
@@ -114,8 +115,17 @@ export default function ChessPiece({ piece, square, isSelected, animationsEnable
   const handleDragEnd = () => setIsDragging(false);
 
   return (
-    <div
-      className={`chess-piece ${isSelected ? 'piece-selected' : ''} ${isDragging ? 'piece-dragging' : ''} ${animationsEnabled ? 'piece-animated' : ''}`}
+    <motion.div
+      layout={animationsEnabled}
+      initial={animationsEnabled ? { scale: 0.6, opacity: 0 } : false}
+      animate={{ scale: 1, opacity: 1 }}
+      transition={{
+        type: 'spring',
+        stiffness: 400,
+        damping: 30,
+        mass: 0.8
+      }}
+      className={`chess-piece ${isSelected ? 'piece-selected' : ''} ${isDragging ? 'piece-dragging' : ''}`}
       draggable
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}

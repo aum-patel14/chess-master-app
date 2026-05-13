@@ -109,7 +109,7 @@
   align-items: center;
   justify-content: center;
   width: 18px;
-  height: calc(min(80vw, 80vh, 540px) / 8);
+  height: 12.5%;
   font-family: 'JetBrains Mono', monospace;
   font-size: 11px;
   color: var(--gold);
@@ -119,7 +119,7 @@
 }
 
 .coord-files .coord-label {
-  width: calc(min(80vw, 80vh, 540px) / 8);
+  width: 12.5%;
   height: 18px;
 }
 
@@ -231,17 +231,11 @@
 
 /* ── Responsive ── */
 @media (max-width: 600px) {
-  .chess-board {
-    width: min(94vw, 94vh);
-    height: min(94vw, 94vh);
-  }
   .coord-label {
-    height: calc(min(94vw, 94vh) / 8);
     width: 14px;
     font-size: 9px;
   }
   .coord-files .coord-label {
-    width: calc(min(94vw, 94vh) / 8);
     height: 14px;
   }
   .board-frame { padding: 14px; }
@@ -250,14 +244,7 @@
 
 @media (min-width: 1400px) {
   .chess-board {
-    width: min(65vh, 580px);
-    height: min(65vh, 580px);
-  }
-  .coord-label {
-    height: calc(min(65vh, 580px) / 8);
-  }
-  .coord-files .coord-label {
-    width: calc(min(65vh, 580px) / 8);
+    max-width: 580px;
   }
 }
 
