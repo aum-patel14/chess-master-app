@@ -22,6 +22,8 @@ export default defineConfig({
         background_color: '#0f0f1a',
         display: 'standalone',
         orientation: 'portrait',
+        start_url: '/chess-master-app/',
+        scope: '/chess-master-app/',
         icons: [
           { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: '/icon-512.png', sizes: '512x512', type: 'image/png' }
@@ -29,7 +31,7 @@ export default defineConfig({
       }
     })
   ],
-  base: './',
+  base: '/chess-master-app/',
   build: {
     outDir: 'dist',
     assetsDir: 'assets',

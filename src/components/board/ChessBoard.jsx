@@ -15,7 +15,7 @@ export default function ChessBoard() {
   const {
     fen, selectedSquare, validMoves, lastMove,
     checkSquare, showCoords, playerColor, promotionPending,
-    gameMode, aiDifficulty, animationsEnabled, history,
+    gameMode, aiDifficulty, animationsEnabled, history, aiStatus
   } = state;
 
   const chess = useMemo(() => new Chess(fen), [fen]);
@@ -132,6 +132,25 @@ export default function ChessBoard() {
   return (
     <div className="board-container">
       <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%', marginBottom: '4px' }}>
+        {gameMode === 'vsAI' && (
+          <div style={{ 
+            marginRight: 'auto', 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '8px',
+            fontSize: '12px',
+            fontWeight: 'bold',
+            color: aiStatus === 'ready' ? '#4caf50' : aiStatus === 'loading' ? '#ff9800' : '#f44336',
+            background: 'var(--surface-dark)',
+            padding: '4px 12px',
+            borderRadius: '12px',
+            border: '1px solid var(--border)'
+          }}>
+            {aiStatus === 'ready' ? 'AI Ready ✓' : 
+             aiStatus === 'loading' ? 'Initializing AI...' : 
+             'Playing in simple mode'}
+          </div>
+        )}
         <div className="icon-btn-wrapper">
           <button 
             className="small-icon-btn"

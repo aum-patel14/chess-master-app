@@ -1,6 +1,7 @@
 import { createContext, useContext, useReducer, useCallback, useRef, useEffect, useState } from 'react';
 import { Chess } from 'chess.js';
 import { getGameStatus, getBestMove as getFallbackBestMove } from '../engine/chessEngine';
+import { stockfishEngine } from '../engine/StockfishService';
 import { soundManager } from '../engine/soundManager';
 import { auth, db } from '../services/firebase';
 import { collection, addDoc, doc, updateDoc, increment } from 'firebase/firestore';
@@ -147,11 +148,25 @@ export function GameProvider({ children }) {
   );
   const [eloChange, setEloChange] = useState(0);
   const [unlockedAchievements, setUnlockedAchievements] = useState([]);
+  const [aiStatus, setAiStatus] = useState('loading'); // 'loading', 'ready', 'fallback'
 
   const aiTimerRef = useRef(null);
   const timerIntervalRef = useRef(null);
-  const aiWorkerRef = useRef(null);
   const applyMoveRef = useRef(null);
+
+  // Poll Stockfish status
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (stockfishEngine.isReady) {
+        setAiStatus('ready');
+        clearInterval(interval);
+      } else if (stockfishEngine.failed) {
+        setAiStatus('fallback');
+        clearInterval(interval);
+      }
+    }, 500);
+    return () => clearInterval(interval);
+  }, []);
 
   // Update sound manager when settings change
   useEffect(() => {
@@ -281,50 +296,34 @@ async function saveGameToCloud(state, finalStatus, history, fen) {
     applyMoveRef.current = applyMove;
   }, [applyMove]);
 
-  // Initialize AI Web Worker
-  useEffect(() => {
-    aiWorkerRef.current = new Worker(new URL('../engine/aiWorker.js', import.meta.url), { type: 'module' });
-    
-    aiWorkerRef.current.onmessage = (e) => {
-      const { success, bestMove, fen, error } = e.data;
-      
-      if (success && bestMove && applyMoveRef.current) {
-        const chess = new Chess(fen);
-        const moveResult = chess.move(bestMove);
-        if (moveResult) {
-          applyMoveRef.current(moveResult, chess);
-        } else {
-          dispatch({ type: 'SET_AI_THINKING', payload: false });
-        }
-      } else {
-        console.error('AI Worker error:', error);
-        dispatch({ type: 'SET_AI_THINKING', payload: false });
-      }
-    };
-
-    return () => {
-      if (aiWorkerRef.current) aiWorkerRef.current.terminate();
-    };
-  }, []);
-
-  const requestAIMoveStockfish = useCallback((fen, difficulty) => {
+  const requestAIMoveStockfish = useCallback(async (fen, difficulty) => {
     dispatch({ type: 'SET_AI_THINKING', payload: true });
     
-    if (aiWorkerRef.current) {
-      aiWorkerRef.current.postMessage({ fen, difficulty });
-    } else {
-      // Fallback if worker isn't ready
-      setTimeout(() => {
-        const aiChess = new Chess(fen);
-        const bestMoveObj = getFallbackBestMove(aiChess, difficulty);
-        if (bestMoveObj && applyMoveRef.current) {
-          const aiResult = aiChess.move(bestMoveObj);
-          if (aiResult) applyMoveRef.current(aiResult, aiChess);
-        }
-        dispatch({ type: 'SET_AI_THINKING', payload: false });
-      }, 50);
+    let bestMoveObj = null;
+    if (aiStatus === 'ready') {
+      const uciMove = await stockfishEngine.getBestMove(fen, difficulty);
+      if (uciMove && uciMove !== '(none)') {
+        bestMoveObj = {
+          from: uciMove.substring(0, 2),
+          to: uciMove.substring(2, 4),
+          promotion: uciMove.length > 4 ? uciMove[4] : undefined
+        };
+      }
     }
-  }, []);
+    
+    // Fallback if Stockfish failed
+    if (!bestMoveObj) {
+      const aiChess = new Chess(fen);
+      bestMoveObj = getFallbackBestMove(aiChess, difficulty);
+    }
+    
+    if (bestMoveObj && applyMoveRef.current) {
+      const aiChess = new Chess(fen);
+      const aiResult = aiChess.move(bestMoveObj);
+      if (aiResult) applyMoveRef.current(aiResult, aiChess);
+    }
+    dispatch({ type: 'SET_AI_THINKING', payload: false });
+  }, [aiStatus]);
 
   // Auto-trigger AI if it's the AI's turn
   useEffect(() => {
@@ -470,6 +469,7 @@ async function saveGameToCloud(state, finalStatus, history, fen) {
       currentTheme,
       playerElo,
       eloChange,
+      aiStatus,
     }}>
       {children}
       <AchievementToast unlockedIds={unlockedAchievements} />

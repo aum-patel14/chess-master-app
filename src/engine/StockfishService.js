@@ -10,11 +10,19 @@ export class StockfishService {
 
   _init() {
     try {
-      this.worker = new Worker('/stockfish.js');
+      this.worker = new Worker(import.meta.env.BASE_URL + 'stockfish.js');
     } catch (e) {
       console.error('Stockfish worker failed to load:', e);
       return;
     }
+
+    // Set a fallback timeout in case Stockfish never responds (e.g., WASM blocked)
+    this.initTimeout = setTimeout(() => {
+      if (!this.isReady) {
+        console.warn('Stockfish failed to initialize within 4 seconds. Falling back.');
+        this.failed = true;
+      }
+    }, 4000);
 
     this.worker.onmessage = (event) => {
       const line = typeof event.data === 'string'
@@ -31,6 +39,7 @@ export class StockfishService {
 
       if (line === 'readyok') {
         this.isReady = true;
+        clearTimeout(this.initTimeout);
       }
 
       if (line.startsWith('bestmove')) {
@@ -49,6 +58,8 @@ export class StockfishService {
     this.worker.onerror = (e) => {
       console.error('Stockfish error:', e);
       this.isReady = false;
+      this.failed = true;
+      clearTimeout(this.initTimeout);
       if (this.pendingResolve) {
         this.pendingResolve(null);
         this.pendingResolve = null;
