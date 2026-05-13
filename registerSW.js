@@ -1,1 +1,0 @@
-if('serviceWorker' in navigator) {window.addEventListener('load', () => {navigator.serviceWorker.register('/chess-master-app/sw.js', { scope: '/chess-master-app/' })})}
