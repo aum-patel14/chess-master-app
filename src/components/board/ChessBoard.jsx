@@ -191,9 +191,6 @@ export default function ChessBoard() {
               ref={boardRef}
               className={`chess-board ${isNeonTheme ? 'board-neon' : ''}`}
               style={{
-                width: '100%',
-                maxWidth: '620px',
-                aspectRatio: '1 / 1',
                 touchAction: 'none',
                 '--board-light': currentTheme.light,
                 '--board-dark': currentTheme.dark,
