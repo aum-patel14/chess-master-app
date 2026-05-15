@@ -10,7 +10,8 @@ export class StockfishService {
 
   _init() {
     try {
-      this.worker = new Worker(import.meta.env.BASE_URL + 'stockfish.js');
+      const stockfishUrl = new URL('/chess-master-app/stockfish.js', window.location.origin).href;
+      this.worker = new Worker(stockfishUrl);
     } catch (e) {
       console.error('Stockfish worker failed to load:', e);
       return;
