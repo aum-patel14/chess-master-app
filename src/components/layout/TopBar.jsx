@@ -1,10 +1,10 @@
-import { Bell, Menu } from 'lucide-react';
+import { Bell, Menu, X } from 'lucide-react';
 
-export function TopBar({ onOpenMobileMenu }) {
+export function TopBar({ onOpenMobileMenu, mobileMenuOpen }) {
   return (
     <header className="topbar">
-      <button className="mobile-menu-btn" onClick={onOpenMobileMenu} style={{ display: 'none' }}>
-        <Menu size={20} color="var(--text-primary)" />
+      <button className="mobile-menu-btn" onClick={onOpenMobileMenu} style={{ display: 'none', background: 'transparent', border: 'none', color: '#e8e8e8', cursor: 'pointer', padding: '4px' }}>
+        {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
 
       <div className="mobile-logo" style={{ display: 'none', alignItems: 'center', gap: '8px', color: 'var(--text-primary)', fontWeight: 'bold' }}>

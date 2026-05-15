@@ -19,8 +19,11 @@ export default function AppShell({ children }) {
       />
       
       <div className="main-area">
-        <TopBar onOpenMobileMenu={() => setMobileMenuOpen(true)} />
-        <main className="page-content">
+        <TopBar 
+          onOpenMobileMenu={() => setMobileMenuOpen(prev => !prev)} 
+          mobileMenuOpen={mobileMenuOpen}
+        />
+        <main className="page-content" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
           {children}
         </main>
       </div>

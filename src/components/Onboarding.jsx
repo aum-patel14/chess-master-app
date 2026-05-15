@@ -51,6 +51,7 @@ export default function Onboarding({ onFinish }) {
 
   const finish = () => {
     localStorage.setItem('onboarded', 'true');
+    localStorage.setItem('chess_onboarded', 'true');
     onFinish();
   };
 

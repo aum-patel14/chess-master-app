@@ -6,6 +6,20 @@ import { useGame } from '../context/GameContext';
 import ChessBoard from '../components/board/ChessBoard';
 import PlayAIModal from '../components/modals/PlayAIModal';
 import GameOverModal from '../components/GameOverModal';
+import PageShell from '../components/PageShell';
+import { useToast } from '../hooks/useToast';
+import ConfirmModal from '../components/ConfirmModal';
+
+const useBoardSize = () => {
+  const calc = () => Math.min(window.innerWidth - 20, window.innerHeight * 0.52, 560);
+  const [size, setSize] = useState(calc);
+  useEffect(() => {
+    const update = () => setSize(calc());
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+  return size;
+};
 
 const DIFFICULTY_NAMES = { 1:'Beginner', 2:'Easy', 3:'Medium', 4:'Hard', 5:'Expert' };
 
@@ -19,13 +33,23 @@ export default function GamePage() {
 
   const location = useLocation();
   const navigate = useNavigate();
-  const searchParams = new URLSearchParams(location.search);
-  const requestedMode = searchParams.get('mode') || 'local';
-  const paramDiff = parseInt(searchParams.get('difficulty'), 10);
-  const paramColor = searchParams.get('color');
-  const paramFen = searchParams.get('fen'); // Support custom starting FEN
+  const { showToast } = useToast();
+  const { mode: requestedMode = 'local', difficulty: paramDiff = 3, timeControl: paramTimeControl = 600, playerColor: paramColor = 'w', resume = false, fen: paramFen = '' } = location.state || {};
 
   const [showAISetup, setShowAISetup] = useState(false);
+  const [hintsUsed, setHintsUsed] = useState(0);
+
+  // Resume game logic
+  useEffect(() => {
+    if (resume) {
+      try {
+        const saved = JSON.parse(localStorage.getItem('chess_saved_game'));
+        if (saved) {
+          startNewGame({ mode: saved.mode, difficulty: saved.difficulty, fen: saved.fen });
+        }
+      } catch(e) {}
+    }
+  }, [resume, startNewGame]);
 
   // Initialize game mode based on URL query string
   useEffect(() => {
@@ -77,6 +101,71 @@ export default function GamePage() {
     }
   }, [history]);
 
+  const boardSize = useBoardSize();
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
+      switch (e.key.toLowerCase()) {
+        case 'n':
+          if (history.length > 0) setConfirmNewGame(true);
+          else startNewGame({ mode: gameMode, playerColor, difficulty: aiDifficulty });
+          break;
+        case 'f':
+          dispatch({ type: 'TOGGLE_BOARD_FLIP' });
+          showToast('Board flipped', 'info');
+          break;
+        case 'u':
+          if (history.length > 0 && !isGameOver && !isAIThinking) {
+            undoMove();
+            showToast('Move undone', 'info');
+          }
+          break;
+        case 'h':
+          handleHint();
+          break;
+        case 's':
+          handleSaveGame();
+          break;
+        case 'escape':
+          setConfirmResign(false);
+          setConfirmNewGame(false);
+          break;
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [history.length, gameMode, playerColor, aiDifficulty, isGameOver, isAIThinking, undoMove, dispatch, showToast]);
+
+  const [confirmNewGame, setConfirmNewGame] = useState(false);
+
+  const handleHint = async () => {
+    if (hintsUsed >= 3) {
+      showToast('No hints left', 'warning');
+      return;
+    }
+    const engine = await import('../engine/StockfishService');
+    const uciMove = await engine.stockfishEngine.getBestMove(fen, 6);
+    if (uciMove && uciMove !== '(none)') {
+      const from = uciMove.substring(0, 2);
+      const to = uciMove.substring(2, 4);
+      dispatch({ type: 'SET_HINT_SQUARES', payload: { from, to } });
+      setHintsUsed(prev => prev + 1);
+      showToast(`Hint shown (${2 - hintsUsed} left)`, 'info');
+      setTimeout(() => dispatch({ type: 'SET_HINT_SQUARES', payload: null }), 3000);
+    }
+  };
+
+  const handleSaveGame = () => {
+    localStorage.setItem('chess_saved_game', JSON.stringify({ pgn: chess.pgn(), fen: chess.fen(), mode: gameMode, difficulty: aiDifficulty, timestamp: Date.now() }));
+    showToast('Game saved ✓', 'success');
+  };
+
+  const handleShare = () => {
+    navigator.clipboard.writeText("I'm playing chess on ChessMaster Pro! Game: " + window.location.href);
+    showToast('Link copied ✓', 'success');
+  };
+
   const topPlayer = {
     name: gameMode === 'vsAI' && playerColor === 'w' ? `AI — ${DIFFICULTY_NAMES[aiDifficulty]}` : 'Opponent',
     isAI: gameMode === 'vsAI' && playerColor === 'w',
@@ -112,8 +201,9 @@ export default function GamePage() {
   }
 
   return (
-    <div className="game-page">
-      <div className="game-board-area">
+    <PageShell>
+      <div className="game-page">
+        <div className="game-board-area">
         <div className="board-wrapper">
           
           <div className="player-card">
@@ -131,7 +221,7 @@ export default function GamePage() {
             )}
           </div>
 
-          <div className="chess-board-container">
+          <div className="chess-board-container" style={{ width: boardSize, height: boardSize }}>
             <ChessBoard />
           </div>
 
@@ -194,9 +284,14 @@ export default function GamePage() {
           </div>
           
           <div className="action-row">
-            <button className="action-btn" onClick={undoMove} disabled={history.length === 0 || isGameOver || isAIThinking}>↩ Undo</button>
-            <button className="action-btn" onClick={offerDraw} disabled={isGameOver}>🤝 Draw</button>
-            <button className="action-btn" onClick={() => startNewGame({ mode: gameMode, playerColor, difficulty: aiDifficulty })}>➕ New</button>
+            <button className="action-btn" onClick={() => { undoMove(); showToast('Move undone', 'info'); }} disabled={history.length === 0 || isGameOver || isAIThinking}>↩ Undo</button>
+            <button className="action-btn" onClick={handleHint} disabled={hintsUsed >= 3 || isGameOver || isAIThinking}>💡 Hint</button>
+            <button className="action-btn" onClick={() => { dispatch({ type: 'TOGGLE_BOARD_FLIP' }); showToast('Board flipped', 'info'); }}>🔄 Flip</button>
+          </div>
+          <div className="action-row" style={{ marginTop: 8 }}>
+            <button className="action-btn" onClick={handleSaveGame} disabled={isGameOver}>💾 Save</button>
+            <button className="action-btn" onClick={handleShare}>🔗 Share</button>
+            <button className="action-btn" onClick={() => { if(history.length > 0) setConfirmNewGame(true); else startNewGame({ mode: gameMode, playerColor, difficulty: aiDifficulty }); }}>➕ New</button>
           </div>
 
           {confirmResign ? (
@@ -231,6 +326,17 @@ export default function GamePage() {
         onStart={handleStartAI} 
       />
       <GameOverModal />
-    </div>
+      <ConfirmModal
+        isOpen={confirmNewGame}
+        title="Start New Game?"
+        message="Your current game will be lost."
+        danger={false}
+        confirmText="Yes, Start New"
+        cancelText="Cancel"
+        onCancel={() => setConfirmNewGame(false)}
+        onConfirm={() => { startNewGame({ mode: gameMode, playerColor, difficulty: aiDifficulty }); setConfirmNewGame(false); showToast('New game started', 'info'); }}
+      />
+      </div>
+    </PageShell>
   );
 }

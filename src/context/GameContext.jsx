@@ -5,9 +5,9 @@ import { stockfishEngine } from '../engine/StockfishService';
 import { soundManager } from '../engine/soundManager';
 import { auth, db } from '../services/firebase';
 import { collection, addDoc, doc, updateDoc, increment } from 'firebase/firestore';
-import { calculateElo, getAIElo } from '../utils/eloSystem';
 import { saveGame, getHistory } from '../utils/gameHistory';
-import { checkAchievements } from '../utils/achievements';
+import { readElo, writeElo, updateStats, updateEloForResult, appendGameHistory, readStats, writeStats } from '../utils/chessStats';
+import { checkAndUnlockAchievements } from '../utils/achievements';
 import AchievementToast from '../components/AchievementToast';
 
 const GameContext = createContext(null);
@@ -51,12 +51,21 @@ const initialState = {
   promotionPending: null,     // { from, to } when pawn reaches last rank
   checkSquare: null,
   highlightedSquares: [],
+  hintSquares: null,
+  boardFlipped: false,
+  reviewFen: null,
   moveCount: 0,
   gameStartTime: null,
 };
 
 function gameReducer(state, action) {
   switch (action.type) {
+    case 'SET_REVIEW_FEN':
+      return { ...state, reviewFen: action.payload };
+    case 'SET_HINT_SQUARES':
+      return { ...state, hintSquares: action.payload };
+    case 'TOGGLE_BOARD_FLIP':
+      return { ...state, boardFlipped: !state.boardFlipped };
     case 'SET_MODE': return { ...state, gameMode: action.payload };
     case 'SET_THEME': return { ...state, theme: action.payload };
     case 'SET_DIFFICULTY': return { ...state, aiDifficulty: action.payload };
@@ -99,6 +108,8 @@ function gameReducer(state, action) {
         selectedSquare: null,
         validMoves: [],
         lastMove: { from: move.from, to: move.to },
+        hintSquares: null,
+        reviewFen: null,
         status,
         capturedPieces,
         checkSquare,
@@ -110,20 +121,41 @@ function gameReducer(state, action) {
       };
     }
     case 'NEW_GAME': {
+      const tc = action.timeControl !== undefined ? action.timeControl : state.timeControl;
       return {
         ...initialState,
         gameMode: action.mode || 'vsAI',
         playerColor: action.playerColor || 'w',
-        aiDifficulty: action.difficulty || state.aiDifficulty,
+        aiDifficulty: action.difficulty ?? state.aiDifficulty,
         theme: state.theme,
         soundEnabled: state.soundEnabled,
         animationsEnabled: state.animationsEnabled,
         showCoords: state.showCoords,
-        timeControl: state.timeControl,
-        whiteTime: state.timeControl ? state.timeControl * 60 : 600,
-        blackTime: state.timeControl ? state.timeControl * 60 : 600,
+        timeControl: tc,
+        whiteTime: tc ? tc * 60 : 600,
+        blackTime: tc ? tc * 60 : 600,
         gameStartTime: Date.now(),
         fen: action.fen || new Chess().fen(),
+        boardFlipped: false,
+        reviewFen: null,
+      };
+    }
+    case 'UNDO_TO': {
+      const { fen, history, capturedPieces, status, checkSquare, lastMove } = action.payload;
+      return {
+        ...state,
+        fen,
+        history,
+        capturedPieces,
+        status,
+        checkSquare: checkSquare ?? null,
+        lastMove: lastMove || null,
+        selectedSquare: null,
+        validMoves: [],
+        moveCount: history.length,
+        isAIThinking: false,
+        promotionPending: null,
+        timerRunning: status.type === 'playing' || status.type === 'check',
       };
     }
     case 'RESIGN': {
@@ -159,9 +191,7 @@ function computeCaptured(history) {
 
 export function GameProvider({ children }) {
   const [state, dispatch] = useReducer(gameReducer, initialState);
-  const [playerElo, setPlayerElo] = useState(
-    parseInt(localStorage.getItem('playerElo')) || 1200
-  );
+  const [playerElo, setPlayerElo] = useState(readElo());
   const [eloChange, setEloChange] = useState(0);
   const [unlockedAchievements, setUnlockedAchievements] = useState([]);
   const [aiStatus, setAiStatus] = useState('loading'); // 'loading', 'ready', 'fallback'
@@ -281,44 +311,51 @@ async function saveGameToCloud(state, finalStatus, history, fen) {
     if (status.type !== 'playing' && status.type !== 'check') {
       saveGameToCloud(state, status, chess.history(), chess.fen());
       
-      // Update local ELO if playing AI
+      let localResult = 'draw';
+      if (status.winner) {
+        localResult = status.winner === (state.playerColor === 'w' ? 'White' : 'Black') ? 'win' : 'loss';
+      }
+
       if (state.gameMode === 'vsAI') {
-        let result = 'draw';
-        if (status.winner) {
-          result = status.winner === (state.playerColor === 'w' ? 'White' : 'Black') ? 'win' : 'loss';
-        }
-        
-        const newElo = calculateElo(playerElo, getAIElo(state.aiDifficulty), result);
+        updateStats(localResult);
+        const newElo = updateEloForResult(localResult, state.aiDifficulty);
         const change = newElo - playerElo;
         setEloChange(change);
         setPlayerElo(newElo);
-        localStorage.setItem('playerElo', newElo);
+        writeElo(newElo);
+      } else {
+        const s = readStats();
+        s.gamesPlayed = (s.gamesPlayed || 0) + 1;
+        writeStats(s);
       }
 
-      // Save local history
-      let localResult = 'draw';
-      if (status.winner) localResult = status.winner === (state.playerColor === 'w' ? 'White' : 'Black') ? 'win' : 'loss';
-      
       saveGame({
         result: localResult,
         opponent: state.gameMode === 'vsAI' ? `AI Lvl ${state.aiDifficulty}` : 'Local',
         difficulty: state.aiDifficulty,
-        moveCount: state.moveCount,
+        moveCount: state.moveCount + 1,
         duration: state.gameStartTime ? Math.floor((Date.now() - state.gameStartTime) / 1000) : 0,
         playerColor: state.playerColor
       });
 
-      // Check achievements
+      appendGameHistory({
+        result: localResult,
+        opponent: state.gameMode === 'vsAI' ? `AI Lvl ${state.aiDifficulty}` : 'Local',
+        moveCount: state.moveCount + 1,
+      });
+
       let lostQueen = false;
       if (state.playerColor === 'w') lostQueen = capturedPieces.b.some(p => p.type === 'q');
       else lostQueen = capturedPieces.w.some(p => p.type === 'q');
-      
-      const newUnlocks = checkAchievements({
+
+      const newUnlocks = checkAndUnlockAchievements('game_end', {
         result: localResult,
-        totalGames: getHistory().length,
         difficulty: state.aiDifficulty,
-        moveCount: state.moveCount,
-        lostQueen
+        moveCount: state.moveCount + 1,
+        lostQueen,
+        hadPromotion: chess.history({ verbose: true }).some((m) => m.promotion),
+        whiteTimeLeft: state.whiteTime,
+        blackTimeLeft: state.blackTime,
       });
       if (newUnlocks.length > 0) {
         setUnlockedAchievements(newUnlocks);
@@ -373,6 +410,7 @@ async function saveGameToCloud(state, finalStatus, history, fen) {
   }, [state.gameMode, state.isAIThinking, state.status.type, state.fen, state.playerColor, state.aiDifficulty, requestAIMoveStockfish]);
 
   const handleSquareClick = useCallback((square) => {
+    if (state.reviewFen) return;
     if (state.status.type !== 'playing' && state.status.type !== 'check') return;
     if (state.isAIThinking) return;
 
@@ -450,14 +488,14 @@ async function saveGameToCloud(state, finalStatus, history, fen) {
     dispatch({ type: 'RESIGN' });
     
     if (state.gameMode === 'vsAI') {
-      const newElo = calculateElo(playerElo, getAIElo(state.aiDifficulty), 'loss');
+      updateStats('loss');
+      const newElo = updateEloForResult('loss', state.aiDifficulty);
       const change = newElo - playerElo;
       setEloChange(change);
       setPlayerElo(newElo);
-      localStorage.setItem('playerElo', newElo);
+      writeElo(newElo);
     }
 
-    // Save local history
     saveGame({
       result: 'loss',
       opponent: state.gameMode === 'vsAI' ? `AI Lvl ${state.aiDifficulty}` : 'Local',
@@ -465,6 +503,11 @@ async function saveGameToCloud(state, finalStatus, history, fen) {
       moveCount: state.moveCount,
       duration: state.gameStartTime ? Math.floor((Date.now() - state.gameStartTime) / 1000) : 0,
       playerColor: state.playerColor
+    });
+    appendGameHistory({
+      result: 'loss',
+      opponent: state.gameMode === 'vsAI' ? `AI Lvl ${state.aiDifficulty}` : 'Local',
+      moveCount: state.moveCount,
     });
   }, [state.gameMode, state.aiDifficulty, playerElo, state.moveCount, state.gameStartTime, state.playerColor]);
 
@@ -475,30 +518,46 @@ async function saveGameToCloud(state, finalStatus, history, fen) {
 
   const undoMove = useCallback(() => {
     if (state.history.length === 0) return;
-    const chess = new Chess();
-    const historySlice = state.history.slice(0, -1);
+    let historySlice = [...state.history];
     if (state.gameMode === 'vsAI') {
-      historySlice.splice(-1); // undo AI move too
+      if (historySlice.length < 2) return;
+      historySlice = historySlice.slice(0, -2);
+    } else {
+      historySlice = historySlice.slice(0, -1);
     }
-    historySlice.forEach(m => chess.move(m));
+    const chess = new Chess();
+    for (const m of historySlice) {
+      chess.move({ from: m.from, to: m.to, promotion: m.promotion });
+    }
     const status = getGameStatus(chess);
     const capturedPieces = computeCaptured(chess.history({ verbose: true }));
-    dispatch({ type: 'APPLY_MOVE', move: chess.history({ verbose: true }).slice(-1)[0] || {}, chess, capturedPieces, status, checkSquare: null });
-    // Actually just reset with replay
-    const newChess = new Chess();
-    historySlice.forEach(m => newChess.move(m));
+    let checkSquare = null;
+    if (status.type === 'check' || status.type === 'checkmate') {
+      const board = chess.board();
+      board.forEach(row => row.forEach(cell => {
+        if (cell && cell.type === 'k' && cell.color === chess.turn()) {
+          checkSquare = cell.square;
+        }
+      }));
+    }
+    const last = historySlice.length ? historySlice[historySlice.length - 1] : null;
+    const lastMove = last ? { from: last.from, to: last.to } : null;
     dispatch({
-      type: 'APPLY_MOVE',
-      move: newChess.history({ verbose: true }).slice(-1)[0] || { from: null, to: null },
-      chess: newChess,
-      capturedPieces: computeCaptured(newChess.history({ verbose: true })),
-      status: getGameStatus(newChess),
-      checkSquare: null,
+      type: 'UNDO_TO',
+      payload: { fen: chess.fen(), history: historySlice, capturedPieces, status, checkSquare, lastMove },
     });
+    if (stockfishEngine.isThinking) {
+      stockfishEngine.worker?.postMessage('stop');
+      stockfishEngine.isThinking = false;
+    }
   }, [state.history, state.gameMode]);
 
   const boardThemes = BOARD_THEMES;
   const currentTheme = BOARD_THEMES[state.theme] || BOARD_THEMES.classic;
+
+  const setHintSquares = useCallback((payload) => {
+    dispatch({ type: 'SET_HINT_SQUARES', payload });
+  }, []);
 
   return (
     <GameContext.Provider value={{
@@ -510,6 +569,7 @@ async function saveGameToCloud(state, finalStatus, history, fen) {
       resign,
       offerDraw,
       undoMove,
+      setHintSquares,
       boardThemes,
       currentTheme,
       playerElo,

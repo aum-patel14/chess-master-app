@@ -1,30 +1,17 @@
-import { Chess } from 'chess.js';
-import { getBestMove } from './chessEngine';
+import { StockfishService } from './StockfishService.js';
 
-self.onmessage = function(e) {
-  const { fen, difficulty, id } = e.data;
-  
-  if (!fen) return;
-  
+const stockfish = new StockfishService();
+
+self.onmessage = async (e) => {
+  const { fen, difficulty } = e.data;
   try {
-    // Reconstruct the chess board from FEN
-    const chess = new Chess(fen);
-    
-    // Calculate best move (this is synchronous but runs in the background thread!)
-    const bestMove = getBestMove(chess, difficulty);
-    
-    // Send the result back
-    self.postMessage({
-      id,
-      success: true,
-      bestMove,
-      fen
-    });
-  } catch (error) {
-    self.postMessage({
-      id,
-      success: false,
-      error: error.message
-    });
+    const bestMove = await stockfish.getBestMove(fen, difficulty);
+    if (bestMove) {
+      self.postMessage({ success: true, bestMove, fen });
+    } else {
+      self.postMessage({ success: false, error: 'No move returned' });
+    }
+  } catch (err) {
+    self.postMessage({ success: false, error: err.message });
   }
 };

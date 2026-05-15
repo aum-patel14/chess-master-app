@@ -1,27 +1,71 @@
-export const ACHIEVEMENTS = [
-  { id: 'first_win', title: 'First Victory', desc: 'Win your first game', icon: '🏆' },
-  { id: 'ten_games', title: 'Dedicated Player', desc: 'Play 10 games', icon: '🎯' },
-  { id: 'beat_expert', title: 'Grandmaster', desc: 'Beat Expert AI', icon: '👑' },
-  { id: 'quick_win', title: 'Speed Chess', desc: 'Win in under 20 moves', icon: '⚡' },
-  { id: 'comeback', title: 'Comeback King', desc: 'Win after losing your queen', icon: '♛' },
-];
+import { readStats } from './chessStats'
 
-export function checkAchievements(gameData) {
-  const unlocked = JSON.parse(localStorage.getItem('achievements') || '[]');
-  const newUnlocks = [];
-  
-  if (gameData.result === 'win' && !unlocked.includes('first_win')) newUnlocks.push('first_win');
-  if (gameData.totalGames >= 10 && !unlocked.includes('ten_games')) newUnlocks.push('ten_games');
-  if (gameData.result === 'win' && gameData.difficulty === 5 && !unlocked.includes('beat_expert')) newUnlocks.push('beat_expert');
-  if (gameData.result === 'win' && gameData.moveCount < 20 && !unlocked.includes('quick_win')) newUnlocks.push('quick_win');
-  if (gameData.result === 'win' && gameData.lostQueen && !unlocked.includes('comeback')) newUnlocks.push('comeback');
-  
-  if (newUnlocks.length > 0) {
-    localStorage.setItem('achievements', JSON.stringify([...unlocked, ...newUnlocks]));
-  }
-  return newUnlocks;
-}
+export const ACHIEVEMENTS = [
+  { id: 'first_win', icon: '🏆', title: 'First Victory', desc: 'Win your first game', secret: false },
+  { id: 'three_streak', icon: '🔥', title: 'On Fire', desc: 'Win 3 games in a row', secret: false },
+  { id: 'puzzle_10', icon: '🧩', title: 'Puzzle Enthusiast', desc: 'Solve 10 puzzles', secret: false },
+  { id: 'speed_win', icon: '⚡', title: 'Speed Demon', desc: 'Win with 3+ minutes remaining', secret: false },
+  { id: 'promotion', icon: '♛', title: 'Pawn Power', desc: 'Win using a pawn promotion', secret: false },
+  { id: 'beat_hard', icon: '🤖', title: 'Machine Slayer', desc: 'Beat the Hard AI', secret: false },
+  { id: 'games_10', icon: '🎮', title: 'Dedicated Player', desc: 'Play 10 games', secret: false },
+  { id: 'games_50', icon: '🎯', title: 'Chess Veteran', desc: 'Play 50 games', secret: true },
+  { id: 'perfect_puzzle', icon: '💎', title: 'Flawless', desc: 'Solve a puzzle without any hints', secret: false },
+]
+
+const STORAGE_KEY = 'chess_achievements'
 
 export function getUnlockedAchievements() {
-  return JSON.parse(localStorage.getItem('achievements') || '[]');
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
+  } catch {
+    return []
+  }
+}
+
+function saveUnlocked(ids) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(ids))
+}
+
+/** @returns {string[]} newly unlocked ids */
+export function checkAndUnlockAchievements(gameResult, gameData = {}) {
+  const unlocked = new Set(getUnlockedAchievements())
+  const newOnes = []
+
+  const stats = readStats()
+
+  const tryUnlock = (id, cond) => {
+    if (cond && !unlocked.has(id)) {
+      unlocked.add(id)
+      newOnes.push(id)
+    }
+  }
+
+  if (gameResult === 'game_end') {
+    tryUnlock('first_win', gameData.result === 'win')
+    tryUnlock('three_streak', gameData.result === 'win' && (stats.streak || 0) >= 3)
+    tryUnlock('speed_win', gameData.result === 'win' && (gameData.whiteTimeLeft >= 180 || gameData.blackTimeLeft >= 180))
+    tryUnlock('promotion', gameData.result === 'win' && gameData.hadPromotion)
+    tryUnlock('beat_hard', gameData.result === 'win' && (gameData.difficulty || 0) >= 4)
+    tryUnlock('games_10', (stats.gamesPlayed || 0) >= 10)
+    tryUnlock('games_50', (stats.gamesPlayed || 0) >= 50)
+  }
+
+  if (gameResult === 'puzzle_solved') {
+    tryUnlock('puzzle_10', (stats.puzzlesSolved || 0) >= 10)
+    tryUnlock('perfect_puzzle', !!gameData.noHints)
+  }
+
+  if (newOnes.length) saveUnlocked([...unlocked])
+  return newOnes
+}
+
+/** Legacy helper used by GameContext */
+export function checkAchievements(gameData) {
+  return checkAndUnlockAchievements('game_end', {
+    result: gameData.result,
+    hadPromotion: false,
+    difficulty: gameData.difficulty,
+    whiteTimeLeft: 999,
+    blackTimeLeft: 999,
+  })
 }

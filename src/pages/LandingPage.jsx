@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Menu, Bell } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 import { SignUpModal, LoginModal } from '../components/Modals';
-import Toast from '../components/Toast';
+import LandingPageToast from '../components/LandingPageToast';
 
 export default function LandingPage() {
   const navigate = useNavigate();
@@ -364,7 +364,7 @@ export default function LandingPage() {
 
       </main>
 
-      <Toast show={!!toastMsg} message={toastMsg} onClose={() => setToastMsg('')} />
+      <LandingPageToast show={!!toastMsg} message={toastMsg} onClose={() => setToastMsg('')} />
       <SignUpModal show={showSignUp} onClose={() => setShowSignUp(false)} onSwitchToLogin={() => { setShowSignUp(false); setShowLogin(true); }} />
       <LoginModal show={showLogin} onClose={() => setShowLogin(false)} onSwitchToSignUp={() => { setShowLogin(false); setShowSignUp(true); }} />
 

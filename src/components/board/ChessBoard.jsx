@@ -11,24 +11,21 @@ const FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 const RANKS = ['8', '7', '6', '5', '4', '3', '2', '1'];
 
 export default function ChessBoard() {
-  const { state, handleSquareClick, currentTheme } = useGame();
+  const { state, handleSquareClick, currentTheme, dispatch } = useGame();
   const {
     fen, selectedSquare, validMoves, lastMove,
     checkSquare, showCoords, playerColor, promotionPending,
-    gameMode, aiDifficulty, animationsEnabled, history, aiStatus
+    gameMode, aiDifficulty, animationsEnabled, history, aiStatus, hintSquares, boardFlipped, reviewFen
   } = state;
 
-  const chess = useMemo(() => new Chess(fen), [fen]);
+  const effectiveFen = reviewFen || fen;
+  const chess = useMemo(() => new Chess(effectiveFen), [effectiveFen]);
   const board = chess.board();
 
-  const [flipped, setFlipped] = useState(false);
+  const flippedView = (playerColor === 'b') !== !!boardFlipped;
 
-  useEffect(() => {
-    setFlipped(playerColor === 'b');
-  }, [playerColor]);
-
-  const ranks = flipped ? [...RANKS].reverse() : RANKS;
-  const files = flipped ? [...FILES].reverse() : FILES;
+  const ranks = flippedView ? [...RANKS].reverse() : RANKS;
+  const files = flippedView ? [...FILES].reverse() : FILES;
 
   // Determine if we should show move indicators
   const isMultiplayer = gameMode === 'local';
@@ -73,7 +70,8 @@ export default function ChessBoard() {
     if (selectedSquare === squareName) classes.push('selected');
     if (lastMove && (lastMove.from === squareName || lastMove.to === squareName)) classes.push('last-move');
     if (checkSquare === squareName) classes.push('in-check');
-    if (dragOver === squareName && validMoves.includes(squareName)) classes.push('drag-over');
+    if (hintSquares?.from === squareName) classes.push('hint-from');
+    if (hintSquares?.to === squareName) classes.push('hint-to');
     if (movingPiece === squareName) classes.push('sq-landing');
     return classes.join(' ');
   };
@@ -142,7 +140,7 @@ export default function ChessBoard() {
         <div className="icon-btn-wrapper">
           <button 
             className="small-icon-btn"
-            onClick={() => setFlipped(!flipped)} 
+            onClick={() => dispatch({ type: 'TOGGLE_BOARD_FLIP' })} 
             title="Flip board"
             style={{
               width: '32px', height: '32px', background: 'transparent', border: '1px solid var(--border)',
@@ -259,7 +257,7 @@ export default function ChessBoard() {
                   color={chess.turn()} 
                   file={promotionPending.to[0]} 
                   rank={promotionPending.to[1]} 
-                  flipped={flipped} 
+                  flipped={flippedView} 
                 />
               )}
             </div>

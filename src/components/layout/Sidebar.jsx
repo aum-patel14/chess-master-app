@@ -1,296 +1,116 @@
-import { useState, useRef, useEffect } from 'react';
-import { Search, Play, Puzzle, BookOpen, Dumbbell, Tv, Users, MoreHorizontal, ChevronDown, 
-         Globe, Bot, UserCog, BarChart2, Trophy, Dice5, History, Calendar, Zap, Shield, 
-         FileText, GraduationCap, Book, Lightbulb, Presentation, Target, Network, Crown, Cpu } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useToast } from '../ToastContext';
-import { useAuth } from '../../context/AuthContext';
-import AuthModal from '../modals/AuthModal';
+import { Home, Play, Puzzle, BookOpen, Trophy, BarChart2, Settings } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
-const MENU_DATA = {
-  Play: [
-    { label: 'Play Online', icon: <Globe size={18} />, path: '/play?mode=local' },
-    { label: 'Play Bots', icon: <Bot size={18} />, path: '/play?mode=ai' },
-    { label: 'Play AI', icon: <Cpu size={18} />, path: '/play?mode=ai' },
-    { label: 'Play Coach', icon: <UserCog size={18} />, path: '/learn/lessons' },
-    { divider: true },
-    { label: 'Stats', icon: <BarChart2 size={18} color="#0ea5e9" />, path: '/stats' },
-    { label: 'Tournaments', icon: <Trophy size={18} color="var(--gold)" />, path: '/tournaments' },
-    { label: 'Variants', icon: <Dice5 size={18} color="#22c55e" />, path: '/variants' },
-    { label: 'Game History', icon: <History size={18} color="#facc15" />, path: '/history' }
-  ],
-  Puzzles: [
-    { label: 'Puzzles', icon: <Puzzle size={18} color="#f97316" />, path: '/puzzles' },
-    { label: 'Daily Puzzle', icon: <Calendar size={18} color="#22c55e" />, path: '/puzzles/daily' },
-    { label: 'Puzzle Rush', icon: <Zap size={18} color="#f59e0b" />, path: '/puzzles/rush' },
-    { label: 'Puzzle Battle', icon: <Shield size={18} color="#22c55e" />, path: '/puzzles/battle' },
-    { label: 'Custom Puzzles', icon: <FileText size={18} color="#e5e7eb" />, path: '/puzzles/custom' }
-  ],
-  Learn: [
-    { label: 'Lessons', icon: <GraduationCap size={18} color="#0ea5e9" />, path: '/learn/lessons' },
-    { label: 'Play Coach', icon: <UserCog size={18} color="#e5e7eb" />, path: '/learn/lessons' },
-    { label: 'Openings', icon: <BookOpen size={18} color="#d97706" />, path: '/learn/openings' }
-  ],
-  Train: [
-    { label: 'Courses', icon: <Book size={18} color="#0ea5e9" />, path: '/train/courses' },
-    { label: 'Analysis', icon: <Search size={18} color="#94a3b8" />, path: '/train/analysis' },
-    { label: 'Insights', icon: <Lightbulb size={18} color="#facc15" />, path: '/train/insights' },
-    { label: 'Classroom', icon: <Presentation size={18} color="#22c55e" />, path: '/train/classroom' },
-    { label: 'Endgames', icon: <Dumbbell size={18} color="#e5e7eb" />, path: '/train/endgames' },
-    { label: 'Practice', icon: <Target size={18} color="#ef4444" />, path: '/train/practice' },
-    { label: 'Aimchess', icon: <Network size={18} color="#8b5cf6" />, path: '/train/aimchess' }
-  ],
-  Community: [
-    { label: 'Members', icon: <Globe size={18} color="#0ea5e9" />, path: '/community/members' },
-    { label: 'Coaches', icon: <Users size={18} color="#94a3b8" />, path: '/community/coaches' },
-    { divider: true },
-    { label: 'Top Players', icon: <Crown size={18} color="#facc15" />, path: '/community/top-players' }
-  ]
-};
-
-export default function Sidebar({ onOpenSignUp, onOpenLogin, mobileOpen, setMobileOpen }) {
+export default function Sidebar({ mobileOpen, setMobileOpen }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { showToast } = useToast();
-  const { currentUser, userData, logout } = useAuth();
-  
-  const [activeMenu, setActiveMenu] = useState(null);
-  const [flyoutTop, setFlyoutTop] = useState(0);
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const sidebarRef = useRef(null);
 
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (sidebarRef.current && !sidebarRef.current.contains(event.target)) {
-        setActiveMenu(null);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const handleNav = (path, isSoon) => {
-    setActiveMenu(null);
-    if (isSoon && !path) {
-      showToast("Coming Soon! Stay tuned.", "coming-soon");
-    } else {
-      navigate(path || '/');
-      if (setMobileOpen) setMobileOpen(false);
-    }
+  const handleNav = (path) => {
+    navigate(path);
+    if (setMobileOpen) setMobileOpen(false);
   };
 
-  const handleMouseEnter = (menuName, e) => {
-    if (window.innerWidth > 900) {
-      setActiveMenu(menuName);
-      if (e && e.currentTarget) {
-        const rect = e.currentTarget.getBoundingClientRect();
-        // Adjust slightly so the first item aligns with the hovered item
-        setFlyoutTop(rect.top - 12);
-      }
-    }
-  };
+  const navItems = [
+    { label: 'Home', icon: <Home size={20} />, path: '/' },
+    { label: 'Play', icon: <Play size={20} />, path: '/game' },
+    { label: 'Puzzles', icon: <Puzzle size={20} />, path: '/puzzles' },
+    { label: 'Learn', icon: <BookOpen size={20} />, path: '/learn' },
+    { label: 'Leaderboard', icon: <Trophy size={20} />, path: '/leaderboard' },
+    { label: 'Stats', icon: <BarChart2 size={20} />, path: '/stats' },
+    { label: 'Settings', icon: <Settings size={20} />, path: '/settings' }
+  ];
 
-  const handleMenuClick = (menuName, defaultPath) => {
-    if (window.innerWidth <= 900) {
-      if (activeMenu === menuName) {
-        setActiveMenu(null);
-      } else {
-        setActiveMenu(menuName);
-      }
-    } else if (defaultPath) {
-      handleNav(defaultPath, false);
-    }
-  };
-
-  const renderMobileSubMenu = (menuName) => {
-    if (window.innerWidth > 900 || activeMenu !== menuName || !MENU_DATA[menuName]) return null;
-    return (
-      <div className="mobile-submenu">
-        {MENU_DATA[menuName].map((item, idx) => (
-          item.divider ? (
-            <div key={idx} className="flyout-divider" style={{ margin: '4px 12px' }} />
-          ) : (
-            <div 
-              key={idx} 
-              className="flyout-item mobile-flyout-item"
-              onClick={() => handleNav(item.path, !item.path)}
-            >
-              <span className="flyout-icon" style={{ transform: 'scale(0.85)' }}>{item.icon}</span>
-              <span style={{ fontSize: '13px' }}>{item.label}</span>
-            </div>
-          )
-        ))}
+  const SidebarContent = (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#1a1a2e' }}>
+      <div 
+        onClick={() => handleNav('/')}
+        style={{ padding: '20px 16px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', borderBottom: '1px solid rgba(212,175,55,0.2)' }}
+      >
+        <span style={{ fontSize: '28px', color: '#d4af37' }}>♚</span>
+        <span style={{ fontFamily: '"Cinzel", serif', fontSize: '16px', fontWeight: 700, color: '#e8e8e8' }}>
+          ChessMaster Pro
+        </span>
       </div>
-    );
-  };
+
+      <nav style={{ padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+        {navItems.map(item => {
+          const isActive = location.pathname === item.path || (item.path === '/game' && location.pathname.startsWith('/game'));
+          return (
+            <button
+              key={item.label}
+              onClick={() => handleNav(item.path)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '12px', width: '100%', height: '44px',
+                padding: '0 16px', borderRadius: '8px', border: 'none', cursor: 'pointer',
+                background: isActive ? 'rgba(212,175,55,0.1)' : 'transparent',
+                color: isActive ? '#d4af37' : '#e8e8e8',
+                borderLeft: isActive ? '3px solid #d4af37' : '3px solid transparent',
+                transition: 'background 200ms ease',
+                textAlign: 'left'
+              }}
+              onMouseEnter={(e) => {
+                if (!isActive) e.currentTarget.style.background = 'rgba(212,175,55,0.08)';
+              }}
+              onMouseLeave={(e) => {
+                if (!isActive) e.currentTarget.style.background = 'transparent';
+              }}
+            >
+              {item.icon}
+              <span style={{ fontSize: '15px', fontWeight: 500 }}>{item.label}</span>
+            </button>
+          );
+        })}
+      </nav>
+    </div>
+  );
 
   return (
     <>
-      <aside 
-        ref={sidebarRef}
-        className={`sidebar ${mobileOpen ? 'mobile-open' : ''}`} 
-        onMouseLeave={() => setActiveMenu(null)}
-      >
-        <div style={{ padding: '16px 16px 8px', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }} onClick={() => handleNav('/', false)}>
-          <span style={{ fontSize: '24px', color: 'var(--gold)' }}>♚</span>
-          <span style={{ fontFamily: '"Cinzel Decorative", cursive', fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>
-            ChessMaster Pro
-          </span>
-        </div>
-
-        <div style={{ margin: '8px 12px', position: 'relative' }}>
-          <Search size={14} color="var(--text-muted)" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
-          <input 
-            type="text" 
-            placeholder="Search"
-            style={{
-              width: '100%', height: '34px', background: 'var(--bg-input)', border: '1px solid var(--border)',
-              borderRadius: '6px', padding: '0 10px 0 32px', fontSize: '13px', color: 'var(--text-primary)', outline: 'none'
-            }}
-            onFocus={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.2)'; }}
-            onBlur={(e) => { e.target.style.borderColor = 'var(--border)'; }}
-          />
-        </div>
-
-        <nav style={{ padding: '4px 8px', display: 'flex', flexDirection: 'column' }}>
-          <NavItem 
-            icon={<Play size={18} />} label="Play" 
-            active={location.pathname === '/play' || activeMenu === 'Play'} 
-            onMouseEnter={(e) => handleMouseEnter('Play', e)}
-            onClick={() => handleMenuClick('Play', '/play')} 
-          />
-          {renderMobileSubMenu('Play')}
-
-          <NavItem 
-            icon={<Puzzle size={18} />} label="Puzzles" 
-            active={activeMenu === 'Puzzles'}
-            onMouseEnter={(e) => handleMouseEnter('Puzzles', e)}
-            onClick={() => handleMenuClick('Puzzles')}
-          />
-          {renderMobileSubMenu('Puzzles')}
-
-          <NavItem 
-            icon={<BookOpen size={18} />} label="Learn" 
-            active={activeMenu === 'Learn'}
-            onMouseEnter={(e) => handleMouseEnter('Learn', e)}
-            onClick={() => handleMenuClick('Learn')}
-          />
-          {renderMobileSubMenu('Learn')}
-
-          <NavItem 
-            icon={<Dumbbell size={18} />} label="Train" 
-            active={activeMenu === 'Train'}
-            onMouseEnter={(e) => handleMouseEnter('Train', e)}
-            onClick={() => handleMenuClick('Train')}
-          />
-          {renderMobileSubMenu('Train')}
-
-          <NavItem 
-            icon={<Tv size={18} />} label="Watch" 
-            onClick={() => handleNav('/watch', false)}
-            onMouseEnter={() => setActiveMenu(null)}
-          />
-
-          <NavItem 
-            icon={<Users size={18} />} label="Community" 
-            active={activeMenu === 'Community'}
-            onMouseEnter={(e) => handleMouseEnter('Community', e)}
-            onClick={() => handleMenuClick('Community')}
-          />
-          {renderMobileSubMenu('Community')}
-          
-          <div style={{ height: '1px', background: 'var(--border)', margin: '8px 12px' }} />
-          
-          <NavItem 
-            icon={<MoreHorizontal size={18} />} label="More" 
-            onClick={() => handleNav('', true)}
-            onMouseEnter={() => setActiveMenu(null)}
-          />
-        </nav>
-
-        <div style={{ marginTop: 'auto', padding: '12px' }}>
-          {currentUser ? (
-            <div className="user-profile-mini" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px', background: 'var(--bg-hover)', borderRadius: '8px', marginBottom: '12px' }}>
-              <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--gold)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
-                {userData?.displayName?.charAt(0).toUpperCase() || 'U'}
-              </div>
-              <div style={{ flex: 1, overflow: 'hidden' }}>
-                <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
-                  {userData?.displayName || 'Player'}
-                </div>
-                <div style={{ fontSize: '12px', color: 'var(--gold)' }}>
-                  {userData?.rating || 1200} Elo
-                </div>
-              </div>
-              <button onClick={logout} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }} title="Log Out">
-                <Search size={16} /> {/* Reusing an icon for logout since LogOut isn't imported, let me just use text or X */}
-                <span style={{fontSize: '10px'}}>Out</span>
-              </button>
-            </div>
-          ) : (
-            <>
-              <button onClick={() => setShowAuthModal(true)} className="sidebar-btn-primary">Sign Up</button>
-              <button onClick={() => setShowAuthModal(true)} className="sidebar-btn-ghost">Log In</button>
-            </>
-          )}
-
-          <div style={{ marginTop: '12px', padding: '0 4px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-muted)', cursor: 'pointer' }}>
-            <span>🌐</span><span>English</span><ChevronDown size={14} />
-          </div>
-
-          <div style={{ display: 'flex', gap: '6px', marginTop: '8px', padding: '0 4px' }}>
-            <div className="pill">📱 App Store</div>
-            <div className="pill">🤖 Google Play</div>
-          </div>
-
-          <div style={{ fontSize: '10px', color: 'var(--text-muted)', textAlign: 'center', marginTop: '10px', marginBottom: '8px' }}>
-            © 2026 ChessMaster Pro
-          </div>
-        </div>
-
-        {/* Auth Modal */}
-        <AuthModal show={showAuthModal} onClose={() => setShowAuthModal(false)} />
-
-        {/* FLYOUT MENU (Desktop Only) */}
-        {activeMenu && MENU_DATA[activeMenu] && window.innerWidth > 900 && (
-          <div className="sidebar-flyout" style={{ top: `${flyoutTop}px` }}>
-            {MENU_DATA[activeMenu].map((item, idx) => (
-              item.divider ? (
-                <div key={idx} className="flyout-divider" />
-              ) : (
-                <div 
-                  key={idx} 
-                  className="flyout-item"
-                  onClick={() => handleNav(item.path, !item.path)}
-                >
-                  <span className="flyout-icon">{item.icon}</span>
-                  <span>{item.label}</span>
-                </div>
-              )
-            ))}
-          </div>
-        )}
+      {/* Desktop Sidebar (handled by CSS .sidebar if not mobile) */}
+      <aside className="sidebar desktop-only">
+        {SidebarContent}
       </aside>
 
-      {mobileOpen && (
-        <div 
-          onClick={() => setMobileOpen(false)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 190 }}
-        />
-      )}
+      {/* Mobile Sidebar */}
+      <AnimatePresence>
+        {mobileOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onClick={() => setMobileOpen && setMobileOpen(false)}
+              style={{
+                position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000
+              }}
+              className="mobile-only"
+            />
+            <motion.aside
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              style={{
+                position: 'fixed', top: 0, left: 0, bottom: 0, width: '280px',
+                zIndex: 1001, boxShadow: '4px 0 20px rgba(0,0,0,0.5)'
+              }}
+              className="mobile-only"
+            >
+              {SidebarContent}
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
+      <style>{`
+        @media (max-width: 900px) {
+          .desktop-only { display: none !important; }
+        }
+        @media (min-width: 901px) {
+          .mobile-only { display: none !important; }
+        }
+      `}</style>
     </>
-  );
-}
-
-function NavItem({ icon, label, active, onClick, onMouseEnter }) {
-  return (
-    <div 
-      className={`nav-item ${active ? 'active' : ''}`} 
-      onClick={onClick}
-      onMouseEnter={onMouseEnter}
-    >
-      <span className="nav-icon">{icon}</span>
-      <span className="nav-label">{label}</span>
-    </div>
   );
 }

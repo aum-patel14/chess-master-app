@@ -17,3 +17,13 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <App />
   </React.StrictMode>,
 )
+
+// Fade out loader
+const loader = document.getElementById('initial-loader');
+if (loader) {
+  loader.style.transition = 'opacity 0.4s ease-out';
+  setTimeout(() => {
+    loader.style.opacity = '0';
+    setTimeout(() => loader.remove(), 400);
+  }, 100);
+}

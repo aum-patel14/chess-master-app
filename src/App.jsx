@@ -1,22 +1,118 @@
 import './App.css';
+import { lazy, Suspense, useState, useEffect } from 'react';
+import { MotionConfig, AnimatePresence } from 'framer-motion';
 import { GameProvider } from './context/GameContext';
-import { ToastProvider } from './components/ToastContext';
+import { ToastProvider } from './hooks/useToast';
 import { AuthProvider } from './context/AuthContext';
 import AppShell from './components/layout/AppShell';
-import HomePage from './pages/HomePage';
-import GamePage from './pages/GamePage';
-import DemoPage from './pages/DemoPage';
-import SettingsScreen from './screens/SettingsScreen';
-import GameHistoryPage from './pages/GameHistoryPage';
-import PrivacyPolicy from './pages/PrivacyPolicy';
 import SplashScreen from './components/SplashScreen';
 import Onboarding from './components/Onboarding';
-import { useState, useEffect } from 'react';
-import { HashRouter, Routes, Route } from 'react-router-dom';
+import BottomNav from './components/BottomNav';
+import QuickPlayFAB from './components/QuickPlayFAB';
+import ShortcutsModal from './components/ShortcutsModal';
+import ErrorBoundary from './components/ErrorBoundary';
+import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+
+function PlayRedirect() {
+  const loc = useLocation();
+  return <Navigate to={`/game${loc.search}`} replace />;
+}
+
+const HomePage = lazy(() => import('./pages/HomePage'));
+const GamePage = lazy(() => import('./pages/GamePage'));
+const PuzzlePage = lazy(() => import('./pages/PuzzlePage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const StatsPage = lazy(() => import('./pages/StatsPage'));
+const LeaderboardPage = lazy(() => import('./pages/LeaderboardPage'));
+const AchievementsPage = lazy(() => import('./pages/AchievementsPage'));
+const LearnPage = lazy(() => import('./pages/LearnPage'));
+const GameHistoryPage = lazy(() => import('./pages/GameHistoryPage'));
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
+const DemoPage = lazy(() => import('./pages/DemoPage'));
+
+const suspenseFallback = (
+  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#0a0a14', color: '#d4af37', fontSize: '2rem' }}>♛</div>
+);
+
+function RouteSwitch() {
+  const location = useLocation();
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 768);
+
+  useEffect(() => {
+    const r = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', r);
+    return () => window.removeEventListener('resize', r);
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
+      if (e.key === '?' || (e.shiftKey && e.key === '/')) {
+        e.preventDefault();
+        if (!isMobile) setShortcutsOpen(true);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isMobile]);
+
+  return (
+    <>
+      <AnimatePresence mode="wait">
+        <Suspense fallback={suspenseFallback}>
+          <Routes location={location} key={location.pathname}>
+            <Route path="/" element={<ErrorBoundary><HomePage /></ErrorBoundary>} />
+            <Route path="/game" element={<ErrorBoundary><GamePage /></ErrorBoundary>} />
+            <Route path="/play" element={<PlayRedirect />} />
+            <Route path="/puzzles" element={<ErrorBoundary><PuzzlePage /></ErrorBoundary>} />
+            <Route path="/learn" element={<ErrorBoundary><LearnPage /></ErrorBoundary>} />
+            <Route path="/leaderboard" element={<ErrorBoundary><LeaderboardPage /></ErrorBoundary>} />
+            <Route path="/stats" element={<ErrorBoundary><StatsPage /></ErrorBoundary>} />
+            <Route path="/achievements" element={<ErrorBoundary><AchievementsPage /></ErrorBoundary>} />
+            <Route path="/settings" element={<ErrorBoundary><SettingsPage /></ErrorBoundary>} />
+            <Route path="/history" element={<ErrorBoundary><GameHistoryPage /></ErrorBoundary>} />
+            <Route path="/privacy" element={<ErrorBoundary><PrivacyPolicy /></ErrorBoundary>} />
+            <Route path="/watch" element={<ErrorBoundary><DemoPage /></ErrorBoundary>} />
+            <Route path="/train/*" element={<ErrorBoundary><DemoPage /></ErrorBoundary>} />
+            <Route path="/community/*" element={<ErrorBoundary><DemoPage /></ErrorBoundary>} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
+      </AnimatePresence>
+      <BottomNav />
+      <QuickPlayFAB />
+      <ShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} isMobile={isMobile} />
+      {!isMobile && (
+        <button
+          type="button"
+          onClick={() => setShortcutsOpen(true)}
+          style={{
+            position: 'fixed',
+            bottom: 24,
+            left: 24,
+            zIndex: 90,
+            width: 44,
+            height: 44,
+            borderRadius: '50%',
+            border: '1px solid rgba(212,175,55,0.35)',
+            background: '#1a1a2e',
+            color: '#d4af37',
+            fontWeight: 800,
+            cursor: 'pointer',
+          }}
+          aria-label="Keyboard shortcuts"
+        >
+          ?
+        </button>
+      )}
+    </>
+  );
+}
 
 export default function App() {
   const [showSplash, setShowSplash] = useState(true);
-  const [showOnboarding, setShowOnboarding] = useState(!localStorage.getItem('onboarded'));
+  const [showOnboarding, setShowOnboarding] = useState(!localStorage.getItem('chess_onboarded'));
 
   useEffect(() => {
     const t = setTimeout(() => setShowSplash(false), 2200);
@@ -25,61 +121,24 @@ export default function App() {
 
   return (
     <div className="app-root">
-      {showOnboarding && !showSplash && <Onboarding onFinish={() => setShowOnboarding(false)} />}
-      <AuthProvider>
-        <GameProvider>
-          <ToastProvider>
-            <HashRouter>
-              {showSplash ? (
-                <SplashScreen />
-              ) : (
-                <AppShell>
-                <Routes>
-                  <Route path="/" element={<HomePage />} />
-                  <Route path="/play" element={<GamePage />} />
-                  
-                  {/* Demo Pages for Sidebar Navigation */}
-                  <Route path="/puzzles" element={<DemoPage />} />
-                  <Route path="/puzzles/daily" element={<DemoPage />} />
-                  <Route path="/puzzles/rush" element={<DemoPage />} />
-                  <Route path="/puzzles/battle" element={<DemoPage />} />
-                  <Route path="/puzzles/custom" element={<DemoPage />} />
-                  
-                  <Route path="/learn" element={<DemoPage />} />
-                  <Route path="/learn/lessons" element={<DemoPage />} />
-                  <Route path="/learn/openings" element={<DemoPage />} />
-                  
-                  <Route path="/train" element={<DemoPage />} />
-                  <Route path="/train/courses" element={<DemoPage />} />
-                  <Route path="/train/analysis" element={<DemoPage />} />
-                  <Route path="/train/insights" element={<DemoPage />} />
-                  <Route path="/train/classroom" element={<DemoPage />} />
-                  <Route path="/train/endgames" element={<DemoPage />} />
-                  <Route path="/train/practice" element={<DemoPage />} />
-                  <Route path="/train/aimchess" element={<DemoPage />} />
-                  
-                  <Route path="/watch" element={<DemoPage />} />
-                  
-                  <Route path="/community" element={<DemoPage />} />
-                  <Route path="/community/members" element={<DemoPage />} />
-                  <Route path="/community/coaches" element={<DemoPage />} />
-                  <Route path="/community/top-players" element={<DemoPage />} />
-                  
-                  <Route path="/stats" element={<DemoPage />} />
-                  <Route path="/tournaments" element={<DemoPage />} />
-                  <Route path="/variants" element={<DemoPage />} />
-                  <Route path="/history" element={<GameHistoryPage />} />
-                  <Route path="/privacy" element={<PrivacyPolicy />} />
-
-                  <Route path="/settings" element={<SettingsScreen />} />
-                  <Route path="*" element={<HomePage />} />
-                </Routes>
-              </AppShell>
-            )}
-            </HashRouter>
-          </ToastProvider>
-        </GameProvider>
-      </AuthProvider>
+      <MotionConfig reducedMotion="user">
+        {showOnboarding && !showSplash && <Onboarding onFinish={() => setShowOnboarding(false)} />}
+        <AuthProvider>
+          <GameProvider>
+            <ToastProvider>
+              <HashRouter>
+                {showSplash ? (
+                  <SplashScreen />
+                ) : (
+                  <AppShell>
+                    <RouteSwitch />
+                  </AppShell>
+                )}
+              </HashRouter>
+            </ToastProvider>
+          </GameProvider>
+        </AuthProvider>
+      </MotionConfig>
     </div>
   );
 }
