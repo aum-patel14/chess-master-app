@@ -2,8 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
-const isGitHub = process.env.npm_lifecycle_event === 'predeploy' || process.env.npm_lifecycle_event === 'deploy';
-const basePath = isGitHub ? '/chess-master-app/' : '/';
+const basePath = '/chess-master-app/';
 
 export default defineConfig({
   plugins: [

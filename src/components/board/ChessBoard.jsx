@@ -217,8 +217,8 @@ export default function ChessBoard() {
                       className={getSquareClasses(squareName)}
                       style={{ 
                         backgroundColor: sqColor === 'light' ? currentTheme.light : currentTheme.dark,
-                        width: '12.5%',
-                        height: '12.5%',
+                        width: '100%',
+                        height: '100%',
                         fontSize: 'clamp(24px, 6vw, 48px)'
                       }}
                       onClick={() => handleSquareClick(squareName)}
