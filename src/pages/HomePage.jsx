@@ -5,6 +5,7 @@ import { useToast } from '../hooks/useToast';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import PageShell from '../components/PageShell';
 import { readStats, readElo } from '../utils/chessStats';
+import { Chess } from 'chess.js';
 
 const TIME_OPTS = [
   { label: 'Bullet 1m', sec: 60 },
@@ -32,8 +33,25 @@ export default function HomePage() {
   const gamesPlayed = stats.gamesPlayed || 0;
 
   const [hasSaved, setHasSaved] = useState(false);
+  
+  // Daily Puzzle State
+  const [dailyPuzzle, setDailyPuzzle] = useState(null);
+  const [puzzleStreak, setPuzzleStreak] = useLocalStorage('chess_puzzle_streak', 0);
+  
   useEffect(() => {
     setHasSaved(!!localStorage.getItem('chess_saved_game'));
+    
+    // Fetch Daily Puzzle
+    fetch('https://lichess.org/api/puzzle/daily')
+      .then(res => res.json())
+      .then(data => {
+        // We only need the URL or simple data for the card
+        setDailyPuzzle(data);
+      })
+      .catch(err => {
+        console.error('Lichess puzzle error', err);
+        setDailyPuzzle({ puzzle: { id: 'fallback', rating: 1500, themes: ['tactics'] } });
+      });
   }, []);
 
   const lastPuzzle = typeof localStorage !== 'undefined' ? localStorage.getItem('chess_last_puzzle_date') : null;
@@ -205,12 +223,35 @@ export default function HomePage() {
             <button className="btn-feature green" onClick={() => navigate('/learn')}>
               Learn Chess
             </button>
-            <button className="btn-feature outline" onClick={() => navigate('/puzzles')}>
-              Daily Puzzle {showNewBadge && <span style={{ marginLeft: 8, fontSize: 11, background: '#ef4444', color: '#fff', padding: '2px 8px', borderRadius: 6 }}>NEW</span>}
-            </button>
             <button className="btn-feature outline" onClick={() => navigate('/leaderboard')}>
               Leaderboard
             </button>
+          </div>
+
+          {/* Daily Puzzle Card */}
+          <div style={{ marginTop: '24px', background: '#1a1a2e', borderRadius: '12px', padding: '20px', border: '1px solid var(--gold)' }}>
+            <h2 style={{ fontSize: '20px', marginBottom: '12px', color: 'var(--gold)', display: 'flex', justifyContent: 'space-between' }}>
+              Daily Puzzle
+              <span style={{ fontSize: '14px', background: 'rgba(212,175,55,0.2)', padding: '4px 8px', borderRadius: '8px' }}>
+                🔥 Streak: {puzzleStreak}
+              </span>
+            </h2>
+            {dailyPuzzle ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <p style={{ margin: 0, opacity: 0.8 }}>
+                  Rating: {dailyPuzzle.puzzle.rating} • Themes: {dailyPuzzle.puzzle.themes.slice(0, 3).join(', ')}
+                </p>
+                <button 
+                  className="btn-feature outline" 
+                  onClick={() => navigate('/puzzles')}
+                  style={{ width: '100%', border: '1px solid var(--gold)', color: 'var(--gold)' }}
+                >
+                  Solve Today's Puzzle {showNewBadge && <span style={{ marginLeft: 8, fontSize: 11, background: '#ef4444', color: '#fff', padding: '2px 8px', borderRadius: 6 }}>NEW</span>}
+                </button>
+              </div>
+            ) : (
+              <p style={{ opacity: 0.7 }}>Loading daily puzzle...</p>
+            )}
           </div>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 20, justifyContent: 'center' }}>

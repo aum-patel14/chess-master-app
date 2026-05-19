@@ -1,15 +1,7 @@
 import './MoveIndicator.css';
 
-export default function MoveIndicator({ hasCapture, themeAccent }) {
-  if (hasCapture) {
-    return (
-      <div className="move-capture-ring" style={{ '--accent': themeAccent }}>
-        <div className="capture-ring-inner" />
-      </div>
-    );
-  }
-
+export default function MoveIndicator({ hasCapture }) {
   return (
-    <div className="move-dot" style={{ '--accent': themeAccent }} />
+    <div className={`move-indicator ${hasCapture ? 'capture' : 'empty'}`} />
   );
 }

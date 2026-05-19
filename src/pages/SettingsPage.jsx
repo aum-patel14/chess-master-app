@@ -8,11 +8,9 @@ import ConfirmModal from '../components/ConfirmModal'
 
 const THEMES = [
   { id: 'classic', label: 'Classic', light: '#f0d9b5', dark: '#b58863' },
-  { id: 'walnut', label: 'Walnut', light: '#ecdab9', dark: '#8b5e3c' },
-  { id: 'neon', label: 'Neon', light: '#1a1a4e', dark: '#0d0d2b' },
-  { id: 'emerald', label: 'Emerald', light: '#d4e8d4', dark: '#2d6a4f' },
-  { id: 'marble', label: 'Marble', light: '#e8e8e8', dark: '#3a3a3a' },
-  { id: 'midnight', label: 'Midnight', light: '#2a2a4a', dark: '#12121f' },
+  { id: 'ocean', label: 'Ocean', light: '#dee3e6', dark: '#8ca2ad' },
+  { id: 'wood', label: 'Wood', light: '#f0c070', dark: '#8a4f2a' },
+  { id: 'midnight', label: 'Midnight', light: '#6f8fa4', dark: '#2e4057' },
 ]
 
 export default function SettingsPage() {
@@ -22,14 +20,15 @@ export default function SettingsPage() {
 
   const [theme, setTheme] = useLocalStorage('chess_theme', 'classic')
   const [, setPieces] = useLocalStorage('chess_pieces', 'standard')
-  const [soundEnabled, setSoundEnabled] = useLocalStorage('chess_sound', true)
-  const [musicEnabled, setMusicEnabled] = useLocalStorage('chess_music', false)
+  const [soundTheme, setSoundTheme] = useLocalStorage('chess_sound_theme', 'wood')
+  const [animationSpeed, setAnimationSpeed] = useLocalStorage('chess_animation_speed', 'normal')
+  const [highlightStyle, setHighlightStyle] = useLocalStorage('chess_highlight_style', 'glow')
+  const [confirmMove, setConfirmMove] = useLocalStorage('chess_confirm_move', false)
   const [difficulty, setDifficulty] = useLocalStorage('chess_difficulty', 'medium')
   const [timeControl, setTimeControl] = useLocalStorage('chess_timecontrol', 600)
   const [showHints, setShowHints] = useLocalStorage('chess_show_hints', true)
   const [showCoords, setShowCoords] = useLocalStorage('chess_show_coords', true)
   const [autoPromote, setAutoPromote] = useLocalStorage('chess_autopromote', false)
-  const [animationsEnabled, setAnimationsEnabled] = useLocalStorage('chess_animations', true)
 
   const [resetOpen, setResetOpen] = useState(false)
 
@@ -62,18 +61,16 @@ export default function SettingsPage() {
   })
 
   const doReset = () => {
-    const keys = [
       'chess_theme',
-      'chess_pieces',
-      'chess_sound',
-      'chess_music',
+      'chess_sound_theme',
+      'chess_animation_speed',
+      'chess_highlight_style',
+      'chess_confirm_move',
       'chess_difficulty',
       'chess_timecontrol',
       'chess_show_hints',
       'chess_show_coords',
       'chess_autopromote',
-      'chess_animations',
-    ]
     keys.forEach((k) => localStorage.removeItem(k))
     showToast('Settings reset to defaults', 'info')
     setResetOpen(false)
@@ -188,6 +185,7 @@ export default function SettingsPage() {
             </div>
             <Switch on={showHints} onToggle={() => setShowHints(!showHints)} label="Show hints" help="In-game hint availability" />
             <Switch on={autoPromote} onToggle={() => setAutoPromote(!autoPromote)} label="Auto-promote" help="Auto-queen on promotion" />
+            <Switch on={confirmMove} onToggle={() => setConfirmMove(!confirmMove)} label="Confirm Move" help="Require confirmation to send move" />
           </section>
 
           <section style={{ background: '#1a1a2e', borderRadius: 14, padding: 18, border: '1px solid rgba(212,175,55,0.12)' }}>
@@ -232,14 +230,39 @@ export default function SettingsPage() {
               ))}
             </div>
             <Switch on={showCoords} onToggle={() => setShowCoords(!showCoords)} label="Coordinates" help="Show rank & file labels" />
-            <Switch on={animationsEnabled} onToggle={() => setAnimationsEnabled(!animationsEnabled)} label="Animations" help="Piece motion effects" />
+            <div style={{ marginTop: '16px' }}>
+              <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 8 }}>Animation Speed</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {['slow', 'normal', 'instant'].map(s => (
+                  <button key={s} type="button" style={pill(animationSpeed === s)} onClick={() => setAnimationSpeed(s)}>
+                    {s.charAt(0).toUpperCase() + s.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div style={{ marginTop: '16px' }}>
+              <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 8 }}>Highlight Style</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {['dot', 'arrow', 'glow'].map(s => (
+                  <button key={s} type="button" style={pill(highlightStyle === s)} onClick={() => setHighlightStyle(s)}>
+                    {s.charAt(0).toUpperCase() + s.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
           </section>
         </div>
 
         <section style={{ background: '#1a1a2e', borderRadius: 14, padding: 18, marginTop: 20, border: '1px solid rgba(212,175,55,0.12)' }}>
           <h2 style={{ fontFamily: 'Cinzel, serif', color: '#d4af37', marginBottom: 12 }}>Audio</h2>
-          <Switch on={soundEnabled} onToggle={() => setSoundEnabled(!soundEnabled)} label="Sound effects" help="Moves, captures, check" />
-          <Switch on={musicEnabled} onToggle={() => setMusicEnabled(!musicEnabled)} label="Music" help="Ambient music (placeholder)" />
+          <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 8 }}>Move Sound</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {['wood', 'digital', 'silent'].map(s => (
+              <button key={s} type="button" style={pill(soundTheme === s)} onClick={() => { setSoundTheme(s); if(s!=='silent') showToast(`${s} sound selected`, 'info'); }}>
+                {s.charAt(0).toUpperCase() + s.slice(1)}
+              </button>
+            ))}
+          </div>
         </section>
 
         <button

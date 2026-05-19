@@ -14,11 +14,9 @@ const GameContext = createContext(null);
 
 const BOARD_THEMES = {
   classic:  { light: '#f0d9b5', dark: '#b58863', name: 'Classic', accent: '#c4a028' },
-  walnut:   { light: '#ecdab9', dark: '#8b5e3c', name: 'Walnut',  accent: '#c47a28' },
-  neon:     { light: '#1a1a4e', dark: '#0d0d2b', name: 'Neon',    accent: '#4488ff' },
-  marble:   { light: '#e8e8e8', dark: '#3a3a3a', name: 'Marble',  accent: '#888888' },
-  emerald:  { light: '#d4e8d4', dark: '#2d6a4f', name: 'Emerald', accent: '#2d9e6a' },
-  midnight: { light: '#2a2a4a', dark: '#12121f', name: 'Midnight', accent: '#8866ff' },
+  ocean:    { light: '#dee3e6', dark: '#8ca2ad', name: 'Ocean',   accent: '#4a728a' },
+  wood:     { light: '#f0c070', dark: '#8a4f2a', name: 'Wood',    accent: '#734122' },
+  midnight: { light: '#6f8fa4', dark: '#2e4057', name: 'Midnight',accent: '#8866ff' },
 };
 
 const initialDifficulty = parseInt(localStorage.getItem('chess_difficulty')) || 3;

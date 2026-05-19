@@ -3,17 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import PageShell from '../components/PageShell'
 import { readStats, readElo } from '../utils/chessStats'
 
-const AI_PLAYERS = [
-  { name: 'Magnus_Bot', elo: 2850, wins: 1240, country: '🇳🇴' },
-  { name: 'Hikaru_AI', elo: 2750, wins: 980, country: '🇺🇸' },
-  { name: 'DeepBlue_v2', elo: 2680, wins: 876, country: '🤖' },
-  { name: 'ChessWizard', elo: 2100, wins: 340, country: '🇩🇪' },
-  { name: 'PawnStar', elo: 1850, wins: 220, country: '🇧🇷' },
-  { name: 'RookRider', elo: 1600, wins: 145, country: '🇮🇳' },
-  { name: 'KnightMare', elo: 1400, wins: 89, country: '🇬🇧' },
-  { name: 'BishopBoss', elo: 1200, wins: 54, country: '🇯🇵' },
-  { name: 'EndgamePro', elo: 1050, wins: 28, country: '🇦🇺' },
-]
+import { DEMO_PLAYERS } from '../data/demoData'
 
 export default function LeaderboardPage() {
   const navigate = useNavigate()
@@ -24,10 +14,11 @@ export default function LeaderboardPage() {
   const myStats = readStats()
 
   const rows = useMemo(() => {
-    const me = { name: 'You', elo: myElo, wins: myStats.wins || 0, country: '🇮🇳', isUser: true }
-    const all = [...AI_PLAYERS, me].sort((a, b) => b.elo - a.elo)
-    return all.map((r, i) => ({ ...r, rank: i + 1 }))
-  }, [myElo, myStats.wins])
+    return DEMO_PLAYERS.map(p => ({
+      ...p,
+      isUser: p.name === 'Aum_Patel'
+    }));
+  }, [])
 
   const filtered = useMemo(() => rows.filter((r) => r.name.toLowerCase().includes(q.trim().toLowerCase())), [rows, q])
 
@@ -139,7 +130,7 @@ export default function LeaderboardPage() {
                   <div
                     style={{
                       display: 'grid',
-                      gridTemplateColumns: '48px 40px 1fr 80px 72px',
+                      gridTemplateColumns: '48px 1fr 80px 100px 60px',
                       gap: 8,
                       fontSize: 12,
                       opacity: 0.7,
@@ -147,17 +138,17 @@ export default function LeaderboardPage() {
                     }}
                   >
                     <span>#</span>
-                    <span />
                     <span>Name</span>
-                    <span>ELO</span>
-                    <span>Wins</span>
+                    <span>Rating</span>
+                    <span>W / L / D</span>
+                    <span>Streak</span>
                   </div>
                   {filtered.map((r) => (
                     <div
                       key={r.name + r.rank}
                       style={{
                         display: 'grid',
-                        gridTemplateColumns: '48px 40px 1fr 80px 72px',
+                        gridTemplateColumns: '48px 1fr 80px 100px 60px',
                         gap: 8,
                         alignItems: 'center',
                         padding: '10px 12px',
@@ -170,10 +161,12 @@ export default function LeaderboardPage() {
                       <span>
                         {r.rank === 1 ? '🥇' : r.rank === 2 ? '🥈' : r.rank === 3 ? '🥉' : r.rank}
                       </span>
-                      <span>{r.country}</span>
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</span>
-                      <span style={{ color: '#d4af37' }}>{r.elo}</span>
-                      <span>{r.wins}</span>
+                      <span style={{ color: '#d4af37' }}>{r.rating}</span>
+                      <span style={{ opacity: 0.8, fontSize: '0.9em' }}>{r.wins}/{r.losses}/{r.draws}</span>
+                      <span style={{ color: r.streak > 0 ? '#22c55e' : r.streak < 0 ? '#ef4444' : '#94a3b8' }}>
+                        {r.streak > 0 ? `+${r.streak}` : r.streak}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -196,11 +189,18 @@ export default function LeaderboardPage() {
                       <div style={{ fontSize: 20 }}>{r.rank <= 3 ? ['🥇', '🥈', '🥉'][r.rank - 1] : `#${r.rank}`}</div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {r.country} {r.name}
+                          {r.name}
                         </div>
-                        <div style={{ fontSize: 12, opacity: 0.75 }}>Wins {r.wins}</div>
+                        <div style={{ fontSize: 12, opacity: 0.75 }}>
+                          {r.wins}W {r.losses}L {r.draws}D
+                        </div>
                       </div>
-                      <div style={{ color: '#d4af37', fontWeight: 800 }}>{r.elo}</div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ color: '#d4af37', fontWeight: 800 }}>{r.rating}</div>
+                        <div style={{ fontSize: 12, color: r.streak > 0 ? '#22c55e' : r.streak < 0 ? '#ef4444' : '#94a3b8' }}>
+                          Streak: {r.streak > 0 ? `+${r.streak}` : r.streak}
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>

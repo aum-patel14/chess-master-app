@@ -3,7 +3,15 @@ import { X, Cpu } from 'lucide-react';
 
 export default function PlayAIModal({ show, onClose, onStart }) {
   const [difficulty, setDifficulty] = useState(3);
-  const [color, setColor] = useState('w'); // 'w', 'b', or 'r' (random)
+  const [color, setColor] = useState('w');
+
+  const AI_LEVELS = [
+    { level: 1, label: "Beginner", elo: 600, depth: 1, description: "Makes random moves" },
+    { level: 2, label: "Casual", elo: 1000, depth: 3, description: "Avoids obvious blunders" },
+    { level: 3, label: "Club", elo: 1400, depth: 6, description: "Plays solid openings" },
+    { level: 4, label: "Advanced", elo: 1800, depth: 10, description: "Finds tactical threats" },
+    { level: 5, label: "Master", elo: 2800, depth: 20, description: "Near-perfect play" }
+  ];
 
   if (!show) return null;
 
@@ -27,27 +35,28 @@ export default function PlayAIModal({ show, onClose, onStart }) {
         <div style={{ marginBottom: '24px' }}>
           <label style={labelStyle}>Difficulty</label>
           <div style={{ display: 'flex', gap: '8px' }}>
-            {[1, 2, 3, 4, 5].map((level) => (
+            {AI_LEVELS.map((ai) => (
               <button 
-                key={level}
+                key={ai.level}
                 style={{
                   ...levelBtnStyle,
-                  background: difficulty === level ? 'var(--gold)' : 'var(--bg-input)',
-                  color: difficulty === level ? '#fff' : 'var(--text-primary)',
-                  borderColor: difficulty === level ? 'var(--gold)' : 'var(--border)'
+                  background: difficulty === ai.level ? 'var(--gold)' : 'var(--bg-input)',
+                  color: difficulty === ai.level ? '#fff' : 'var(--text-primary)',
+                  borderColor: difficulty === ai.level ? 'var(--gold)' : 'var(--border)'
                 }}
-                onClick={() => setDifficulty(level)}
+                onClick={() => setDifficulty(ai.level)}
               >
-                {level}
+                {ai.level}
               </button>
             ))}
           </div>
-          <div style={{ textAlign: 'center', marginTop: '8px', fontSize: '12px', color: 'var(--text-secondary)' }}>
-            {difficulty === 1 ? 'Beginner (New to chess)' :
-             difficulty === 2 ? 'Easy (Casual player)' :
-             difficulty === 3 ? 'Medium (Intermediate)' :
-             difficulty === 4 ? 'Hard (Advanced)' :
-             'Expert (Master level)'}
+          <div style={{ textAlign: 'center', marginTop: '12px', minHeight: '40px' }}>
+            <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--gold)' }}>
+              {AI_LEVELS[difficulty - 1].label} ({AI_LEVELS[difficulty - 1].elo} ELO)
+            </div>
+            <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+              {AI_LEVELS[difficulty - 1].description}
+            </div>
           </div>
         </div>
 

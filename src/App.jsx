@@ -27,6 +27,7 @@ const LeaderboardPage = lazy(() => import('./pages/LeaderboardPage'));
 const AchievementsPage = lazy(() => import('./pages/AchievementsPage'));
 const LearnPage = lazy(() => import('./pages/LearnPage'));
 const GameHistoryPage = lazy(() => import('./pages/GameHistoryPage'));
+const TournamentsPage = lazy(() => import('./pages/TournamentsPage'));
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
 const DemoPage = lazy(() => import('./pages/DemoPage'));
 
@@ -72,6 +73,7 @@ function RouteSwitch() {
             <Route path="/achievements" element={<ErrorBoundary><AchievementsPage /></ErrorBoundary>} />
             <Route path="/settings" element={<ErrorBoundary><SettingsPage /></ErrorBoundary>} />
             <Route path="/history" element={<ErrorBoundary><GameHistoryPage /></ErrorBoundary>} />
+            <Route path="/tournaments" element={<ErrorBoundary><TournamentsPage /></ErrorBoundary>} />
             <Route path="/privacy" element={<ErrorBoundary><PrivacyPolicy /></ErrorBoundary>} />
             <Route path="/watch" element={<ErrorBoundary><DemoPage /></ErrorBoundary>} />
             <Route path="/train/*" element={<ErrorBoundary><DemoPage /></ErrorBoundary>} />

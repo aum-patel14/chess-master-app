@@ -3,10 +3,13 @@
 .board-container {
   position: relative;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  flex: 1;
-  padding: 20px;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 10px;
   touch-action: none;
   -webkit-user-select: none;
   user-select: none;
@@ -29,7 +32,12 @@
 .board-frame {
   position: relative;
   z-index: 1;
-  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
+  padding: 8px;
+  box-sizing: border-box;
   border-radius: var(--radius-md);
   background: #1A1208;
   border: 2px solid var(--gold);
@@ -76,6 +84,8 @@
 .board-wrapper {
   position: relative;
   display: flex;
+  flex: 1;
+  width: 100%;
   flex-direction: column;
   align-items: center;
   gap: 2px;
@@ -83,53 +93,40 @@
 
 .board-row-container {
   display: flex;
+  flex: 1;
+  width: 100%;
   align-items: center;
   gap: 4px;
 }
 
-/* ── Coordinate Labels ── */
-.coord-row {
-  display: flex;
-  align-items: center;
-}
-
-.coord-col {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-around;
-}
-
-.coord-corner {
-  width: 18px;
-  height: 18px;
-}
-
-.coord-label {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 12.5%;
-  font-family: 'JetBrains Mono', monospace;
+.inner-coord {
+  position: absolute;
+  font-family: 'JetBrains Mono', var(--font-main);
   font-size: 11px;
-  color: var(--gold);
-  opacity: 0.7;
-  -webkit-user-select: none;
+  font-weight: 600;
+  opacity: 0.85;
+  pointer-events: none;
   user-select: none;
+  z-index: 1;
 }
 
-.coord-files .coord-label {
-  width: 12.5%;
-  height: 18px;
+.rank-coord {
+  top: 2px;
+  left: 3px;
+}
+
+.file-coord {
+  bottom: 1px;
+  right: 3px;
 }
 
 /* ── Chess Board Grid ── */
 .chess-board {
   display: grid;
+  flex: 1;
+  width: 100%;
   grid-template-columns: repeat(8, 1fr);
   grid-template-rows: repeat(8, 1fr);
-  width: min(80vw, 80vh, 540px);
-  height: min(80vw, 80vh, 540px);
   border-radius: 2px;
   overflow: hidden;
   position: relative;
@@ -192,17 +189,22 @@
 }
 
 /* Last move */
-.board-square.last-move::before {
-  background: rgba(212,175,55,0.15) !important;
+.dark-square.last-move::before {
+  background: rgba(255, 255, 0, 0.4) !important;
 }
 
-.board-square.selected.last-move::before {
-  background: rgba(212,175,55,0.45) !important;
+.light-square.last-move::before {
+  background: rgba(255, 255, 0, 0.3) !important;
 }
 
 /* King in check */
 .board-square.in-check {
   animation: checkFlash 0.55s ease infinite;
+}
+
+@keyframes checkFlash {
+  0%, 100% { background-color: rgba(255, 0, 0, 0.3); }
+  50% { background-color: rgba(255, 0, 0, 0.6); }
 }
 
 .board-square.in-check::after {
@@ -231,15 +233,10 @@
 
 /* ── Responsive ── */
 @media (max-width: 600px) {
-  .coord-label {
-    width: 14px;
-    font-size: 9px;
+  .board-frame {
+    padding: 10px;
+    border-width: 6px;
   }
-  .coord-files .coord-label {
-    height: 14px;
-  }
-  .board-frame { padding: 14px; }
-  .board-container { padding: 8px; }
 }
 
 @media (min-width: 1400px) {

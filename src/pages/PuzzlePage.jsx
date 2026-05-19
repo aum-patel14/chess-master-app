@@ -16,41 +16,32 @@ const PUZZLES = [
   {
     id: 'p-m1',
     fen: '7k/5Q2/6K1/8/8/8/8/8 w - - 0 1',
-    solution: ['Qf8#'],
+    solution: ['Qg7'],
     difficulty: 'Easy',
     category: 'Checkmate',
   },
   {
     id: 'p-t1',
-    fen: '4k3/8/8/8/8/8/4R3/4K3 w - - 0 1',
-    solution: ['Re8#'],
+    fen: 'r1bqk2r/pppp1ppp/2n2n2/2b1p3/2B1P3/2N2N2/PPPP1PPP/R1BQK2R w KQkq - 0 1',
+    solution: ['Bxf7+'],
     difficulty: 'Medium',
     category: 'Tactics',
   },
   {
     id: 'p-e1',
-    fen: '8/5k2/8/8/8/3K4/4P3/8 w - - 0 1',
+    fen: '8/8/8/8/8/3K4/4P3/5k2 w - - 0 1',
     solution: ['e4'],
     difficulty: 'Easy',
     category: 'Endgame',
   },
   {
     id: 'p-o1',
-    fen: 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1',
+    fen: 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1',
     solution: ['e5'],
     difficulty: 'Easy',
     category: 'Opening',
   },
 ]
-
-const UNICODE = {
-  p: { w: '♙', b: '♟' },
-  n: { w: '♘', b: '♞' },
-  b: { w: '♗', b: '♝' },
-  r: { w: '♖', b: '♜' },
-  q: { w: '♕', b: '♛' },
-  k: { w: '♔', b: '♚' },
-}
 
 function MiniBoard({ chess, selected, legal, onSquare, highlights }) {
   const board = chess.board()
@@ -78,6 +69,13 @@ function MiniBoard({ chess, selected, legal, onSquare, highlights }) {
           const ring = highlights?.piece === sq
           const hFrom = highlights?.from === sq
           const hTo = highlights?.to === sq
+          
+          let pieceImg = null;
+          if (cell) {
+            const key = `${cell.color}${cell.type.toUpperCase()}`;
+            pieceImg = <img src={`${import.meta.env.BASE_URL}pieces/cburnett/${key}.svg`} style={{ width: '85%', height: '85%', pointerEvents: 'none' }} alt={key} />
+          }
+
           return (
             <button
               type="button"
@@ -91,7 +89,6 @@ function MiniBoard({ chess, selected, legal, onSquare, highlights }) {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: 'clamp(22px, 7vw, 36px)',
                 cursor: 'pointer',
                 background: dark ? '#b58863' : '#f0d9b5',
                 boxShadow: isSel
@@ -106,7 +103,7 @@ function MiniBoard({ chess, selected, legal, onSquare, highlights }) {
                 outline: isLeg ? '2px dashed rgba(34,197,94,0.7)' : 'none',
               }}
             >
-              {cell ? UNICODE[cell.type][cell.color] : ''}
+              {pieceImg}
             </button>
           )
         })

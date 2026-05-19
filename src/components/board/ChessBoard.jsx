@@ -6,6 +6,7 @@ import ChessPiece from './ChessPiece';
 import MoveIndicator from './MoveIndicator';
 import PromotionModal from './PromotionModal';
 import ParticleCanvas, { triggerCaptureEffect, triggerMoveEffect } from './ParticleCanvas';
+import { usePiecePositions } from './usePiecePositions';
 
 const FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 const RANKS = ['8', '7', '6', '5', '4', '3', '2', '1'];
@@ -21,6 +22,7 @@ export default function ChessBoard() {
   const effectiveFen = reviewFen || fen;
   const chess = useMemo(() => new Chess(effectiveFen), [effectiveFen]);
   const board = chess.board();
+  const pieces = usePiecePositions(effectiveFen);
 
   const flippedView = (playerColor === 'b') !== !!boardFlipped;
 
@@ -115,9 +117,19 @@ export default function ChessBoard() {
   // Neon glow overlay for neon theme
   const isNeonTheme = currentTheme.name === 'Neon' || currentTheme.name === 'Midnight';
 
+  const getSquareOffset = (squareName) => {
+    const file = squareName[0];
+    const rank = squareName[1];
+    const fileIdx = FILES.indexOf(file);
+    const rankIdx = RANKS.indexOf(rank);
+    const x = flippedView ? 7 - fileIdx : fileIdx;
+    const y = flippedView ? 7 - rankIdx : rankIdx;
+    return { left: `${x * 12.5}%`, top: `${y * 12.5}%` };
+  };
+
   return (
     <div className="board-container">
-      <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%', marginBottom: '4px' }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%', maxWidth: '600px', marginBottom: '4px' }}>
         {gameMode === 'vsAI' && (
           <div style={{ 
             marginRight: 'auto', 
@@ -167,23 +179,7 @@ export default function ChessBoard() {
         <div className="frame-corner frame-br">♜</div>
 
         <div className="board-wrapper">
-          {/* Top file labels */}
-          {showCoords && (
-            <div className="coord-row coord-files">
-              <div className="coord-corner" />
-              {files.map(f => <div key={f} className="coord-label">{f}</div>)}
-              <div className="coord-corner" />
-            </div>
-          )}
-
           <div className="board-row-container">
-            {/* Left rank labels */}
-            {showCoords && (
-              <div className="coord-col coord-ranks">
-                {ranks.map(r => <div key={r} className="coord-label">{r}</div>)}
-              </div>
-            )}
-
             {/* The board itself */}
             <div
               ref={boardRef}
@@ -204,12 +200,16 @@ export default function ChessBoard() {
                   const isValidTarget = validMoves.includes(squareName);
                   const sqColor = getSquareColor(file, rank);
 
+                  const isFileEdge = flippedView ? rank === '8' : rank === '1';
+                  const isRankEdge = flippedView ? file === 'h' : file === 'a';
+                  const labelColor = sqColor === 'light' ? currentTheme.dark : currentTheme.light;
+
                   return (
                     <div
                       key={squareName}
                       id={`sq-${squareName}`}
                       data-square={squareName}
-                      className={getSquareClasses(squareName)}
+                      className={`${getSquareClasses(squareName)} ${sqColor}-square`}
                       style={{ 
                         backgroundColor: sqColor === 'light' ? currentTheme.light : currentTheme.dark,
                         width: '100%',
@@ -223,17 +223,16 @@ export default function ChessBoard() {
                       onTouchStart={(e) => handleTouchStart(e, squareName)}
                       onTouchEnd={(e) => handleTouchEnd(e, squareName)}
                     >
-                      {/* Piece */}
-                      {cell && (
-                        <ChessPiece
-                          piece={cell}
-                          square={squareName}
-                          isSelected={selectedSquare === squareName}
-                          isLanding={movingPiece === squareName}
-                          animationsEnabled={animationsEnabled}
-                          onDragStart={handleDragStart}
-                          animStyle={{ animation: (movingPiece === squareName) ? 'slideIn 0.2s ease' : 'none' }}
-                        />
+                      {/* Inner Coordinates */}
+                      {showCoords && isRankEdge && (
+                        <div className="inner-coord rank-coord" style={{ color: labelColor }}>
+                          {rank}
+                        </div>
+                      )}
+                      {showCoords && isFileEdge && (
+                        <div className="inner-coord file-coord" style={{ color: labelColor }}>
+                          {file}
+                        </div>
                       )}
 
                       {/* Move dot / capture ring */}
@@ -244,6 +243,37 @@ export default function ChessBoard() {
                   );
                 })
               )}
+
+              {/* Pieces Layer */}
+              {pieces.map((p) => {
+                const isSelected = selectedSquare === p.square;
+                const isLanding = movingPiece === p.square;
+                return (
+                  <div
+                    key={p.id}
+                    style={{
+                      position: 'absolute',
+                      width: '12.5%',
+                      height: '12.5%',
+                      ...getSquareOffset(p.square),
+                      zIndex: isSelected || isLanding || draggedFrom === p.square ? 10 : 2,
+                      pointerEvents: 'none' // Let events pass through to grid cells, except piece drag
+                    }}
+                  >
+                    <div style={{ pointerEvents: 'auto', width: '100%', height: '100%' }}>
+                      <ChessPiece
+                        piece={p}
+                        square={p.square}
+                        isSelected={isSelected}
+                        animationsEnabled={animationsEnabled}
+                        onDragStart={handleDragStart}
+                        onDrop={handleDrop}
+                        animStyle={{ animation: isLanding ? 'slideIn 0.2s ease' : 'none' }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
 
               {/* Particle overlay */}
               <ParticleCanvas boardRef={boardRef} />
@@ -261,23 +291,7 @@ export default function ChessBoard() {
                 />
               )}
             </div>
-
-            {/* Right rank labels */}
-            {showCoords && (
-              <div className="coord-col coord-ranks">
-                {ranks.map(r => <div key={r} className="coord-label">{r}</div>)}
-              </div>
-            )}
           </div>
-
-          {/* Bottom file labels */}
-          {showCoords && (
-            <div className="coord-row coord-files">
-              <div className="coord-corner" />
-              {files.map(f => <div key={f} className="coord-label">{f}</div>)}
-              <div className="coord-corner" />
-            </div>
-          )}
         </div>
       </div>
 

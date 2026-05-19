@@ -38,30 +38,102 @@ class SoundManager {
   playMove() {
     if (!this.enabled) return;
     this.init(); this.resume();
+    
+    const t = this.ctx.currentTime;
+    
+    // Thud component (low frequency)
     const osc = this.ctx.createOscillator();
-    const gain = this._gain(0.15);
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(520, this.ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(380, this.ctx.currentTime + 0.08);
-    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.15);
-    osc.connect(gain);
-    osc.start();
-    osc.stop(this.ctx.currentTime + 0.15);
+    const oscGain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(150, t);
+    osc.frequency.exponentialRampToValueAtTime(40, t + 0.05);
+    
+    oscGain.gain.setValueAtTime(0, t);
+    oscGain.gain.linearRampToValueAtTime(0.8 * this.volume, t + 0.01);
+    oscGain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+    
+    osc.connect(oscGain);
+    oscGain.connect(this.ctx.destination);
+    osc.start(t);
+    osc.stop(t + 0.1);
+
+    // Clack component (noise burst)
+    const bufferSize = this.ctx.sampleRate * 0.05; // 50ms noise
+    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = Math.random() * 2 - 1;
+    }
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = buffer;
+    
+    // Filter noise to sound like wood
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = 1200;
+    filter.Q.value = 1.5;
+
+    const noiseGain = this.ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.8 * this.volume, t);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+    
+    noise.connect(filter);
+    filter.connect(noiseGain);
+    noiseGain.connect(this.ctx.destination);
+    noise.start(t);
   }
 
   playCapture() {
     if (!this.enabled) return;
     this.init(); this.resume();
-    const buf = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.2, this.ctx.sampleRate);
-    const data = buf.getChannelData(0);
-    for (let i = 0; i < data.length; i++) {
-      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / data.length, 2);
+    
+    const t = this.ctx.currentTime;
+    
+    // Aggressive thud
+    const osc = this.ctx.createOscillator();
+    const oscGain = this.ctx.createGain();
+    osc.type = 'square'; // harsher
+    osc.frequency.setValueAtTime(200, t);
+    osc.frequency.exponentialRampToValueAtTime(30, t + 0.08);
+    
+    oscGain.gain.setValueAtTime(0, t);
+    oscGain.gain.linearRampToValueAtTime(0.6 * this.volume, t + 0.01);
+    oscGain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+    
+    // Lowpass filter for the square wave
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(2000, t);
+    filter.frequency.exponentialRampToValueAtTime(100, t + 0.1);
+    
+    osc.connect(filter);
+    filter.connect(oscGain);
+    oscGain.connect(this.ctx.destination);
+    osc.start(t);
+    osc.stop(t + 0.15);
+
+    // Crunch component (longer noise burst)
+    const bufferSize = this.ctx.sampleRate * 0.15;
+    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = Math.random() * 2 - 1;
     }
-    const src = this.ctx.createBufferSource();
-    src.buffer = buf;
-    const gain = this._gain(0.3);
-    src.connect(gain);
-    src.start();
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = buffer;
+    
+    const noiseFilter = this.ctx.createBiquadFilter();
+    noiseFilter.type = 'highpass';
+    noiseFilter.frequency.value = 800;
+
+    const noiseGain = this.ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.5 * this.volume, t);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+    
+    noise.connect(noiseFilter);
+    noiseFilter.connect(noiseGain);
+    noiseGain.connect(this.ctx.destination);
+    noise.start(t);
   }
 
   playCheck() {

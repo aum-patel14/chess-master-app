@@ -92,21 +92,24 @@ export function AuthProvider({ children }) {
     }
 
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setCurrentUser(user);
-      
       if (user && db) {
+        setCurrentUser(user);
         // Fetch custom user data from Firestore
         try {
           const userDocRef = doc(db, 'users', user.uid);
           const docSnap = await getDoc(userDocRef);
           if (docSnap.exists()) {
             setUserData(docSnap.data());
+          } else {
+            setUserData(null);
           }
         } catch (error) {
           console.error("Error fetching user data:", error);
         }
       } else {
-        setUserData(null);
+        // GUEST MODE FALLBACK (Phase 1)
+        setCurrentUser({ uid: "guest", email: "guest@chessmaster.com", displayName: "Aum_Patel" });
+        setUserData({ id: "guest", name: "Aum_Patel", rating: 2510, wins: 89, losses: 40, draws: 14, country: "IN" });
       }
       
       setLoading(false);

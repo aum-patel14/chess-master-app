@@ -19,35 +19,47 @@ export default function PromotionModal({ color, file, rank, flipped }) {
   const fileIdx = flipped ? [...FILES].reverse().indexOf(file) : FILES.indexOf(file);
   const rankIdx = flipped ? [...RANKS].reverse().indexOf(rank) : RANKS.indexOf(rank);
 
+  // Position it exactly over the promotion square, extending downwards or upwards
   const left = `${fileIdx * 12.5}%`;
-  // If white promotes on rank 8, rankIdx is 0. 
-  // If it's a bottom-aligned promotion, we might want to offset so it doesn't clip off the bottom.
-  // The user says "directly on the board at the promotion square".
   
-  // 4 pieces stacked vertically or horizontally? 
-  // "Display 4 piece options in a row (queen, rook, bishop, knight)" -> Row!
-  const top = `${rankIdx * 12.5}%`;
+  // A column of 4 pieces works best.
+  // If we're at the top (rankIdx < 4), the modal extends down from the square.
+  // If we're at the bottom (rankIdx >= 4), the modal extends up from the square.
+  const isTopHalf = rankIdx < 4;
 
+  const top = isTopHalf ? `${rankIdx * 12.5}%` : 'auto';
+  const bottom = !isTopHalf ? `${(7 - rankIdx) * 12.5}%` : 'auto';
+
+  // We want the modal to be exactly one square wide, and 4 squares tall.
   return (
     <div className="promotion-modal-overlay">
       <div 
         className="promotion-modal-container"
         style={{
           left,
-          top: rank === '8' || rank === '1' ? (rankIdx < 4 ? top : 'auto') : top,
-          bottom: rankIdx >= 4 ? `${(7 - rankIdx) * 12.5}%` : 'auto',
-          transform: fileIdx > 4 ? 'translateX(-75%)' : 'none' // shift left if on right edge
+          top,
+          bottom,
+          width: '12.5%',
+          height: '50%',
+          flexDirection: isTopHalf ? 'column' : 'column-reverse'
         }}
       >
-        {PIECES.map(type => (
-          <button
-            key={type}
-            className="promotion-modal-btn"
-            onClick={() => handlePromotion(type)}
-          >
-            {PIECE_SYMBOLS[color][type]}
-          </button>
-        ))}
+        {PIECES.map(type => {
+          const key = `${color}${type.toUpperCase()}`;
+          const src = `${import.meta.env.BASE_URL}pieces/cburnett/${key}.svg`;
+          return (
+            <button
+              key={type}
+              className="promotion-modal-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                handlePromotion(type);
+              }}
+            >
+              <img src={src} alt={type} style={{ width: '100%', height: '100%', pointerEvents: 'none' }} />
+            </button>
+          );
+        })}
       </div>
     </div>
   );

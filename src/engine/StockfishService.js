@@ -74,10 +74,10 @@ export class StockfishService {
   get difficultySettings() {
     return {
       1: { depth: 1, movetime: 150,  skillLevel: 0  },
-      2: { depth: 2, movetime: 400,  skillLevel: 5  },
-      3: { depth: 4, movetime: 800,  skillLevel: 10 },
-      4: { depth: 6, movetime: 1500, skillLevel: 15 },
-      5: { depth: 8, movetime: 2500, skillLevel: 20 },
+      2: { depth: 3, movetime: 400,  skillLevel: 5  },
+      3: { depth: 6, movetime: 800,  skillLevel: 10 },
+      4: { depth: 10, movetime: 1500, skillLevel: 15 },
+      5: { depth: 20, movetime: 2500, skillLevel: 20 },
     };
   }
 
