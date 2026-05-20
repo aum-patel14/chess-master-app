@@ -1,13 +1,21 @@
 import './CapturedPieces.css';
 
 const PIECE_UNICODE = {
-  k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟',
+  q: '♛', r: '♜', b: '♝', n: '♞', p: '♟',
+  // White pieces (inverted)
+  Q: '♕', R: '♖', B: '♗', N: '♘', P: '♙',
 };
 
 const PIECE_VALUES = { q: 9, r: 5, b: 3, n: 3, p: 1, k: 0 };
 
+/**
+ * pieces: array of { type, color } or just type strings, from the chess history
+ * color: 'w' or 'b' — the CAPTURING side (what they've taken)
+ */
 export default function CapturedPieces({ pieces, color }) {
-  if (!pieces || pieces.length === 0) return null;
+  if (!pieces || pieces.length === 0) return (
+    <div className="captured-row-empty" />
+  );
 
   const getType = (p) => {
     if (!p) return '';
@@ -15,19 +23,27 @@ export default function CapturedPieces({ pieces, color }) {
     return t ? t.toLowerCase() : '';
   };
 
-  const sorted = [...pieces].sort((a, b) => (PIECE_VALUES[getType(b)] || 0) - (PIECE_VALUES[getType(a)] || 0));
-  const advantage = pieces.reduce((sum, p) => sum + (PIECE_VALUES[getType(p)] || 0), 0);
+  const sorted = [...pieces].sort((a, b) =>
+    (PIECE_VALUES[getType(b)] || 0) - (PIECE_VALUES[getType(a)] || 0)
+  );
 
   return (
     <div className={`captured-row captured-${color}`}>
-      <div className="captured-pieces">
-        {sorted.map((p, i) => (
-          <span key={i} className={`cap-piece cap-${color}`}>
-            {PIECE_UNICODE[getType(p)]}
-          </span>
-        ))}
-      </div>
-      {/* We don't need to show advantage here, it's shown in eval bar or player card! */}
+      {sorted.map((p, i) => {
+        const type = getType(p);
+        // captured pieces are the opponent's color
+        const pieceColor = color === 'w' ? 'b' : 'w'; // captured piece color
+        const src = `/chess-master-app/pieces/cburnett/${pieceColor}${type.toUpperCase()}.svg`;
+        return (
+          <img
+            key={i}
+            src={src}
+            alt={type}
+            className="cap-piece-img"
+            title={type}
+          />
+        );
+      })}
     </div>
   );
 }

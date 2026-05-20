@@ -1,23 +1,32 @@
-/* Move indicator styles — appended to ChessPiece.css namespace */
+/* Move Indicator — spec-compliant green highlights */
 
 .move-indicator {
   position: absolute;
-  border-radius: 50%;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   pointer-events: none;
   z-index: 5;
 }
 
-/* Empty square: dark circle, 18% radius -> 36% diameter */
-.move-indicator.empty {
-  width: 36%;
-  height: 36%;
-  background-color: rgba(0, 0, 0, 0.2);
+/* Empty square: green dot in the center */
+.move-indicator.empty::after {
+  content: '';
+  width: 32%;
+  height: 32%;
+  border-radius: 50%;
+  background: rgba(0, 200, 100, 0.55);
+  box-shadow: 0 0 6px rgba(0, 200, 100, 0.3);
 }
 
-/* Capture square: hollow ring border */
-.move-indicator.capture {
-  width: 90%;
-  height: 90%;
-  border: 5px solid rgba(0, 0, 0, 0.2);
-  background-color: transparent;
+/* Capture square: green ring around the edge */
+.move-indicator.capture::after {
+  content: '';
+  position: absolute;
+  inset: 4%;
+  border-radius: 50%;
+  border: 4px solid rgba(0, 200, 100, 0.65);
+  background: transparent;
+  box-shadow: inset 0 0 8px rgba(0, 200, 100, 0.2);
 }

@@ -32,6 +32,7 @@ const initialState = {
   selectedSquare: null,
   validMoves: [],
   lastMove: null,
+  errorSquare: null,          // Square that triggered an illegal move (for shake animation)
   status: { type: 'playing', message: '', winner: null },
   gameMode: 'menu',          // 'menu' | 'vsAI' | 'local' | 'puzzle'
   playerColor: 'w',          // player is white by default
@@ -107,6 +108,7 @@ function gameReducer(state, action) {
         history: [...state.history, move],
         selectedSquare: null,
         validMoves: [],
+        errorSquare: null,
         lastMove: { from: move.from, to: move.to },
         hintSquares: null,
         reviewFen: null,

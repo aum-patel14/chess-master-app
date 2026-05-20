@@ -5,27 +5,25 @@
   background: var(--bg-card);
 }
 
-.history-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border);
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  flex-shrink: 0;
-}
-
-.history-count {
-  font-size: 11px;
-  color: var(--text-muted);
-}
-
 .history-list {
   flex: 1;
   overflow-y: auto;
   padding: 4px 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.history-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.history-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.history-list::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
 }
 
 .history-empty {
@@ -45,7 +43,14 @@
   transition: background 0.1s;
 }
 
-.history-row:nth-child(even) { background: rgba(255,255,255,0.02); }
+.history-row:nth-child(even) {
+  background: rgba(255,255,255,0.02);
+}
+
+/* ── #11: Highlight latest move row ── */
+.history-row-latest {
+  background: rgba(196, 160, 40, 0.08) !important;
+}
 
 .move-num {
   font-size: 11px;
@@ -67,8 +72,10 @@
 .move-white { color: #f0f0f0; }
 .move-black { color: #aaa; }
 
+/* ── #11: Latest move highlighted in gold ── */
 .move-latest {
-  background: rgba(196,160,40,0.15);
-  color: var(--gold-300) !important;
+  background: rgba(196, 160, 40, 0.22);
+  color: var(--gold, #c4a028) !important;
   font-weight: 700;
+  box-shadow: 0 0 6px rgba(196, 160, 40, 0.15);
 }

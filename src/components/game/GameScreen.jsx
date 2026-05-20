@@ -1,5 +1,5 @@
 import './GameScreen.css';
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { Chess } from 'chess.js';
 import { useGame } from '../../context/GameContext';
 import ChessBoard from '../board/ChessBoard';
@@ -47,11 +47,14 @@ export default function GameScreen() {
   const [confirmResign, setConfirmResign] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
 
-  // Trigger Check Toast
+  const prevStatusRef = useRef(null);
+
+  // Trigger Check Toast — only once per new check event (#2)
   useEffect(() => {
-    if (status.type === 'check') {
-      showToast('Check!', 'warning');
+    if (status.type === 'check' && prevStatusRef.current !== 'check') {
+      showToast('⚠ Check!', 'warning', 2000);
     }
+    prevStatusRef.current = status.type;
   }, [status.type, showToast]);
 
   // Game timer (elapsed)
@@ -149,10 +152,18 @@ export default function GameScreen() {
               <ChessBoard />
             </div>
 
-            {/* Below Board Icons */}
+            {/* Below Board Icons — #12 Undo button included */}
             <div className="board-action-row">
               <button className="board-action-btn" title="Flip Board" onClick={() => dispatch({ type: 'TOGGLE_BOARD_FLIP' })}>
                 <RotateCcw size={18} />
+              </button>
+              <button
+                className="board-action-btn"
+                title="Undo Move"
+                onClick={undoMove}
+                disabled={isGameOver || isAIThinking || history.length === 0 || (gameMode === 'vsAI' && history.length < 2)}
+              >
+                ↩
               </button>
               <button className="board-action-btn" title="Resign" onClick={() => { if(confirmResign) { resign(); setConfirmResign(false); } else setConfirmResign(true); }} disabled={isGameOver}>
                 {confirmResign ? '✔' : <Flag size={18} />}

@@ -1,4 +1,4 @@
-/* ChessBoard Styles — Premium Edition */
+/* ChessBoard Styles — Production Edition */
 
 .board-container {
   position: relative;
@@ -15,6 +15,7 @@
   user-select: none;
 }
 
+/* ── Ambient Glow ── */
 .board-glow {
   position: absolute;
   inset: -30px;
@@ -28,6 +29,11 @@
   animation: ambientDrift 8s ease-in-out infinite alternate;
 }
 
+@keyframes ambientDrift {
+  from { opacity: 0.7; transform: scale(1); }
+  to   { opacity: 1;   transform: scale(1.05); }
+}
+
 /* ── Premium Board Frame ── */
 .board-frame {
   position: relative;
@@ -38,9 +44,9 @@
   width: 100%;
   padding: 8px;
   box-sizing: border-box;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-md, 8px);
   background: #1A1208;
-  border: 2px solid var(--gold);
+  border: 2px solid var(--gold, #c4a028);
   box-shadow: 
     0 0 0 1px rgba(212,175,55,0.3),
     0 0 40px rgba(0,0,0,0.8),
@@ -99,13 +105,16 @@
   gap: 4px;
 }
 
+/* ── Coordinate Labels ── */
 .inner-coord {
   position: absolute;
-  font-size: clamp(8px, 2.5vw, 13px);
+  font-size: clamp(8px, 1.6vw, 13px);
   font-weight: 700;
-  opacity: 0.75;
+  opacity: 0.8;
   user-select: none;
   pointer-events: none;
+  z-index: 4;
+  line-height: 1;
 }
 
 .rank-coord {
@@ -118,9 +127,9 @@
   right: 3px;
 }
 
-/* Error Shake Animation */
+/* ── Error Shake Animation (full spec) ── */
 @keyframes shake {
-  0%, 100% { transform: translateX(0); }
+  0%,100% { transform: translateX(0); }
   20% { transform: translateX(-6px); }
   40% { transform: translateX(6px); }
   60% { transform: translateX(-4px); }
@@ -131,10 +140,19 @@
   animation: shake 0.35s ease;
 }
 
-/* Keyboard Navigation Focus */
+/* ── Keyboard Navigation Focus Ring ── */
 .keyboard-focus {
-  box-shadow: inset 0 0 0 4px var(--gold) !important;
   outline: none;
+}
+
+.keyboard-focus::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 3px solid rgba(255, 220, 50, 0.9);
+  box-shadow: inset 0 0 8px rgba(255, 220, 50, 0.4), 0 0 10px rgba(255, 220, 50, 0.3);
+  pointer-events: none;
+  z-index: 8;
 }
 
 .chess-board:focus {
@@ -152,11 +170,17 @@
   border-radius: 2px;
   overflow: hidden;
   position: relative;
-  /* Inner border */
   border: 2px solid rgba(0,0,0,0.6);
   box-shadow:
     inset 0 0 0 1px rgba(255,255,255,0.04),
     inset 0 0 30px rgba(0,0,0,0.3);
+}
+
+/* AI thinking — disable board interaction */
+.chess-board.ai-thinking {
+  pointer-events: none;
+  opacity: 0.9;
+  cursor: wait;
 }
 
 /* Neon board overlay */
@@ -187,9 +211,10 @@
   -webkit-user-select: none;
   user-select: none;
   transition: filter 0.1s ease;
+  overflow: visible;
 }
 
-/* Hover effect — inner shine */
+/* Hover: subtle white shine via pseudo-element */
 .board-square::before {
   content: '';
   position: absolute;
@@ -204,36 +229,36 @@
   background: rgba(255, 255, 255, 0.13);
 }
 
-/* Selected */
-.board-square.selected::before {
-  background: rgba(212,175,55,0.35) !important;
-  box-shadow: inset 0 0 0 2px rgba(212,175,55,0.6);
-}
-
-/* Last move */
+/* ── #3: Last Move Highlight — golden/yellow overlay (rgba(255,200,0,0.35)) ── */
 .dark-square.last-move::before {
-  background: rgba(255, 255, 0, 0.4) !important;
+  background: rgba(255, 200, 0, 0.38) !important;
 }
 
 .light-square.last-move::before {
-  background: rgba(255, 255, 0, 0.3) !important;
+  background: rgba(255, 200, 0, 0.28) !important;
 }
 
-/* King in check */
+/* ── #15: Selected Square — thick blue ring ── */
+.board-square.selected::before {
+  background: rgba(100, 200, 255, 0.25) !important;
+  box-shadow: inset 0 0 0 4px rgba(100, 200, 255, 0.9);
+}
+
+/* ── #2: King in Check — red pulsing glow ── */
 .board-square.in-check {
-  animation: checkFlash 0.55s ease infinite;
+  animation: checkFlash 0.6s ease infinite;
 }
 
 @keyframes checkFlash {
-  0%, 100% { background-color: rgba(255, 0, 0, 0.3); }
-  50% { background-color: rgba(255, 0, 0, 0.6); }
+  0%, 100% { box-shadow: inset 0 0 0 4px rgba(220, 50, 50, 0.85); }
+  50%       { box-shadow: inset 0 0 0 4px rgba(220, 50, 50, 0.3); }
 }
 
 .board-square.in-check::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at center, rgba(255,50,50,0.55) 0%, rgba(255,0,0,0.15) 55%, transparent 100%);
+  background: radial-gradient(circle at center, rgba(255,50,50,0.45) 0%, rgba(255,0,0,0.1) 55%, transparent 100%);
   z-index: 2;
   pointer-events: none;
 }
@@ -249,15 +274,23 @@
 }
 
 @keyframes landingPulse {
-  0% { background: rgba(255,255,255,0.4) !important; }
+  0%   { background: rgba(255,255,255,0.4) !important; }
   100% { background: transparent !important; }
+}
+
+/* Hint highlights */
+.board-square.hint-from {
+  box-shadow: inset 0 0 0 3px rgba(59, 130, 246, 0.95);
+}
+.board-square.hint-to {
+  box-shadow: inset 0 0 0 3px rgba(147, 197, 253, 0.95);
 }
 
 /* ── Responsive ── */
 @media (max-width: 600px) {
   .board-frame {
-    padding: 10px;
-    border-width: 6px;
+    padding: 6px;
+    border-width: 2px;
   }
 }
 
@@ -267,18 +300,45 @@
   }
 }
 
-/* Hint highlights (Stockfish hint) */
-.board-square.hint-from {
-  box-shadow: inset 0 0 0 3px rgba(59, 130, 246, 0.95);
-}
-.board-square.hint-to {
-  box-shadow: inset 0 0 0 3px rgba(147, 197, 253, 0.95);
+/* ── AI Thinking Banner ── */
+.ai-thinking-overlay {
+  position: absolute;
+  top: -36px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(20,20,20,0.92);
+  border: 1px solid var(--gold, #c4a028);
+  border-radius: 20px;
+  padding: 6px 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gold, #c4a028);
+  white-space: nowrap;
+  z-index: 100;
+  pointer-events: none;
+  animation: fadeIn 0.2s ease;
 }
 
-.move-dot {
-  background: rgba(212,175,55,0.4) !important;
-  border-radius: 50% !important;
-  width: 30% !important;
-  height: 30% !important;
-  margin: auto !important;
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(-4px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.ai-thinking-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--gold, #c4a028);
+  animation: dotPulse 1s ease-in-out infinite;
+}
+
+.ai-thinking-dot:nth-child(2) { animation-delay: 0.2s; }
+.ai-thinking-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes dotPulse {
+  0%, 100% { opacity: 0.3; transform: scale(0.7); }
+  50%       { opacity: 1;   transform: scale(1); }
 }

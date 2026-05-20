@@ -16,7 +16,8 @@ export default function ChessBoard() {
   const {
     fen, selectedSquare, validMoves, lastMove,
     checkSquare, showCoords, playerColor, promotionPending,
-    gameMode, aiDifficulty, animationsEnabled, history, aiStatus, hintSquares, boardFlipped, reviewFen
+    gameMode, aiDifficulty, animationsEnabled, history, aiStatus,
+    hintSquares, boardFlipped, reviewFen, isAIThinking, errorSquare
   } = state;
 
   const effectiveFen = reviewFen || fen;
@@ -25,27 +26,28 @@ export default function ChessBoard() {
   const pieces = usePiecePositions(effectiveFen);
 
   const flippedView = (playerColor === 'b') !== !!boardFlipped;
-
   const ranks = flippedView ? [...RANKS].reverse() : RANKS;
   const files = flippedView ? [...FILES].reverse() : FILES;
 
-  // Determine if we should show move indicators
-  const isMultiplayer = gameMode === 'local';
-  const isHardAI = gameMode === 'vsAI' && aiDifficulty > 3;
-  const showMoveIndicators = !isMultiplayer && !isHardAI;
+  // Show move indicators for non-hard AI modes
+  const showMoveIndicators = gameMode !== 'local' && !(gameMode === 'vsAI' && aiDifficulty > 3);
 
   const boardRef = useRef(null);
   const [draggedFrom, setDraggedFrom] = useState(null);
   const [dragOver, setDragOver] = useState(null);
-  const [movingPiece, setMovingPiece] = useState(null); // { from, to }
+  const [movingPiece, setMovingPiece] = useState(null);
   const [keyboardFocus, setKeyboardFocus] = useState(null);
   const prevHistoryLen = useRef(0);
 
-  const handleKeyDown = (e) => {
+  // Touch drag state for following finger
+  const touchDragState = useRef({ active: false, fromSquare: null });
+
+  /* ── Keyboard Navigation (#14) ── */
+  const handleKeyDown = useCallback((e) => {
     if (!keyboardFocus) {
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
         e.preventDefault();
-        setKeyboardFocus(flippedView ? 'h1' : 'a1'); // Start somewhere
+        setKeyboardFocus(flippedView ? 'h1' : 'a8');
       }
       return;
     }
@@ -55,33 +57,43 @@ export default function ChessBoard() {
     let fileIdx = FILES.indexOf(file);
     let rankIdx = RANKS.indexOf(rank);
 
-    if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      rankIdx = flippedView ? rankIdx + 1 : rankIdx - 1;
-    } else if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      rankIdx = flippedView ? rankIdx - 1 : rankIdx + 1;
-    } else if (e.key === 'ArrowLeft') {
-      e.preventDefault();
-      fileIdx = flippedView ? fileIdx + 1 : fileIdx - 1;
-    } else if (e.key === 'ArrowRight') {
-      e.preventDefault();
-      fileIdx = flippedView ? fileIdx - 1 : fileIdx + 1;
-    } else if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      handleSquareClick(keyboardFocus);
-    } else if (e.key === 'Escape') {
-      e.preventDefault();
-      if (selectedSquare) handleSquareClick(selectedSquare); // deselect
-      setKeyboardFocus(null);
+    switch (e.key) {
+      case 'ArrowUp':
+        e.preventDefault();
+        rankIdx = flippedView ? rankIdx + 1 : rankIdx - 1;
+        break;
+      case 'ArrowDown':
+        e.preventDefault();
+        rankIdx = flippedView ? rankIdx - 1 : rankIdx + 1;
+        break;
+      case 'ArrowLeft':
+        e.preventDefault();
+        fileIdx = flippedView ? fileIdx + 1 : fileIdx - 1;
+        break;
+      case 'ArrowRight':
+        e.preventDefault();
+        fileIdx = flippedView ? fileIdx - 1 : fileIdx + 1;
+        break;
+      case 'Enter':
+      case ' ':
+        e.preventDefault();
+        handleSquareClick(keyboardFocus);
+        break;
+      case 'Escape':
+        e.preventDefault();
+        dispatch({ type: 'CLEAR_SELECTION' });
+        setKeyboardFocus(null);
+        return;
+      default:
+        return;
     }
 
     if (fileIdx >= 0 && fileIdx <= 7 && rankIdx >= 0 && rankIdx <= 7) {
       setKeyboardFocus(`${FILES[fileIdx]}${RANKS[rankIdx]}`);
     }
-  };
+  }, [keyboardFocus, flippedView, handleSquareClick, dispatch]);
 
-  // Trigger particle effects when moves happen
+  /* ── Particle effects on move ── */
   useEffect(() => {
     if (!boardRef.current) return;
     if (history.length === 0 || history.length === prevHistoryLen.current) return;
@@ -90,7 +102,6 @@ export default function ChessBoard() {
     if (!lastMv) return;
     prevHistoryLen.current = history.length;
 
-    // Animate the moved piece
     setMovingPiece(lastMv.to);
     setTimeout(() => setMovingPiece(null), 350);
 
@@ -102,12 +113,14 @@ export default function ChessBoard() {
     }
   }, [history]);
 
+  /* ── Square color ── */
   const getSquareColor = (file, rank) => {
     const fileIdx = FILES.indexOf(file);
     const rankIdx = parseInt(rank) - 1;
     return (fileIdx + rankIdx) % 2 === 0 ? 'dark' : 'light';
   };
 
+  /* ── CSS classes for each square ── */
   const getSquareClasses = (squareName) => {
     const classes = ['board-square'];
     if (selectedSquare === squareName) classes.push('selected');
@@ -116,14 +129,26 @@ export default function ChessBoard() {
     if (hintSquares?.from === squareName) classes.push('hint-from');
     if (hintSquares?.to === squareName) classes.push('hint-to');
     if (movingPiece === squareName) classes.push('sq-landing');
+    if (dragOver === squareName) classes.push('drag-over');
     return classes.join(' ');
   };
 
+  /* ── Square position for absolute piece layer ── */
+  const getSquareOffset = (squareName) => {
+    const file = squareName[0];
+    const rank = squareName[1];
+    const fileIdx = FILES.indexOf(file);
+    const rankIdx = RANKS.indexOf(rank);
+    const x = flippedView ? 7 - fileIdx : fileIdx;
+    const y = flippedView ? 7 - rankIdx : rankIdx;
+    return { left: `${x * 12.5}%`, top: `${y * 12.5}%` };
+  };
+
+  /* ── Drag and Drop (#8) ── */
   const handleDragStart = (e, square) => {
     setDraggedFrom(square);
     handleSquareClick(square);
     e.dataTransfer.effectAllowed = 'move';
-    // Ghost image
     const ghost = document.createElement('div');
     ghost.style.cssText = 'width:60px;height:60px;position:fixed;top:-100px;left:-100px;opacity:0.9;pointer-events:none;';
     document.body.appendChild(ghost);
@@ -140,42 +165,47 @@ export default function ChessBoard() {
     setDraggedFrom(null);
   };
 
+  /* ── Touch support with touchmove drag-follow (#8) ── */
   const handleTouchStart = (e, square) => {
-    // We prevent default inside if we don't want scrolling, but handled by touch-action: none
+    touchDragState.current = { active: true, fromSquare: square };
     handleSquareClick(square);
   };
 
-  const handleTouchEnd = (e, square) => {
+  const handleTouchMove = (e) => {
+    if (!touchDragState.current.active) return;
     e.preventDefault();
     const touch = e.changedTouches[0];
     const el = document.elementFromPoint(touch.clientX, touch.clientY);
     const targetSquare = el?.dataset?.square || el?.closest('[data-square]')?.dataset?.square;
-    if (targetSquare && targetSquare !== square) {
-      handleSquareClick(targetSquare);
+    if (targetSquare && targetSquare !== dragOver) {
+      setDragOver(targetSquare);
     }
   };
 
-  // Neon glow overlay for neon theme
-  const isNeonTheme = currentTheme.name === 'Neon' || currentTheme.name === 'Midnight';
-
-  const getSquareOffset = (squareName) => {
-    const file = squareName[0];
-    const rank = squareName[1];
-    const fileIdx = FILES.indexOf(file);
-    const rankIdx = RANKS.indexOf(rank);
-    const x = flippedView ? 7 - fileIdx : fileIdx;
-    const y = flippedView ? 7 - rankIdx : rankIdx;
-    return { left: `${x * 12.5}%`, top: `${y * 12.5}%` };
+  const handleTouchEnd = (e) => {
+    e.preventDefault();
+    const touch = e.changedTouches[0];
+    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    const targetSquare = el?.dataset?.square || el?.closest('[data-square]')?.dataset?.square;
+    if (targetSquare && targetSquare !== touchDragState.current.fromSquare) {
+      handleSquareClick(targetSquare);
+    }
+    touchDragState.current = { active: false, fromSquare: null };
+    setDragOver(null);
   };
+
+  const isNeonTheme = currentTheme.name === 'Neon' || currentTheme.name === 'Midnight';
 
   return (
     <div className="board-container">
-      <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%', maxWidth: '600px', marginBottom: '4px' }}>
+      {/* Top control bar */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%', maxWidth: '600px', marginBottom: '4px', position: 'relative' }}>
+        {/* AI Status indicator */}
         {gameMode === 'vsAI' && (
-          <div style={{ 
-            marginRight: 'auto', 
-            display: 'flex', 
-            alignItems: 'center', 
+          <div style={{
+            marginRight: 'auto',
+            display: 'flex',
+            alignItems: 'center',
             gap: '8px',
             fontSize: '12px',
             fontWeight: 'bold',
@@ -185,15 +215,15 @@ export default function ChessBoard() {
             borderRadius: '12px',
             border: '1px solid var(--border)'
           }}>
-            {aiStatus === 'ready' ? 'AI Ready ✓' : 
-             aiStatus === 'loading' ? 'Initializing AI...' : 
-             'Playing in simple mode'}
+            {aiStatus === 'ready' ? 'Stockfish ✓' :
+             aiStatus === 'loading' ? 'Initializing AI...' :
+             'Simple AI Mode'}
           </div>
         )}
         <div className="icon-btn-wrapper">
-          <button 
+          <button
             className="small-icon-btn"
-            onClick={() => dispatch({ type: 'TOGGLE_BOARD_FLIP' })} 
+            onClick={() => dispatch({ type: 'TOGGLE_BOARD_FLIP' })}
             title="Flip board"
             style={{
               width: '32px', height: '32px', background: 'transparent', border: '1px solid var(--border)',
@@ -208,10 +238,20 @@ export default function ChessBoard() {
         </div>
       </div>
 
-      {/* Ambient glow based on theme */}
+      {/* ── #4: AI Thinking Indicator above board ── */}
+      {isAIThinking && gameMode === 'vsAI' && (
+        <div className="ai-thinking-overlay">
+          <div className="ai-thinking-dot" />
+          <div className="ai-thinking-dot" />
+          <div className="ai-thinking-dot" />
+          AI is thinking...
+        </div>
+      )}
+
+      {/* Ambient glow */}
       <div className="board-glow" style={{ '--theme-accent': currentTheme.accent }} />
 
-      {/* Premium wooden / dark frame */}
+      {/* Premium board frame */}
       <div className="board-frame" style={{ '--frame-accent': currentTheme.accent }}>
         {/* Corner ornaments */}
         <div className="frame-corner frame-tl">♟</div>
@@ -221,14 +261,16 @@ export default function ChessBoard() {
 
         <div className="board-wrapper">
           <div className="board-row-container">
-            {/* The board itself */}
+            {/* The chess board grid */}
             <div
               ref={boardRef}
-              className={`chess-board ${isNeonTheme ? 'board-neon' : ''}`}
               role="grid"
               aria-label="Chess board"
               tabIndex={0}
               onKeyDown={handleKeyDown}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              className={`chess-board ${isNeonTheme ? 'board-neon' : ''} ${isAIThinking ? 'ai-thinking' : ''}`}
               style={{
                 touchAction: 'none',
                 '--board-light': currentTheme.light,
@@ -236,6 +278,7 @@ export default function ChessBoard() {
                 '--theme-accent': currentTheme.accent,
               }}
             >
+              {/* ── Square Grid ── */}
               {ranks.map((rank) =>
                 files.map((file) => {
                   const squareName = `${file}${rank}`;
@@ -245,14 +288,22 @@ export default function ChessBoard() {
                   const isValidTarget = validMoves.includes(squareName);
                   const sqColor = getSquareColor(file, rank);
 
-                  const isFileEdge = flippedView ? rank === '8' : rank === '1';
+                  // Coordinate label edges
                   const isRankEdge = flippedView ? file === 'h' : file === 'a';
+                  const isFileEdge = flippedView ? rank === '8' : rank === '1';
                   const labelColor = sqColor === 'light' ? currentTheme.dark : currentTheme.light;
-                  
-                  const isErrorShake = state.errorSquare === squareName;
+
+                  // Error shake
+                  const isErrorShake = errorSquare === squareName;
+                  // Keyboard focus
                   const isKeyboardFocused = keyboardFocus === squareName;
-                  
-                  const pieceDesc = cell ? `${cell.color === 'w' ? 'white' : 'black'} ${cell.type === 'p' ? 'pawn' : cell.type === 'n' ? 'knight' : cell.type === 'b' ? 'bishop' : cell.type === 'r' ? 'rook' : cell.type === 'q' ? 'queen' : 'king'}` : 'empty';
+
+                  // ARIA: describe the piece on this square
+                  const pieceDesc = cell
+                    ? `${cell.color === 'w' ? 'white' : 'black'} ${
+                        { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king' }[cell.type]
+                      }`
+                    : 'empty';
 
                   return (
                     <div
@@ -261,21 +312,24 @@ export default function ChessBoard() {
                       data-square={squareName}
                       role="gridcell"
                       aria-label={`${squareName}, ${pieceDesc}`}
-                      className={`${getSquareClasses(squareName)} ${sqColor}-square ${isErrorShake ? 'shake' : ''} ${isKeyboardFocused ? 'keyboard-focus' : ''}`}
-                      style={{ 
+                      className={[
+                        getSquareClasses(squareName),
+                        `${sqColor}-square`,
+                        isErrorShake ? 'shake' : '',
+                        isKeyboardFocused ? 'keyboard-focus' : '',
+                      ].filter(Boolean).join(' ')}
+                      style={{
                         backgroundColor: sqColor === 'light' ? currentTheme.light : currentTheme.dark,
                         width: '100%',
                         height: '100%',
-                        fontSize: 'clamp(24px, 6vw, 48px)'
                       }}
                       onClick={() => handleSquareClick(squareName)}
                       onDragOver={(e) => { e.preventDefault(); setDragOver(squareName); }}
                       onDragLeave={() => setDragOver(null)}
                       onDrop={(e) => handleDrop(e, squareName)}
                       onTouchStart={(e) => handleTouchStart(e, squareName)}
-                      onTouchEnd={(e) => handleTouchEnd(e, squareName)}
                     >
-                      {/* Inner Coordinates */}
+                      {/* ── #9: Inner Coordinates ── */}
                       {showCoords && isRankEdge && (
                         <div className="inner-coord rank-coord" style={{ color: labelColor }}>
                           {rank}
@@ -287,7 +341,7 @@ export default function ChessBoard() {
                         </div>
                       )}
 
-                      {/* Move dot / capture ring */}
+                      {/* ── #1: Legal Move Indicators (green dot / capture ring) ── */}
                       {showMoveIndicators && isValidTarget && (
                         <MoveIndicator hasCapture={!!cell} themeAccent={currentTheme.accent} />
                       )}
@@ -296,7 +350,7 @@ export default function ChessBoard() {
                 })
               )}
 
-              {/* Pieces Layer */}
+              {/* ── Pieces Layer (absolute, on top of grid) ── */}
               {pieces.map((p) => {
                 const isSelected = selectedSquare === p.square;
                 const isLanding = movingPiece === p.square;
@@ -309,7 +363,8 @@ export default function ChessBoard() {
                       height: '12.5%',
                       ...getSquareOffset(p.square),
                       zIndex: isSelected || isLanding || draggedFrom === p.square ? 10 : 2,
-                      pointerEvents: 'none' // Let events pass through to grid cells, except piece drag
+                      pointerEvents: 'none',
+                      transition: animationsEnabled ? 'left 0.18s ease, top 0.18s ease' : 'none',
                     }}
                   >
                     <div style={{ pointerEvents: 'auto', width: '100%', height: '100%' }}>
@@ -334,20 +389,19 @@ export default function ChessBoard() {
               {/* Neon grid lines */}
               {isNeonTheme && <div className="neon-grid" style={{ '--accent': currentTheme.accent }} />}
 
-              {/* Promotion dialog */}
+              {/* ── #7: Pawn Promotion Modal ── */}
               {promotionPending && (
-                <PromotionModal 
-                  color={chess.turn()} 
-                  file={promotionPending.to[0]} 
-                  rank={promotionPending.to[1]} 
-                  flipped={flippedView} 
+                <PromotionModal
+                  color={chess.turn()}
+                  file={promotionPending.to[0]}
+                  rank={promotionPending.to[1]}
+                  flipped={flippedView}
                 />
               )}
             </div>
           </div>
         </div>
       </div>
-
     </div>
   );
 }

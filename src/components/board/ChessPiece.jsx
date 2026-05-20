@@ -17,15 +17,19 @@ export default function ChessPiece({ piece, square, isSelected, animationsEnable
   return (
     <motion.img
       src={src}
-      alt={key}
+      alt={`${piece.color === 'w' ? 'White' : 'Black'} ${key}`}
       draggable
       layout={animationsEnabled}
       initial={animationsEnabled ? { scale: 0.6, opacity: 0 } : false}
-      animate={{ scale: isDragging ? 1.1 : 1, opacity: isDragging ? 0.8 : 1 }}
+      animate={{
+        scale: isDragging ? 1.15 : isSelected ? 1.08 : 1,
+        opacity: isDragging ? 0.75 : 1,
+      }}
       transition={{
-        type: 'tween',
+        type: 'spring',
+        stiffness: 400,
+        damping: 28,
         duration: 0.15,
-        ease: 'easeOut'
       }}
       className={`chess-piece ${isSelected ? 'piece-selected' : ''} ${isDragging ? 'piece-dragging' : ''}`}
       onClick={(e) => {
@@ -44,7 +48,14 @@ export default function ChessPiece({ piece, square, isSelected, animationsEnable
         width: '100%',
         height: '100%',
         cursor: isDragging ? 'grabbing' : 'grab',
-        touchAction: 'none'
+        touchAction: 'none',
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
+        // #16: smooth sliding transition
+        transition: 'filter 0.12s ease',
+        filter: isSelected
+          ? 'drop-shadow(0 8px 16px rgba(0,0,0,0.7)) drop-shadow(0 0 12px rgba(100,200,255,0.6))'
+          : 'drop-shadow(0 2px 4px rgba(0,0,0,0.5)) drop-shadow(0 1px 2px rgba(0,0,0,0.3))',
       }}
     />
   );
