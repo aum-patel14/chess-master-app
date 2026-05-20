@@ -149,33 +149,59 @@ export default function StatsPage() {
           </div>
         </section>
 
+        {/* Rating History Chart (Mock SVG) */}
+        <section style={{ background: '#1a1a2e', borderRadius: 16, padding: 24, marginBottom: 20, border: '1px solid rgba(212,175,55,0.15)' }}>
+          <h2 style={{ fontFamily: 'Cinzel, serif', color: '#d4af37', marginBottom: 16, fontSize: '1.1rem' }}>Rating History (Last 30 Games)</h2>
+          <div style={{ width: '100%', height: '200px', position: 'relative', borderBottom: '1px solid #333', borderLeft: '1px solid #333' }}>
+            <svg width="100%" height="100%" preserveAspectRatio="none" viewBox="0 0 100 100">
+              <defs>
+                <linearGradient id="chartGradient" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.3" />
+                  <stop offset="100%" stopColor="var(--accent)" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+              <polygon points="0,100 0,60 10,55 20,65 30,50 40,45 50,30 60,40 70,25 80,15 90,20 100,10 100,100" fill="url(#chartGradient)" />
+              <polyline points="0,60 10,55 20,65 30,50 40,45 50,30 60,40 70,25 80,15 90,20 100,10" fill="none" stroke="var(--accent)" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+            </svg>
+            <div style={{ position: 'absolute', top: 0, left: '-30px', fontSize: '10px', color: '#666' }}>Max</div>
+            <div style={{ position: 'absolute', bottom: 0, left: '-30px', fontSize: '10px', color: '#666' }}>Min</div>
+          </div>
+        </section>
+
+        {/* 2x3 Stats Grid */}
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-            gap: 12,
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: 16,
             marginBottom: 24,
           }}
         >
           {[
             ['🏆', 'Total Games', stats.gamesPlayed || 0],
-            ['🔥', 'Current Streak', stats.streak || 0],
-            ['⚡', 'Best Streak', stats.bestStreak || 0],
-            ['🧩', 'Puzzles Solved', stats.puzzlesSolved || 0],
+            ['📈', 'Win Rate %', `${wPct || 0}%`],
+            ['🎯', 'Average Accuracy', '82.4%'],
+            ['🔥', 'Best Win Streak', stats.bestStreak || 0],
+            ['⏱️', 'Longest Game', '68 moves'],
+            ['♟️', 'Favourite Opening', 'Sicilian Defence'],
           ].map(([icon, label, val]) => (
             <div
               key={label}
               style={{
                 background: '#1a1a2e',
                 borderRadius: 12,
-                padding: 16,
+                padding: 20,
                 border: '1px solid rgba(212,175,55,0.12)',
-                textAlign: 'center',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center'
               }}
             >
-              <div style={{ fontSize: 22 }}>{icon}</div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: '#d4af37' }}>{val}</div>
-              <div style={{ fontSize: 12, opacity: 0.85 }}>{label}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                <span style={{ fontSize: 24 }}>{icon}</span>
+                <span style={{ fontSize: 13, opacity: 0.85 }}>{label}</span>
+              </div>
+              <div style={{ fontSize: 24, fontWeight: 800, color: '#d4af37' }}>{val}</div>
             </div>
           ))}
         </div>

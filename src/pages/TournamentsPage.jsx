@@ -1,6 +1,6 @@
 import React from 'react';
 import PageShell from '../components/PageShell';
-import { Trophy, Users, Calendar, ArrowRight } from 'lucide-react';
+import { Trophy, Users, Calendar, ArrowRight, Clock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function TournamentsPage() {
@@ -81,35 +81,32 @@ export default function TournamentsPage() {
           </h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
             
-            {/* Tournament 1 */}
-            <div style={{ background: '#1a1a2e', borderRadius: '12px', padding: '20px', border: '1px solid rgba(255,255,255,0.1)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                <h3 style={{ fontSize: '18px', margin: 0 }}>Monday Morning Blitz</h3>
-                <span style={{ fontSize: '12px', background: 'rgba(212,175,55,0.2)', color: 'var(--gold)', padding: '4px 8px', borderRadius: '12px' }}>500 pts</span>
+            {[
+              { name:"Monday Morning Blitz",   format:"Round Robin", timeControl:"3+2",  starts:"2 days",  slots:{filled:8,  total:16}, prize:"500 pts"  },
+              { name:"Classical Weekend Open", format:"Swiss",       timeControl:"30+20", starts:"5 days",  slots:{filled:3,  total:8},  prize:"1000 pts" },
+              { name:"Speed Chess Sunday",     format:"Arena",       timeControl:"1+0",  starts:"7 days",  slots:{filled:14, total:32}, prize:"250 pts"  }
+            ].map(t => (
+              <div key={t.name} style={{ background: '#1a1a2e', borderRadius: '12px', padding: '20px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                  <h3 style={{ fontSize: '18px', margin: 0 }}>{t.name}</h3>
+                  <span style={{ fontSize: '12px', background: 'rgba(212,175,55,0.2)', color: 'var(--gold)', padding: '4px 8px', borderRadius: '12px', whiteSpace: 'nowrap' }}>{t.prize}</span>
+                </div>
+                <div style={{ fontSize: '12px', color: '#888', marginBottom: '16px', display: 'flex', gap: '12px' }}>
+                  <span style={{ background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px' }}>{t.format}</span>
+                  <span style={{ background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px' }}>{t.timeControl}</span>
+                </div>
+                <div style={{ display: 'flex', gap: '16px', fontSize: '14px', color: '#aaa', marginBottom: '20px' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Clock size={14} /> {t.starts}</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Users size={14} /> {t.slots.filled}/{t.slots.total} Joined</span>
+                </div>
+                <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', marginBottom: '20px', overflow: 'hidden' }}>
+                  <div style={{ width: `${(t.slots.filled / t.slots.total) * 100}%`, height: '100%', background: 'var(--gold)' }}></div>
+                </div>
+                <button style={{ width: '100%', padding: '10px', background: 'var(--gold)', color: '#000', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
+                  Join Tournament <ArrowRight size={16} />
+                </button>
               </div>
-              <div style={{ display: 'flex', gap: '16px', fontSize: '14px', color: '#aaa', marginBottom: '20px' }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Clock size={14} /> Starts in 2 days</span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Users size={14} /> 8/16 Joined</span>
-              </div>
-              <button style={{ width: '100%', padding: '10px', background: 'var(--gold)', color: '#000', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
-                Join Tournament <ArrowRight size={16} />
-              </button>
-            </div>
-
-            {/* Tournament 2 */}
-            <div style={{ background: '#1a1a2e', borderRadius: '12px', padding: '20px', border: '1px solid rgba(255,255,255,0.1)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                <h3 style={{ fontSize: '18px', margin: 0 }}>Classical Weekend</h3>
-                <span style={{ fontSize: '12px', background: 'rgba(212,175,55,0.2)', color: 'var(--gold)', padding: '4px 8px', borderRadius: '12px' }}>1000 pts</span>
-              </div>
-              <div style={{ display: 'flex', gap: '16px', fontSize: '14px', color: '#aaa', marginBottom: '20px' }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Clock size={14} /> Starts in 5 days</span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Users size={14} /> 3/8 Joined</span>
-              </div>
-              <button style={{ width: '100%', padding: '10px', background: 'var(--gold)', color: '#000', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
-                Join Tournament <ArrowRight size={16} />
-              </button>
-            </div>
+            ))}
 
           </div>
         </section>

@@ -108,8 +108,8 @@ export function AuthProvider({ children }) {
         }
       } else {
         // GUEST MODE FALLBACK (Phase 1)
-        setCurrentUser({ uid: "guest", email: "guest@chessmaster.com", displayName: "Aum_Patel" });
-        setUserData({ id: "guest", name: "Aum_Patel", rating: 2510, wins: 89, losses: 40, draws: 14, country: "IN" });
+        setCurrentUser(null);
+        setUserData({ id: 'guest', name: 'Guest', rating: 1200, wins: 0, losses: 0, draws: 0, isGuest: true });
       }
       
       setLoading(false);

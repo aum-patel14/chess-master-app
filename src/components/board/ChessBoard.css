@@ -125,6 +125,7 @@
   display: grid;
   flex: 1;
   width: 100%;
+  aspect-ratio: 1 / 1;
   grid-template-columns: repeat(8, 1fr);
   grid-template-rows: repeat(8, 1fr);
   border-radius: 2px;

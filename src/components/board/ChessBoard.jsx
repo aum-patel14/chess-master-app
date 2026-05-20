@@ -268,6 +268,7 @@ export default function ChessBoard() {
                         animationsEnabled={animationsEnabled}
                         onDragStart={handleDragStart}
                         onDrop={handleDrop}
+                        onClick={() => handleSquareClick(p.square)}
                         animStyle={{ animation: isLanding ? 'slideIn 0.2s ease' : 'none' }}
                       />
                     </div>

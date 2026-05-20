@@ -89,12 +89,12 @@ export default function GameHistoryPage() {
                       <div style={{ flex: 1 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                           <span className={`result-badge ${resultClass}`}>{resultText}</span>
-                          <span style={{ fontWeight: 700, fontSize: '16px' }}>vs {game.opponent}</span>
+                          <span style={{ fontWeight: 700, fontSize: '16px' }}>vs {game.opponent?.name}</span>
                         </div>
                         <div style={{ fontSize: '14px', color: '#94a3b8', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
                           <span>{game.opening}</span>
                           <span>•</span>
-                          <span>{game.accuracy}% Accuracy</span>
+                          <span>{game.accuracy?.me}% Accuracy</span>
                         </div>
                       </div>
                     </div>

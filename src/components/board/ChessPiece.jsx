@@ -2,7 +2,7 @@ import './ChessPiece.css';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 
-export default function ChessPiece({ piece, square, isSelected, animationsEnabled, onDragStart, onDrop, animStyle }) {
+export default function ChessPiece({ piece, square, isSelected, animationsEnabled, onDragStart, onDrop, onClick, animStyle }) {
   const [isDragging, setIsDragging] = useState(false);
   const key = `${piece.color}${piece.type.toUpperCase()}`;
   const src = `${import.meta.env.BASE_URL}pieces/cburnett/${key}.svg`;
@@ -28,6 +28,9 @@ export default function ChessPiece({ piece, square, isSelected, animationsEnable
         ease: 'easeOut'
       }}
       className={`chess-piece ${isSelected ? 'piece-selected' : ''} ${isDragging ? 'piece-dragging' : ''}`}
+      onClick={(e) => {
+        if (onClick) onClick(e, square);
+      }}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}

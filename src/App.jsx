@@ -3,7 +3,7 @@ import { lazy, Suspense, useState, useEffect } from 'react';
 import { MotionConfig, AnimatePresence } from 'framer-motion';
 import { GameProvider } from './context/GameContext';
 import { ToastProvider } from './hooks/useToast';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import AppShell from './components/layout/AppShell';
 import SplashScreen from './components/SplashScreen';
 import Onboarding from './components/Onboarding';
@@ -35,6 +35,18 @@ const suspenseFallback = (
   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#0a0a14', color: '#d4af37', fontSize: '2rem' }}>♛</div>
 );
 
+function AuthConsumerBanner() {
+  const { userData } = useAuth();
+  if (userData?.isGuest) {
+    return (
+      <div style={{ background: '#3b82f6', color: '#fff', textAlign: 'center', padding: '6px 16px', fontSize: '13px', fontWeight: 600, display: 'flex', justifyContent: 'center', gap: '8px', zIndex: 100, position: 'relative' }}>
+        <span>Playing as Guest — Sign up to save your progress</span>
+      </div>
+    );
+  }
+  return null;
+}
+
 function RouteSwitch() {
   const location = useLocation();
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
@@ -60,6 +72,7 @@ function RouteSwitch() {
 
   return (
     <>
+      <AuthConsumerBanner />
       <AnimatePresence mode="wait">
         <Suspense fallback={suspenseFallback}>
           <Routes location={location} key={location.pathname}>
