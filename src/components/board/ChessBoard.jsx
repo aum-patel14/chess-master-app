@@ -38,7 +38,48 @@ export default function ChessBoard() {
   const [draggedFrom, setDraggedFrom] = useState(null);
   const [dragOver, setDragOver] = useState(null);
   const [movingPiece, setMovingPiece] = useState(null); // { from, to }
+  const [keyboardFocus, setKeyboardFocus] = useState(null);
   const prevHistoryLen = useRef(0);
+
+  const handleKeyDown = (e) => {
+    if (!keyboardFocus) {
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+        e.preventDefault();
+        setKeyboardFocus(flippedView ? 'h1' : 'a1'); // Start somewhere
+      }
+      return;
+    }
+
+    const file = keyboardFocus[0];
+    const rank = keyboardFocus[1];
+    let fileIdx = FILES.indexOf(file);
+    let rankIdx = RANKS.indexOf(rank);
+
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      rankIdx = flippedView ? rankIdx + 1 : rankIdx - 1;
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      rankIdx = flippedView ? rankIdx - 1 : rankIdx + 1;
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      fileIdx = flippedView ? fileIdx + 1 : fileIdx - 1;
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      fileIdx = flippedView ? fileIdx - 1 : fileIdx + 1;
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleSquareClick(keyboardFocus);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      if (selectedSquare) handleSquareClick(selectedSquare); // deselect
+      setKeyboardFocus(null);
+    }
+
+    if (fileIdx >= 0 && fileIdx <= 7 && rankIdx >= 0 && rankIdx <= 7) {
+      setKeyboardFocus(`${FILES[fileIdx]}${RANKS[rankIdx]}`);
+    }
+  };
 
   // Trigger particle effects when moves happen
   useEffect(() => {
@@ -184,6 +225,10 @@ export default function ChessBoard() {
             <div
               ref={boardRef}
               className={`chess-board ${isNeonTheme ? 'board-neon' : ''}`}
+              role="grid"
+              aria-label="Chess board"
+              tabIndex={0}
+              onKeyDown={handleKeyDown}
               style={{
                 touchAction: 'none',
                 '--board-light': currentTheme.light,
@@ -203,13 +248,20 @@ export default function ChessBoard() {
                   const isFileEdge = flippedView ? rank === '8' : rank === '1';
                   const isRankEdge = flippedView ? file === 'h' : file === 'a';
                   const labelColor = sqColor === 'light' ? currentTheme.dark : currentTheme.light;
+                  
+                  const isErrorShake = state.errorSquare === squareName;
+                  const isKeyboardFocused = keyboardFocus === squareName;
+                  
+                  const pieceDesc = cell ? `${cell.color === 'w' ? 'white' : 'black'} ${cell.type === 'p' ? 'pawn' : cell.type === 'n' ? 'knight' : cell.type === 'b' ? 'bishop' : cell.type === 'r' ? 'rook' : cell.type === 'q' ? 'queen' : 'king'}` : 'empty';
 
                   return (
                     <div
                       key={squareName}
                       id={`sq-${squareName}`}
                       data-square={squareName}
-                      className={`${getSquareClasses(squareName)} ${sqColor}-square`}
+                      role="gridcell"
+                      aria-label={`${squareName}, ${pieceDesc}`}
+                      className={`${getSquareClasses(squareName)} ${sqColor}-square ${isErrorShake ? 'shake' : ''} ${isKeyboardFocused ? 'keyboard-focus' : ''}`}
                       style={{ 
                         backgroundColor: sqColor === 'light' ? currentTheme.light : currentTheme.dark,
                         width: '100%',

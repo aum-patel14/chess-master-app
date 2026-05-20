@@ -71,8 +71,10 @@ function gameReducer(state, action) {
     case 'TOGGLE_SOUND': return { ...state, soundEnabled: !state.soundEnabled };
     case 'TOGGLE_ANIMATIONS': return { ...state, animationsEnabled: !state.animationsEnabled };
     case 'TOGGLE_COORDS': return { ...state, showCoords: !state.showCoords };
-    case 'SET_SELECTED': return { ...state, selectedSquare: action.square, validMoves: action.moves };
-    case 'CLEAR_SELECTION': return { ...state, selectedSquare: null, validMoves: [] };
+    case 'SET_SELECTED': return { ...state, selectedSquare: action.square, validMoves: action.moves, errorSquare: null };
+    case 'CLEAR_SELECTION': return { ...state, selectedSquare: null, validMoves: [], errorSquare: null };
+    case 'SET_ERROR_SQUARE': return { ...state, errorSquare: action.payload };
+    case 'CLEAR_ERROR_SQUARE': return { ...state, errorSquare: null };
     case 'SET_AI_THINKING': return { ...state, isAIThinking: action.payload };
     case 'SET_PROMOTION_PENDING': return { ...state, promotionPending: action.payload };
     case 'SET_TIME_CONTROL': return {
@@ -449,6 +451,10 @@ async function saveGameToCloud(state, finalStatus, history, fen) {
           applyMove(moveResult, chess);
         }
         return;
+      } else {
+        // Illegal move attempt
+        dispatch({ type: 'SET_ERROR_SQUARE', payload: square });
+        setTimeout(() => dispatch({ type: 'CLEAR_ERROR_SQUARE' }), 400);
       }
     }
 

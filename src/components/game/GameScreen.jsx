@@ -9,6 +9,8 @@ import CapturedPieces from './CapturedPieces';
 import TimerDisplay from './TimerDisplay';
 import { RotateCcw, Flag, Handshake, LineChart, Settings, Home, Gamepad2, Puzzle, BookOpen, User, ChevronFirst, ChevronLeft, ChevronRight, ChevronLast } from 'lucide-react';
 
+import { useToast } from '../../hooks/useToast';
+
 const DIFFICULTY_NAMES = { 1:'Beginner', 2:'Easy', 3:'Medium', 4:'Hard', 5:'Expert' };
 const PIECE_VALUES = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
 
@@ -31,6 +33,7 @@ function getMaterialAdvantage(capturedByW, capturedByB) {
 
 export default function GameScreen() {
   const { state, dispatch, resign, offerDraw, undoMove, startNewGame } = useGame();
+  const { showToast } = useToast();
   const {
     fen, status, isAIThinking, gameMode, playerColor,
     aiDifficulty, capturedPieces, history,
@@ -43,6 +46,13 @@ export default function GameScreen() {
   const isGameOver = status.type !== 'playing' && status.type !== 'check';
   const [confirmResign, setConfirmResign] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
+
+  // Trigger Check Toast
+  useEffect(() => {
+    if (status.type === 'check') {
+      showToast('Check!', 'warning');
+    }
+  }, [status.type, showToast]);
 
   // Game timer (elapsed)
   useEffect(() => {

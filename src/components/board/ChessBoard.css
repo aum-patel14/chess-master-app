@@ -101,23 +101,44 @@
 
 .inner-coord {
   position: absolute;
-  font-family: 'JetBrains Mono', var(--font-main);
-  font-size: 11px;
-  font-weight: 600;
-  opacity: 0.85;
-  pointer-events: none;
+  font-size: clamp(8px, 2.5vw, 13px);
+  font-weight: 700;
+  opacity: 0.75;
   user-select: none;
-  z-index: 1;
+  pointer-events: none;
 }
 
 .rank-coord {
-  top: 2px;
+  top: 3px;
   left: 3px;
 }
 
 .file-coord {
-  bottom: 1px;
+  bottom: 2px;
   right: 3px;
+}
+
+/* Error Shake Animation */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+
+.shake {
+  animation: shake 0.35s ease;
+}
+
+/* Keyboard Navigation Focus */
+.keyboard-focus {
+  box-shadow: inset 0 0 0 4px var(--gold) !important;
+  outline: none;
+}
+
+.chess-board:focus {
+  outline: none;
 }
 
 /* ── Chess Board Grid ── */
