@@ -41,15 +41,21 @@ export default function HomePage() {
   useEffect(() => {
     setHasSaved(!!localStorage.getItem('chess_saved_game'));
     
-    // Fetch Daily Puzzle
+    // Fetch Daily Puzzle with defensive checks
     fetch('https://lichess.org/api/puzzle/daily')
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error('Response status not ok');
+        return res.json();
+      })
       .then(data => {
-        // We only need the URL or simple data for the card
-        setDailyPuzzle(data);
+        if (data && data.puzzle && Array.isArray(data.puzzle.themes)) {
+          setDailyPuzzle(data);
+        } else {
+          throw new Error('Invalid structure');
+        }
       })
       .catch(err => {
-        console.error('Lichess puzzle error', err);
+        console.warn('Lichess puzzle loading failed, using fallback card:', err);
         setDailyPuzzle({ puzzle: { id: 'fallback', rating: 1500, themes: ['tactics'] } });
       });
   }, []);

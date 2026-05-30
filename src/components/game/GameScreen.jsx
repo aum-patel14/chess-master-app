@@ -299,37 +299,123 @@ export default function GameScreen() {
     );
   }
 
+  const formatClockTime = (timeInSeconds) => {
+    if (timeInSeconds <= 0) return '0:00.0';
+    const minutes = Math.floor(timeInSeconds / 60);
+    const seconds = Math.floor(timeInSeconds % 60);
+    if (timeInSeconds < 10) {
+      const tenths = Math.floor((timeInSeconds % 1) * 10);
+      return `0:0${seconds}.${tenths}`;
+    }
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  const moves = history.map(m => m.san);
+  const movesPaired = [];
+  for (let i = 0; i < moves.length; i += 2) {
+    movesPaired.push([moves[i], moves[i + 1] || '']);
+  }
+  const currentMoveIndex = reviewIndex !== null ? reviewIndex : history.length - 1;
+
+  const avatarLetterTop = topPlayer.name ? topPlayer.name.trim().charAt(0).toUpperCase() : 'A';
+  const avatarLetterBottom = bottomPlayer.name ? bottomPlayer.name.trim().charAt(0).toUpperCase() : 'Y';
+
   return (
     <div className="game-page">
       {/* CENTER BOARD ZONE */}
-      <div className="center-area">
-        {/* Black Player Info Bar */}
-        <PlayerInfoBar player={topPlayer} isAIThinking={isAIThinking} />
-        
-        <div className="board-layout-wrapper">
-          {/* Eval Bar */}
-          <div className="eval-bar">
-            <div className="eval-fill-black" />
-            <div className="eval-fill-white" style={{ height: `${clampedEval}%` }} />
-            <div className="eval-score">
-              {stockfishEngine.isReady ? stockfishEval.text : ((materialAdv.w - materialAdv.b) > 0 ? `+${materialAdv.w - materialAdv.b}` : materialAdv.w - materialAdv.b)}
+      <div className="game-center">
+        <div className="board-and-players-wrapper">
+          {/* BLACK player bar — above board (aligned with board) */}
+          <div style={{
+            width: 'var(--board-size)',
+            height: '44px',
+            background: 'rgba(255,255,255,0.05)',
+            borderRadius: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0 12px',
+            marginLeft: '40px',
+            boxSizing: 'border-box',
+            flexShrink: 0
+          }}>
+            <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
+              <div style={{width:'32px',height:'32px',borderRadius:'50%',background:'#374151',
+                display:'flex',alignItems:'center',justifyContent:'center',
+                fontSize:'14px',fontWeight:'600',color:'white'}}>{avatarLetterTop}</div>
+              <span style={{fontSize:'14px',fontWeight:'500',color:'white'}}>{topPlayer.name}</span>
+              <span style={{fontSize:'12px',padding:'2px 8px',background:'rgba(255,255,255,0.1)',
+                borderRadius:'99px',color:'#aaa'}}>{topPlayer.rating}</span>
             </div>
+            <span style={{fontSize:'16px',fontWeight:'600',color:'white',fontFamily:'monospace'}}>
+              {formatClockTime(topPlayer.time)}
+            </span>
           </div>
 
-          <div className="board-and-controls">
-            {state.opponentDisconnected && (
-              <div style={disconnectBannerStyle}>
-                ⚠️ Opponent disconnected! Auto-win in {opponentDisconnectedCountdown}s...
+          {/* Board row: eval bar + rank labels + board */}
+          <div style={{display:'flex', flexDirection:'row', alignItems:'flex-start', gap:'4px', flexShrink:0, width:'100%'}}>
+            {/* Eval Bar */}
+            <div className="eval-bar" style={{ height: 'var(--board-size)', width: '12px' }}>
+              <div className="eval-fill-black" />
+              <div className="eval-fill-white" style={{ height: `${clampedEval}%` }} />
+              <div className="eval-score">
+                {stockfishEngine.isReady ? stockfishEval.text : ((materialAdv.w - materialAdv.b) > 0 ? `+${materialAdv.w - materialAdv.b}` : materialAdv.w - materialAdv.b)}
               </div>
-            )}
-            <div className="board-wrapper-inner">
+            </div>
+            
+            {/* Rank numbers LEFT (spans the board height perfectly) */}
+            <div style={{display:'flex',flexDirection:'column',height:'var(--board-size)',width:'20px',flexShrink:0}}>
+              {(flippedView?[1,2,3,4,5,6,7,8]:[8,7,6,5,4,3,2,1]).map(r=>(
+                <div key={r} style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',
+                  fontSize:'12px',fontWeight:'600',color:'rgba(255,255,255,0.6)'}}>
+                  {r}
+                </div>
+              ))}
+            </div>
+
+            {/* The actual 8x8 board */}
+            <div className="board-outer">
               <ChessBoard bestMoveArrow={analysisArrow} />
             </div>
           </div>
-        </div>
 
-        {/* White Player Info Bar */}
-        <PlayerInfoBar player={bottomPlayer} isAIThinking={isAIThinking} />
+          {/* File letters BOTTOM (aligned with board) */}
+          <div style={{display:'flex',flexDirection:'row',width:'var(--board-size)',marginLeft:'40px',flexShrink:0}}>
+            {(flippedView?['h','g','f','e','d','c','b','a']:['a','b','c','d','e','f','g','h']).map(f=>(
+              <div key={f} style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',
+                fontSize:'12px',fontWeight:'600',color:'rgba(255,255,255,0.6)',height:'20px'}}>
+                {f}
+              </div>
+            ))}
+          </div>
+
+          {/* WHITE player bar — below board (aligned with board) */}
+          <div style={{
+            width: 'var(--board-size)',
+            height: '44px',
+            background: 'rgba(255,255,255,0.05)',
+            borderRadius: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0 12px',
+            marginLeft: '40px',
+            boxSizing: 'border-box',
+            flexShrink: 0
+          }}>
+            <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
+              <div style={{width:'32px',height:'32px',borderRadius:'50%',background:'#4B5563',
+                display:'flex',alignItems:'center',justifyContent:'center',
+                fontSize:'14px',fontWeight:'600',color:'white'}}>{avatarLetterBottom}</div>
+              <span style={{fontSize:'14px',fontWeight:'500',color:'white'}}>{bottomPlayer.name}</span>
+              <span style={{fontSize:'12px',padding:'2px 8px',background:'rgba(255,255,255,0.1)',
+                borderRadius:'99px',color:'#aaa'}}>{bottomPlayer.rating}</span>
+            </div>
+            <span style={{fontSize:'16px',fontWeight:'600',color:'white',fontFamily:'monospace'}}>
+              {formatClockTime(bottomPlayer.time)}
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* RIGHT CONTROL PANEL */}
@@ -346,82 +432,156 @@ export default function GameScreen() {
             }}
           />
         ) : (
-          <div className="right-panel-content">
-            <div className="right-panel-header">MOVES</div>
+          <div style={{width:'260px', height:'100vh', 
+            background:'#16213e', display:'flex', flexDirection:'column', 
+            borderLeft:'1px solid rgba(255,255,255,0.08)'}}>
 
-            {/* MOVE HISTORY SCROLL AREA */}
-            <div className="history-wrapper">
-              <MoveHistoryPanel 
-                history={history} 
-                activeReviewFen={reviewFen} 
-                onJumpToMove={handleJumpToMove} 
-              />
-            </div>
-            
-            {/* PLAYBACK CONTROLS */}
-            <div className="history-controls">
-              <button className="hist-btn" onClick={handleFirst} disabled={history.length === 0}>|◀</button>
-              <button className="hist-btn" onClick={handlePrev} disabled={history.length === 0}>◀</button>
-              <button className="hist-btn" onClick={handleNext} disabled={history.length === 0 || reviewIndex === null}>▶</button>
-              <button className="hist-btn" onClick={handleLast} disabled={history.length === 0 || reviewIndex === null}>▶|</button>
+            {/* Header */}
+            <div style={{padding:'16px', borderBottom:'1px solid rgba(255,255,255,0.08)'}}>
+              <span style={{fontSize:'11px',fontWeight:'600',letterSpacing:'0.08em',
+                color:'rgba(255,255,255,0.4)',textTransform:'uppercase'}}>Moves</span>
             </div>
 
-            {/* ACTION BUTTONS */}
-            <div className="game-actions-container">
-              <div className="action-row">
-                <button className="action-btn-half" onClick={handleUndo} disabled={isGameOver || isAIThinking || history.length === 0}>
-                  <RefreshCw size={16} />
-                  <span>Undo</span>
-                </button>
-                <button className="action-btn-half" onClick={handleHint} disabled={isGameOver || isAIThinking}>
-                  <Sparkles size={16} />
-                  <span>Hint</span>
-                </button>
-              </div>
-              
-              <div className="action-row">
-                <button className="action-btn-half" onClick={() => dispatch({ type: 'TOGGLE_BOARD_FLIP' })}>
-                  <RotateCcw size={16} />
-                  <span>Flip</span>
-                </button>
-                <button className="action-btn-half" onClick={() => startNewGame({ mode: gameMode, playerColor, difficulty: aiDifficulty })}>
-                  <Play size={16} />
-                  <span>New</span>
-                </button>
-              </div>
-
-              <div className="action-row">
-                <button className="action-btn-half" onClick={handleSaveGame}>
-                  <Save size={16} />
-                  <span>Save</span>
-                </button>
-                <button className="action-btn-half" onClick={handleShareGame}>
-                  <Share2 size={16} />
-                  <span>Share</span>
-                </button>
-              </div>
+            {/* Move list */}
+            <div style={{flex:1, overflowY:'auto', padding:'8px'}}>
+              {moves.length === 0 ? (
+                <p style={{fontSize:'13px',color:'rgba(255,255,255,0.3)',
+                  textAlign:'center',marginTop:'20px'}}>No moves yet</p>
+              ) : (
+                movesPaired.map(([white, black], i) => (
+                  <div key={i} style={{display:'grid',gridTemplateColumns:'32px 1fr 1fr',
+                    gap:'4px',padding:'4px 6px',borderRadius:'4px',
+                    background: currentMoveIndex === i*2 || currentMoveIndex === i*2+1 ? 'rgba(226,176,74,0.15)' : 'transparent'}}>
+                    <span style={{fontSize:'12px',color:'rgba(255,255,255,0.3)'}}>{i+1}.</span>
+                    <span 
+                      onClick={() => handleJumpToMove(i * 2)}
+                      style={{
+                        fontSize:'13px',
+                        color:'white',
+                        cursor:'pointer',
+                        background: currentMoveIndex === i * 2 ? 'rgba(226,176,74,0.3)' : 'transparent',
+                        padding: '1px 3px',
+                        borderRadius: '3px'
+                      }}
+                    >
+                      {white}
+                    </span>
+                    {black && (
+                      <span 
+                        onClick={() => handleJumpToMove(i * 2 + 1)}
+                        style={{
+                          fontSize:'13px',
+                          color:'rgba(255,255,255,0.8)',
+                          cursor:'pointer',
+                          background: currentMoveIndex === i * 2 + 1 ? 'rgba(226,176,74,0.3)' : 'transparent',
+                          padding: '1px 3px',
+                          borderRadius: '3px'
+                        }}
+                      >
+                        {black}
+                      </span>
+                    )}
+                  </div>
+                ))
+              )}
             </div>
 
-            {/* RESIGN OR ANALYZE BUTTON */}
-            {isGameOver ? (
-              <button 
-                className="resign-btn font-cinzel animate-pulse" 
-                onClick={handleAnalyzeGameClick}
-                style={{ background: 'linear-gradient(135deg, var(--gold-dark), var(--gold))', color: '#111', fontWeight: 800 }}
-              >
-                <Sparkles size={16} style={{ marginRight: '8px' }} />
-                ANALYZE GAME
+            {/* Playback controls */}
+            <div style={{display:'flex',justifyContent:'center',gap:'8px',
+              padding:'12px',borderTop:'1px solid rgba(255,255,255,0.08)'}}>
+              {['|◀','◀','▶','▶|'].map((icon,i) => {
+                const handlers = [handleFirst, handlePrev, handleNext, handleLast];
+                const disabled = [
+                  history.length === 0,
+                  history.length === 0,
+                  history.length === 0 || reviewIndex === null,
+                  history.length === 0 || reviewIndex === null
+                ];
+                return (
+                  <button 
+                    key={i} 
+                    onClick={handlers[i]}
+                    disabled={disabled[i]}
+                    style={{width:'40px',height:'40px',background:'rgba(255,255,255,0.05)',
+                      border:'1px solid rgba(255,255,255,0.1)',borderRadius:'6px',
+                      color:'white',fontSize:'14px',cursor:'pointer', opacity: disabled[i] ? 0.35 : 1}}>
+                    {icon}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Action buttons */}
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px',
+              padding:'8px 12px'}}>
+              {[
+                ['↩ Undo', 'undo'],
+                ['💡 Hint', 'hint'],
+                ['⟲ Flip', 'flip'],
+                ['＋ New', 'new']
+              ].map(([label,action]) => {
+                const handlers = {
+                  undo: handleUndo,
+                  hint: handleHint,
+                  flip: () => dispatch({ type: 'TOGGLE_BOARD_FLIP' }),
+                  new: () => startNewGame({ mode: gameMode, playerColor, difficulty: aiDifficulty })
+                };
+                const disabled = {
+                  undo: isGameOver || isAIThinking || history.length === 0,
+                  hint: isGameOver || isAIThinking,
+                  flip: false,
+                  new: false
+                };
+                return (
+                  <button 
+                    key={action} 
+                    onClick={handlers[action]}
+                    disabled={disabled[action]}
+                    style={{height:'40px',background:'rgba(255,255,255,0.05)',
+                      border:'1px solid rgba(255,255,255,0.1)',borderRadius:'6px',
+                      color:'white',fontSize:'12px',cursor:'pointer',fontWeight:'500', opacity: disabled[action] ? 0.35 : 1}}>
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Save + Share */}
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px',
+              padding:'0 12px 8px'}}>
+              <button onClick={handleSaveGame} style={{height:'36px',background:'rgba(255,255,255,0.05)',
+                border:'1px solid rgba(255,255,255,0.1)',borderRadius:'6px',
+                color:'white',fontSize:'12px',cursor:'pointer'}}>
+                💾 Save
               </button>
-            ) : (
-              <button 
-                className="resign-btn font-cinzel" 
-                onClick={() => { if(confirmResign) { resign(); setConfirmResign(false); } else setConfirmResign(true); }} 
-                disabled={isGameOver}
-              >
-                <Flag size={16} style={{ marginRight: '8px' }} />
-                {confirmResign ? 'CONFIRM RESIGNATION' : 'RESIGN'}
+              <button onClick={handleShareGame} style={{height:'36px',background:'rgba(255,255,255,0.05)',
+                border:'1px solid rgba(255,255,255,0.1)',borderRadius:'6px',
+                color:'white',fontSize:'12px',cursor:'pointer'}}>
+                🔗 Share
               </button>
-            )}
+            </div>
+
+            {/* Resign */}
+            <div style={{padding:'8px 12px 16px'}}>
+              {isGameOver ? (
+                <button 
+                  onClick={handleAnalyzeGameClick}
+                  style={{width:'100%',height:'40px',background:'linear-gradient(135deg, var(--gold-dark), var(--gold))',
+                    border:'none',borderRadius:'6px',
+                    color:'#111',fontSize:'13px',fontWeight:'700',cursor:'pointer'}}>
+                  📊 Analyze Game
+                </button>
+              ) : (
+                <button 
+                  onClick={() => { if(confirmResign) { resign(); setConfirmResign(false); } else setConfirmResign(true); }}
+                  disabled={isGameOver}
+                  style={{width:'100%',height:'40px',background:'rgba(220,50,50,0.15)',
+                    border:'1px solid rgba(220,50,50,0.3)',borderRadius:'6px',
+                    color:'#f87171',fontSize:'13px',fontWeight:'600',cursor:'pointer', opacity: isGameOver ? 0.35 : 1}}>
+                  🏳 {confirmResign ? 'CONFIRM RESIGNATION' : 'Resign'}
+                </button>
+              )}
+            </div>
           </div>
         )}
       </div>

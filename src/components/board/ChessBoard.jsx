@@ -219,178 +219,143 @@ export default function ChessBoard({ bestMoveArrow }) {
   }, [bestMoveArrow, flippedView]);
 
   return (
-    <div className="board-wrapper">
-      {/* AI Thinking Indicator */}
-      {isAIThinking && gameMode === 'vsAI' && (
-        <div className="ai-thinking-overlay">
-          <div className="ai-thinking-dot" />
-          <div className="ai-thinking-dot" />
-          <div className="ai-thinking-dot" />
-          AI is thinking...
-        </div>
+    <div
+      ref={boardRef}
+      role="grid"
+      aria-label="Chess board"
+      tabIndex={0}
+      onKeyDown={handleKeyDown}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      className={`board-grid chess-board ${isNeonTheme ? 'board-neon' : ''} ${isAIThinking ? 'ai-thinking' : ''}`}
+      style={{
+        touchAction: 'none',
+        '--board-light': '#f0d9b5',
+        '--board-dark': '#b58863',
+        '--theme-accent': currentTheme.accent,
+      }}
+    >
+      {/* Ambient glow */}
+      <div className="board-glow" style={{ '--theme-accent': currentTheme.accent }} />
+
+      {/* ── Square Grid ── */}
+      {ranks.map((rank) =>
+        files.map((file) => {
+          const squareName = `${file}${rank}`;
+          const boardRank = RANKS.indexOf(rank);
+          const boardFile = FILES.indexOf(file);
+          const cell = board[boardRank]?.[boardFile];
+          const isValidTarget = validMoves.includes(squareName);
+          const sqColor = getSquareColor(file, rank);
+
+          const isErrorShake = errorSquare === squareName;
+          const isKeyboardFocused = keyboardFocus === squareName;
+
+          const pieceDesc = cell
+            ? `${cell.color === 'w' ? 'white' : 'black'} ${
+                { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king' }[cell.type]
+              }`
+            : 'empty';
+
+          return (
+            <div
+              key={squareName}
+              id={`sq-${squareName}`}
+              data-square={squareName}
+              role="gridcell"
+              aria-label={`${squareName}, ${pieceDesc}`}
+              className={[
+                getSquareClasses(squareName),
+                `${sqColor}-square`,
+                isErrorShake ? 'shake' : '',
+                isKeyboardFocused ? 'keyboard-focus' : '',
+              ].filter(Boolean).join(' ')}
+              style={{
+                backgroundColor: sqColor === 'light' ? '#f0d9b5' : '#b58863',
+                width: '100%',
+                height: '100%',
+              }}
+              onClick={() => handleSquareClick(squareName)}
+              onDragOver={(e) => { e.preventDefault(); setDragOver(squareName); }}
+              onDragLeave={() => setDragOver(null)}
+              onDrop={(e) => handleDrop(e, squareName)}
+              onTouchStart={(e) => handleTouchStart(e, squareName)}
+            >
+              {showMoveIndicators && isValidTarget && (
+                <MoveIndicator hasCapture={!!cell} themeAccent={currentTheme.accent} />
+              )}
+            </div>
+          );
+        })
       )}
 
-      {/* Rank numbers — LEFT side only */}
-      <div className="rank-labels" style={{height: 'var(--board-size)', display:'flex', flexDirection:'column'}}>
-        {(flippedView ? [1,2,3,4,5,6,7,8] : [8,7,6,5,4,3,2,1]).map(n => (
-          <div key={n} style={{flex:1, display:'flex', alignItems:'center', justifyContent:'center', width:'18px', fontSize:'11px', color:'rgba(255,255,255,0.5)', fontWeight:500}}>
-            {n}
-          </div>
-        ))}
-      </div>
-
-      <div className="board-and-files">
-        {/* The 8x8 board grid */}
-        <div className="board-container">
-          {/* Ambient glow */}
-          <div className="board-glow" style={{ '--theme-accent': currentTheme.accent }} />
-
+      {/* ── Pieces Layer ── */}
+      {pieces.map((p) => {
+        const isSelected = selectedSquare === p.square;
+        const isLanding = movingPiece === p.square;
+        return (
           <div
-            ref={boardRef}
-            role="grid"
-            aria-label="Chess board"
-            tabIndex={0}
-            onKeyDown={handleKeyDown}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
-            className={`board-grid chess-board ${isNeonTheme ? 'board-neon' : ''} ${isAIThinking ? 'ai-thinking' : ''}`}
+            key={p.id}
             style={{
-              touchAction: 'none',
-              '--board-light': '#f0d9b5',
-              '--board-dark': '#b58863',
-              '--theme-accent': currentTheme.accent,
+              position: 'absolute',
+              width: '12.5%',
+              height: '12.5%',
+              ...getSquareOffset(p.square),
+              zIndex: isSelected || isLanding || draggedFrom === p.square ? 10 : 2,
+              pointerEvents: 'none',
+              transition: animationsEnabled ? 'left 0.18s ease, top 0.18s ease' : 'none',
             }}
           >
-            {/* ── Square Grid ── */}
-            {ranks.map((rank) =>
-              files.map((file) => {
-                const squareName = `${file}${rank}`;
-                const boardRank = RANKS.indexOf(rank);
-                const boardFile = FILES.indexOf(file);
-                const cell = board[boardRank]?.[boardFile];
-                const isValidTarget = validMoves.includes(squareName);
-                const sqColor = getSquareColor(file, rank);
-
-                const isErrorShake = errorSquare === squareName;
-                const isKeyboardFocused = keyboardFocus === squareName;
-
-                const pieceDesc = cell
-                  ? `${cell.color === 'w' ? 'white' : 'black'} ${
-                      { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king' }[cell.type]
-                    }`
-                  : 'empty';
-
-                return (
-                  <div
-                    key={squareName}
-                    id={`sq-${squareName}`}
-                    data-square={squareName}
-                    role="gridcell"
-                    aria-label={`${squareName}, ${pieceDesc}`}
-                    className={[
-                      getSquareClasses(squareName),
-                      `${sqColor}-square`,
-                      isErrorShake ? 'shake' : '',
-                      isKeyboardFocused ? 'keyboard-focus' : '',
-                    ].filter(Boolean).join(' ')}
-                    style={{
-                      backgroundColor: sqColor === 'light' ? '#f0d9b5' : '#b58863',
-                      width: '100%',
-                      height: '100%',
-                    }}
-                    onClick={() => handleSquareClick(squareName)}
-                    onDragOver={(e) => { e.preventDefault(); setDragOver(squareName); }}
-                    onDragLeave={() => setDragOver(null)}
-                    onDrop={(e) => handleDrop(e, squareName)}
-                    onTouchStart={(e) => handleTouchStart(e, squareName)}
-                  >
-                    {showMoveIndicators && isValidTarget && (
-                      <MoveIndicator hasCapture={!!cell} themeAccent={currentTheme.accent} />
-                    )}
-                  </div>
-                );
-              })
-            )}
-
-            {/* ── Pieces Layer ── */}
-            {pieces.map((p) => {
-              const isSelected = selectedSquare === p.square;
-              const isLanding = movingPiece === p.square;
-              return (
-                <div
-                  key={p.id}
-                  style={{
-                    position: 'absolute',
-                    width: '12.5%',
-                    height: '12.5%',
-                    ...getSquareOffset(p.square),
-                    zIndex: isSelected || isLanding || draggedFrom === p.square ? 10 : 2,
-                    pointerEvents: 'none',
-                    transition: animationsEnabled ? 'left 0.18s ease, top 0.18s ease' : 'none',
-                  }}
-                >
-                  <div style={{ pointerEvents: 'auto', width: '100%', height: '100%' }}>
-                    <ChessPiece
-                      piece={p}
-                      square={p.square}
-                      isSelected={isSelected}
-                      animationsEnabled={animationsEnabled}
-                      onDragStart={handleDragStart}
-                      onDrop={handleDrop}
-                      onClick={() => handleSquareClick(p.square)}
-                      animStyle={{ animation: isLanding ? 'slideIn 0.2s ease' : 'none' }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-
-            {/* Particle overlay */}
-            <ParticleCanvas boardRef={boardRef} />
-
-            {/* BEST MOVE SVG ARROW DRAWING */}
-            {arrowCoords && (
-              <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 15 }}>
-                <defs>
-                  <marker id="arrowhead" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
-                    <polygon points="0 0, 6 3, 0 6" fill="rgba(226, 176, 74, 0.85)" />
-                  </marker>
-                </defs>
-                <line 
-                  x1={arrowCoords.start.x} y1={arrowCoords.start.y} 
-                  x2={arrowCoords.end.x} y2={arrowCoords.end.y} 
-                  stroke="rgba(226, 176, 74, 0.85)" 
-                  strokeWidth="5" 
-                  markerEnd="url(#arrowhead)" 
-                  strokeDasharray="1"
-                />
-              </svg>
-            )}
-
-            {/* Neon grid lines */}
-            {isNeonTheme && <div className="neon-grid" style={{ '--accent': currentTheme.accent }} />}
-
-            {/* Pawn Promotion Modal */}
-            {promotionPending && (
-              <PromotionModal
-                color={chess.turn()}
-                file={promotionPending.to[0]}
-                rank={promotionPending.to[1]}
-                flipped={flippedView}
+            <div style={{ pointerEvents: 'auto', width: '100%', height: '100%' }}>
+              <ChessPiece
+                piece={p}
+                square={p.square}
+                isSelected={isSelected}
+                animationsEnabled={animationsEnabled}
+                onDragStart={handleDragStart}
+                onDrop={handleDrop}
+                onClick={() => handleSquareClick(p.square)}
+                animStyle={{ animation: isLanding ? 'slideIn 0.2s ease' : 'none' }}
               />
-            )}
-          </div>
-        </div>
-
-        {/* File letters — BOTTOM only */}
-        <div className="file-labels" style={{width:'var(--board-size)', display:'flex', flexDirection:'row'}}>
-          {(flippedView ? ['h','g','f','e','d','c','b','a'] : ['a','b','c','d','e','f','g','h']).map(f => (
-            <div key={f} style={{flex:1, display:'flex', alignItems:'center', justifyContent:'center', height:'18px', fontSize:'11px', color:'rgba(255,255,255,0.5)', fontWeight:500}}>
-              {f}
             </div>
-          ))}
-        </div>
-      </div>
+          </div>
+        );
+      })}
+
+      {/* Particle overlay */}
+      <ParticleCanvas boardRef={boardRef} />
+
+      {/* BEST MOVE SVG ARROW DRAWING */}
+      {arrowCoords && (
+        <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 15 }}>
+          <defs>
+            <marker id="arrowhead" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+              <polygon points="0 0, 6 3, 0 6" fill="rgba(226, 176, 74, 0.85)" />
+            </marker>
+          </defs>
+          <line 
+            x1={arrowCoords.start.x} y1={arrowCoords.start.y} 
+            x2={arrowCoords.end.x} y2={arrowCoords.end.y} 
+            stroke="rgba(226, 176, 74, 0.85)" 
+            strokeWidth="5" 
+            markerEnd="url(#arrowhead)" 
+            strokeDasharray="1"
+          />
+        </svg>
+      )}
+
+      {/* Neon grid lines */}
+      {isNeonTheme && <div className="neon-grid" style={{ '--accent': currentTheme.accent }} />}
+
+      {/* Pawn Promotion Modal */}
+      {promotionPending && (
+        <PromotionModal
+          color={chess.turn()}
+          file={promotionPending.to[0]}
+          rank={promotionPending.to[1]}
+          flipped={flippedView}
+        />
+      )}
     </div>
   );
 }

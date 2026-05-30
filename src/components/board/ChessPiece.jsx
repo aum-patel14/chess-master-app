@@ -54,8 +54,8 @@ export default function ChessPiece({ piece, square, isSelected, animationsEnable
         // #16: smooth sliding transition
         transition: 'filter 0.12s ease',
         filter: isSelected
-          ? 'drop-shadow(0 8px 16px rgba(0,0,0,0.7)) drop-shadow(0 0 12px rgba(100,200,255,0.6))'
-          : 'drop-shadow(0 2px 4px rgba(0,0,0,0.5)) drop-shadow(0 1px 2px rgba(0,0,0,0.3))',
+          ? 'drop-shadow(0 6px 10px rgba(0,0,0,0.4)) drop-shadow(0 0 4px rgba(100,200,255,0.4))'
+          : 'drop-shadow(0 2px 3px rgba(0,0,0,0.25))',
       }}
     />
   );
