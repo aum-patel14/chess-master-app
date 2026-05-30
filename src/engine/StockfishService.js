@@ -2,29 +2,40 @@ export class StockfishService {
   constructor() {
     this.worker = null;
     this.isReady = false;
+    this.failed = false;
     this.pendingResolve = null;
     this.isThinking = false;
     this.timeoutId = null;
+    this.initTimeout = null;
+    this.fallbackTimeout = null;
     this._init();
   }
 
   _init() {
+    this.failed = false;
+    this.isReady = false;
     try {
-      const stockfishUrl = new URL('/chess-master-app/stockfish.js', window.location.origin).href;
+      const basePath = import.meta.env.BASE_URL || '/';
+      const stockfishUrl = new URL(`${basePath}stockfish.js`.replace(/\/+/g, '/'), window.location.origin).href;
       this.worker = new Worker(stockfishUrl);
+      this._setupWorkerEvents();
+      this.worker.postMessage('uci');
     } catch (e) {
-      console.error('Stockfish worker failed to load:', e);
+      console.error('Stockfish worker failed to load locally:', e);
+      this._loadFallback();
       return;
     }
 
-    // Set a fallback timeout in case Stockfish never responds (e.g., WASM blocked)
+    // Set a fallback timeout in case Stockfish never responds (e.g., WASM blocked or 404)
     this.initTimeout = setTimeout(() => {
       if (!this.isReady) {
-        console.warn('Stockfish failed to initialize within 4 seconds. Falling back.');
-        this.failed = true;
+        console.warn('Stockfish failed to initialize locally within 4 seconds. Falling back to CDN.');
+        this._loadFallback();
       }
     }, 4000);
+  }
 
+  _setupWorkerEvents() {
     this.worker.onmessage = (event) => {
       const line = typeof event.data === 'string'
         ? event.data
@@ -40,7 +51,9 @@ export class StockfishService {
 
       if (line === 'readyok') {
         this.isReady = true;
+        this.failed = false;
         clearTimeout(this.initTimeout);
+        clearTimeout(this.fallbackTimeout);
       }
 
       if (line.startsWith('bestmove')) {
@@ -57,27 +70,62 @@ export class StockfishService {
     };
 
     this.worker.onerror = (e) => {
-      console.error('Stockfish error:', e);
-      this.isReady = false;
-      this.failed = true;
-      clearTimeout(this.initTimeout);
-      if (this.pendingResolve) {
-        this.pendingResolve(null);
-        this.pendingResolve = null;
+      console.error('Stockfish worker error:', e);
+      // If the local worker failed and we haven't failed already, try fallback
+      if (!this.failed && !this.isReady) {
+        clearTimeout(this.initTimeout);
+        this._loadFallback();
+      } else {
+        this.isReady = false;
+        this.failed = true;
+        if (this.pendingResolve) {
+          this.pendingResolve(null);
+          this.pendingResolve = null;
+        }
       }
     };
+  }
 
-    // Initialize ONCE
-    this.worker.postMessage('uci');
+  _loadFallback() {
+    if (this.isReady) return; // If already succeeded somehow
+    console.warn('Attempting Stockfish CDN fallback...');
+
+    if (this.worker) {
+      try { this.worker.terminate(); } catch (e) {}
+    }
+
+    try {
+      const blobCode = `importScripts("https://cdn.jsdelivr.net/npm/stockfish@16.0.0/src/stockfish-nnue-16.js");`;
+      const blob = new Blob([blobCode], { type: "application/javascript" });
+      const workerUrl = URL.createObjectURL(blob);
+      
+      this.worker = new Worker(workerUrl);
+      this._setupWorkerEvents();
+
+      // Set a fallback timeout for the CDN as well
+      this.fallbackTimeout = setTimeout(() => {
+        if (!this.isReady) {
+          console.error('Stockfish CDN fallback also failed to initialize.');
+          this.isReady = false;
+          this.failed = true;
+        }
+      }, 5000);
+
+      this.worker.postMessage('uci');
+    } catch (err) {
+      console.error('Failed to create Stockfish CDN worker:', err);
+      this.isReady = false;
+      this.failed = true;
+    }
   }
 
   get difficultySettings() {
     return {
-      1: { depth: 1, movetime: 150,  skillLevel: 0  },
-      2: { depth: 3, movetime: 400,  skillLevel: 5  },
-      3: { depth: 6, movetime: 800,  skillLevel: 10 },
-      4: { depth: 10, movetime: 1500, skillLevel: 15 },
-      5: { depth: 20, movetime: 2500, skillLevel: 20 },
+      1: { depth: 1,  movetime: 100,  skillLevel: 0  },
+      2: { depth: 3,  movetime: 300,  skillLevel: 5  },
+      3: { depth: 8,  movetime: 1000, skillLevel: 10 },
+      4: { depth: 15, movetime: 2000, skillLevel: 15 },
+      5: { depth: 20, movetime: 3000, skillLevel: 20 },
     };
   }
 

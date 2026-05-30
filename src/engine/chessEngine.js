@@ -206,9 +206,9 @@ export function getGameStatus(chess) {
     return { type: 'checkmate', message: `${winner} wins by checkmate!`, winner };
   }
   if (chess.isStalemate()) return { type: 'stalemate', message: 'Draw by stalemate', winner: null };
-  if (chess.isDraw()) return { type: 'draw', message: 'Draw', winner: null };
-  if (chess.isThreefoldRepetition()) return { type: 'repetition', message: 'Draw by repetition', winner: null };
+  if (chess.isThreefoldRepetition()) return { type: 'repetition', message: 'Draw by threefold repetition', winner: null };
   if (chess.isInsufficientMaterial()) return { type: 'insufficient', message: 'Draw — insufficient material', winner: null };
+  if (chess.isDraw()) return { type: 'draw', message: 'Draw by 50-move rule', winner: null };
   if (chess.inCheck()) return { type: 'check', message: 'Check!', winner: null };
   return { type: 'playing', message: '', winner: null };
 }
