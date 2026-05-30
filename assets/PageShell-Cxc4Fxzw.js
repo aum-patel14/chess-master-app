@@ -1,0 +1,1 @@
+import{t as e}from"./jsx-runtime-2UHhqg_S.js";import{t}from"./proxy-C9Do9Sd3.js";var n=e();function r({children:e}){return(0,n.jsx)(t.div,{initial:{opacity:0,x:20},animate:{opacity:1,x:0},exit:{opacity:0,x:-20},transition:{duration:.3,ease:`circOut`},style:{minHeight:`100vh`,width:`100%`},children:e})}export{r as t};
