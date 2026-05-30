@@ -202,6 +202,64 @@ export class StockfishService {
     }, settings.movetime + 1000);
   }
 
+  evaluatePosition(fen, depth = 10) {
+    return new Promise((resolve) => {
+      if (!this.worker) {
+        resolve({ score: 0, bestMove: null });
+        return;
+      }
+
+      // Ensure worker is ready
+      if (!this.isReady) {
+        resolve({ score: 0, bestMove: null });
+        return;
+      }
+
+      this.worker.postMessage(`position fen ${fen}`);
+      this.worker.postMessage(`go depth ${depth}`);
+      
+      let lastScore = 0;
+      let lastBestMove = null;
+
+      const onMsg = (event) => {
+        const line = typeof event.data === 'string'
+          ? event.data
+          : event.data?.data;
+        if (!line) return;
+
+        if (line.includes('score cp')) {
+          const parts = line.split(' ');
+          const cpIndex = parts.indexOf('cp');
+          if (cpIndex !== -1) {
+            const rawScore = parseInt(parts[cpIndex + 1]);
+            const activeTurn = fen.split(' ')[1];
+            // Normalize so white positive, black negative
+            lastScore = (activeTurn === 'w' ? rawScore : -rawScore) / 100.0;
+          }
+        } else if (line.includes('score mate')) {
+          const parts = line.split(' ');
+          const mateIndex = parts.indexOf('mate');
+          if (mateIndex !== -1) {
+            const mateIn = parseInt(parts[mateIndex + 1]);
+            const activeTurn = fen.split(' ')[1];
+            lastScore = activeTurn === 'w' ? (mateIn > 0 ? 100 : -100) : (mateIn > 0 ? -100 : 100);
+          }
+        }
+
+        if (line.startsWith('bestmove')) {
+          lastBestMove = line.split(' ')[1];
+          this.worker.removeEventListener('message', onMsg);
+          resolve({
+            score: lastScore,
+            bestMove: lastBestMove !== '(none)' ? lastBestMove : null
+          });
+        }
+      };
+
+      this.worker.addEventListener('message', onMsg);
+    });
+  }
+
   terminate() {
     if (this.worker) {
       this.worker.postMessage('stop');

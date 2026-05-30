@@ -9,6 +9,8 @@ import { saveGame, getHistory } from '../utils/gameHistory';
 import { readElo, writeElo, updateStats, updateEloForResult, appendGameHistory, readStats, writeStats } from '../utils/chessStats';
 import { checkAndUnlockAchievements } from '../utils/achievements';
 import AchievementToast from '../components/AchievementToast';
+import UpgradeModal from '../components/modals/UpgradeModal';
+import { getSocket } from '../hooks/useSocket';
 
 const GameContext = createContext(null);
 
@@ -24,7 +26,17 @@ const initialTheme = localStorage.getItem('chess_theme') || 'classic';
 const initialSound = localStorage.getItem('chess_sound') !== 'false';
 const initialAnimations = localStorage.getItem('chess_animations') !== 'false';
 const initialCoords = localStorage.getItem('chess_coords') !== 'false';
-const initialTime = localStorage.getItem('chess_time') ? parseInt(localStorage.getItem('chess_time')) : null;
+
+// Default to Rapid: 10 minutes, 0 increment
+const defaultTimeControl = { base: 10, increment: 0 };
+const initialTime = (() => {
+  try {
+    const saved = localStorage.getItem('chess_time');
+    return saved ? JSON.parse(saved) : defaultTimeControl;
+  } catch (e) {
+    return defaultTimeControl;
+  }
+})();
 
 const initialState = {
   fen: new Chess().fen(),
@@ -34,7 +46,7 @@ const initialState = {
   lastMove: null,
   errorSquare: null,          // Square that triggered an illegal move (for shake animation)
   status: { type: 'playing', message: '', winner: null },
-  gameMode: 'menu',          // 'menu' | 'vsAI' | 'local' | 'puzzle'
+  gameMode: 'menu',          // 'menu' | 'vsAI' | 'local' | 'puzzle' | 'online'
   playerColor: 'w',          // player is white by default
   aiDifficulty: initialDifficulty,
   isAIThinking: false,
@@ -43,9 +55,9 @@ const initialState = {
   showCoords: initialCoords,
   soundEnabled: initialSound,
   animationsEnabled: initialAnimations,
-  timeControl: initialTime,          // null = unlimited
-  whiteTime: initialTime ? initialTime * 60 : 600,
-  blackTime: initialTime ? initialTime * 60 : 600,
+  timeControl: initialTime,          // { base: number, increment: number }
+  whiteTime: initialTime ? initialTime.base * 60 : 600,
+  blackTime: initialTime ? initialTime.base * 60 : 600,
   timerRunning: false,
   promotionPending: null,     // { from, to } when pawn reaches last rank
   checkSquare: null,
@@ -55,10 +67,56 @@ const initialState = {
   reviewFen: null,
   moveCount: 0,
   gameStartTime: null,
+  roomCode: null,
+  opponentName: null,
+  opponentRating: null,
+  opponentDisconnected: false,
+  opponentDisconnectedSeconds: null,
 };
 
 function gameReducer(state, action) {
   switch (action.type) {
+    case 'SET_ONLINE_GAME': {
+      const tc = action.payload.timeControl || { base: 10, increment: 0 };
+      return {
+        ...state,
+        gameMode: 'online',
+        roomCode: action.payload.roomCode,
+        playerColor: action.payload.color,
+        opponentName: action.payload.opponentName,
+        opponentRating: action.payload.opponentRating,
+        timeControl: tc,
+        whiteTime: tc.base * 60,
+        blackTime: tc.base * 60,
+        timerRunning: true,
+        fen: new Chess().fen(),
+        history: [],
+        selectedSquare: null,
+        validMoves: [],
+        lastMove: null,
+        status: { type: 'playing', message: '', winner: null },
+        opponentDisconnected: false,
+        capturedPieces: { w: [], b: [] },
+        checkSquare: null,
+        reviewFen: null,
+        hintSquares: null,
+        moveCount: 0,
+        gameStartTime: Date.now()
+      };
+    }
+    case 'SET_OPPONENT_DISCONNECTED':
+      return {
+        ...state,
+        opponentDisconnected: action.payload.disconnected,
+        opponentDisconnectedSeconds: action.payload.seconds
+      };
+    case 'SET_GAME_OVER_STATUS':
+      return {
+        ...state,
+        status: action.payload,
+        timerRunning: false,
+        opponentDisconnected: false
+      };
     case 'SET_REVIEW_FEN':
       return { ...state, reviewFen: action.payload };
     case 'SET_HINT_SQUARES':
@@ -81,19 +139,19 @@ function gameReducer(state, action) {
     case 'SET_TIME_CONTROL': return {
       ...state,
       timeControl: action.payload,
-      whiteTime: action.payload ? action.payload * 60 : 600,
-      blackTime: action.payload ? action.payload * 60 : 600,
+      whiteTime: action.payload ? action.payload.base * 60 : 600,
+      blackTime: action.payload ? action.payload.base * 60 : 600,
     };
     case 'TICK_TIMER': {
       if (!state.timerRunning || !state.timeControl) return state;
       const chess = new Chess(state.fen);
       const turn = chess.turn();
-      if (turn === 'w') return { ...state, whiteTime: Math.max(0, state.whiteTime - 1) };
-      return { ...state, blackTime: Math.max(0, state.blackTime - 1) };
+      if (turn === 'w') return { ...state, whiteTime: Math.max(0, state.whiteTime - 0.1) };
+      return { ...state, blackTime: Math.max(0, state.blackTime - 0.1) };
     }
     case 'TIMEOUT': {
       if (state.status.type === 'timeout') return state;
-      const winner = state.whiteTime === 0 ? 'Black' : 'White';
+      const winner = state.whiteTime <= 0 ? 'Black' : 'White';
       return {
         ...state,
         status: { type: 'timeout', message: `Time's up! ${winner} wins!`, winner },
@@ -102,10 +160,24 @@ function gameReducer(state, action) {
     }
     case 'APPLY_MOVE': {
       const { move, chess, capturedPieces, status, checkSquare } = action;
+      const turnAfterMove = chess.turn();
+      let whiteTime = state.whiteTime;
+      let blackTime = state.blackTime;
+      
+      if (state.timeControl && state.timeControl.increment > 0 && state.moveCount >= 1) {
+        if (turnAfterMove === 'b') {
+          // White just completed a move, add increment to White
+          whiteTime += state.timeControl.increment;
+        } else {
+          // Black just completed a move, add increment to Black
+          blackTime += state.timeControl.increment;
+        }
+      }
+
       return {
         ...state,
         fen: chess.fen(),
-        history: [...state.history, move],
+        history: [...state.history, { ...move, fen: chess.fen() }],
         selectedSquare: null,
         validMoves: [],
         errorSquare: null,
@@ -120,10 +192,13 @@ function gameReducer(state, action) {
         timerRunning: status.type === 'playing' || status.type === 'check',
         moveCount: state.moveCount + 1,
         gameStartTime: state.gameStartTime || Date.now(),
+        whiteTime,
+        blackTime,
       };
     }
     case 'NEW_GAME': {
       const tc = action.timeControl !== undefined ? action.timeControl : state.timeControl;
+      const baseSecs = tc ? tc.base * 60 : 600;
       return {
         ...initialState,
         gameMode: action.mode || 'vsAI',
@@ -134,8 +209,8 @@ function gameReducer(state, action) {
         animationsEnabled: state.animationsEnabled,
         showCoords: state.showCoords,
         timeControl: tc,
-        whiteTime: tc ? tc * 60 : 600,
-        blackTime: tc ? tc * 60 : 600,
+        whiteTime: baseSecs,
+        blackTime: baseSecs,
         gameStartTime: Date.now(),
         fen: action.fen || new Chess().fen(),
         boardFlipped: false,
@@ -197,6 +272,89 @@ export function GameProvider({ children }) {
   const [eloChange, setEloChange] = useState(0);
   const [unlockedAchievements, setUnlockedAchievements] = useState([]);
   const [aiStatus, setAiStatus] = useState('loading'); // 'loading', 'ready', 'fallback'
+  const [opponentDisconnectedCountdown, setOpponentDisconnectedCountdown] = useState(30);
+
+  const fenRef = useRef(state.fen);
+  const gameModeRef = useRef(state.gameMode);
+  const playerColorRef = useRef(state.playerColor);
+
+  useEffect(() => {
+    fenRef.current = state.fen;
+    gameModeRef.current = state.gameMode;
+    playerColorRef.current = state.playerColor;
+  }, [state.fen, state.gameMode, state.playerColor]);
+
+  useEffect(() => {
+    let interval = null;
+    if (state.opponentDisconnected) {
+      setOpponentDisconnectedCountdown(30);
+      interval = setInterval(() => {
+        setOpponentDisconnectedCountdown(c => Math.max(0, c - 1));
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [state.opponentDisconnected]);
+
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+
+    const handleMoveMade = ({ from, to, promotion }) => {
+      if (gameModeRef.current !== 'online') return;
+      const chess = new Chess(fenRef.current);
+      if (chess.turn() === playerColorRef.current) return;
+
+      const moveResult = chess.move({ from, to, promotion });
+      if (moveResult && applyMoveRef.current) {
+        applyMoveRef.current(moveResult, chess);
+      }
+    };
+
+    const handleOpponentDisconnected = ({ secondsToReconnect }) => {
+      dispatch({ type: 'SET_OPPONENT_DISCONNECTED', payload: { disconnected: true, seconds: secondsToReconnect } });
+    };
+
+    const handleOpponentReconnected = () => {
+      dispatch({ type: 'SET_OPPONENT_DISCONNECTED', payload: { disconnected: false, seconds: null } });
+    };
+
+    const handleGameOver = ({ result, reason, winnerColor }) => {
+      const isWin = result === 'win' || (result === 'loss' && winnerColor === playerColorRef.current);
+      const isDraw = result === 'draw';
+      
+      let msg = 'Game Over';
+      if (reason === 'disconnect-timeout') {
+        msg = 'Opponent disconnected (reconnection timeout)';
+      } else if (reason === 'resignation') {
+        msg = `${winnerColor === 'w' ? 'White' : 'Black'} won by resignation`;
+      } else if (reason === 'agreement') {
+        msg = 'Draw by agreement';
+      }
+
+      dispatch({
+        type: 'SET_GAME_OVER_STATUS',
+        payload: {
+          type: isDraw ? 'draw' : isWin ? 'win' : 'loss',
+          message: msg,
+          winner: winnerColor === 'w' ? 'White' : winnerColor === 'b' ? 'Black' : null
+        }
+      });
+    };
+
+    socket.on('move-made', handleMoveMade);
+    socket.on('opponent-disconnected', handleOpponentDisconnected);
+    socket.on('opponent-reconnected', handleOpponentReconnected);
+    socket.on('game-over', handleGameOver);
+
+    return () => {
+      socket.off('move-made', handleMoveMade);
+      socket.off('opponent-disconnected', handleOpponentDisconnected);
+      socket.off('opponent-reconnected', handleOpponentReconnected);
+      socket.off('game-over', handleGameOver);
+    };
+  }, []);
 
   const aiTimerRef = useRef(null);
   const timerIntervalRef = useRef(null);
@@ -224,7 +382,7 @@ export function GameProvider({ children }) {
     localStorage.setItem('chess_animations', state.animationsEnabled);
     localStorage.setItem('chess_coords', state.showCoords);
     if (state.timeControl !== null) {
-      localStorage.setItem('chess_time', state.timeControl);
+      localStorage.setItem('chess_time', JSON.stringify(state.timeControl));
     } else {
       localStorage.removeItem('chess_time');
     }
@@ -240,14 +398,14 @@ export function GameProvider({ children }) {
     if (state.timerRunning && state.timeControl && !state.isAIThinking && (state.status.type === 'playing' || state.status.type === 'check')) {
       timerIntervalRef.current = setInterval(() => {
         dispatch({ type: 'TICK_TIMER' });
-      }, 1000);
+      }, 100);
     }
     return () => clearInterval(timerIntervalRef.current);
   }, [state.timerRunning, state.timeControl, state.isAIThinking, state.status.type, state.fen]);
 
   // Check for timeout
   useEffect(() => {
-    if (state.timeControl && (state.whiteTime === 0 || state.blackTime === 0)) {
+    if (state.timeControl && (state.whiteTime <= 0 || state.blackTime <= 0)) {
       dispatch({ type: 'TIMEOUT' });
     }
   }, [state.whiteTime, state.blackTime, state.timeControl]);
@@ -419,8 +577,8 @@ async function saveGameToCloud(state, finalStatus, history, fen) {
     const chess = new Chess(state.fen);
     const currentTurn = chess.turn();
 
-    // In vsAI mode, only allow player's turn
-    if (state.gameMode === 'vsAI' && currentTurn !== state.playerColor) return;
+    // In vsAI or online mode, only allow player's turn
+    if ((state.gameMode === 'vsAI' || state.gameMode === 'online') && currentTurn !== state.playerColor) return;
 
     const piece = chess.get(square);
 
@@ -451,6 +609,19 @@ async function saveGameToCloud(state, finalStatus, history, fen) {
         const moveResult = chess.move({ from: state.selectedSquare, to: square });
         if (moveResult) {
           applyMove(moveResult, chess);
+
+          if (state.gameMode === 'online') {
+            const socket = getSocket();
+            if (socket) {
+              socket.emit('make-move', {
+                from: state.selectedSquare,
+                to: square,
+                promotion: targetMove.promotion,
+                fen: chess.fen(),
+                san: moveResult.san
+              });
+            }
+          }
         }
         return;
       } else {
@@ -473,6 +644,19 @@ async function saveGameToCloud(state, finalStatus, history, fen) {
     });
     if (moveResult) {
       applyMove(moveResult, chess);
+
+      if (state.gameMode === 'online') {
+        const socket = getSocket();
+        if (socket) {
+          socket.emit('make-move', {
+            from: state.promotionPending.from,
+            to: state.promotionPending.to,
+            promotion: piece,
+            fen: chess.fen(),
+            san: moveResult.san
+          });
+        }
+      }
     }
   }, [state, applyMove]);
 
@@ -493,6 +677,12 @@ async function saveGameToCloud(state, finalStatus, history, fen) {
     soundManager.playDraw();
     dispatch({ type: 'RESIGN' });
     
+    if (state.gameMode === 'online') {
+      const socket = getSocket();
+      if (socket) socket.emit('resign');
+      return;
+    }
+
     if (state.gameMode === 'vsAI') {
       updateStats('loss');
       const newElo = updateEloForResult('loss', state.aiDifficulty);
@@ -520,7 +710,12 @@ async function saveGameToCloud(state, finalStatus, history, fen) {
   const offerDraw = useCallback(() => {
     soundManager.playDraw();
     dispatch({ type: 'OFFER_DRAW' });
-  }, []);
+
+    if (state.gameMode === 'online') {
+      const socket = getSocket();
+      if (socket) socket.emit('offer-draw');
+    }
+  }, [state.gameMode]);
 
   const undoMove = useCallback(() => {
     if (state.history.length === 0) return;
@@ -558,6 +753,44 @@ async function saveGameToCloud(state, finalStatus, history, fen) {
     }
   }, [state.history, state.gameMode]);
 
+  const [userPlan, setUserPlan] = useState(() => localStorage.getItem('plan') || 'free');
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradeReason, setUpgradeReason] = useState('');
+
+  const isPremium = userPlan === 'premium';
+
+  const upgradeToPremium = useCallback(() => {
+    setUserPlan('premium');
+    localStorage.setItem('plan', 'premium');
+    setShowUpgradeModal(false);
+  }, []);
+
+  const getUsage = useCallback((type) => {
+    const usageKey = `usage_${new Date().toDateString()}`;
+    const usage = JSON.parse(localStorage.getItem(usageKey) || '{}');
+    return usage[type] || 0;
+  }, []);
+
+  const incrementUsage = useCallback((type) => {
+    const usageKey = `usage_${new Date().toDateString()}`;
+    const usage = JSON.parse(localStorage.getItem(usageKey) || '{}');
+    usage[type] = (usage[type] || 0) + 1;
+    localStorage.setItem(usageKey, JSON.stringify(usage));
+  }, []);
+
+  const checkFeatureLimit = useCallback((type, message) => {
+    if (isPremium) return true;
+
+    const limit = type === 'analysis' ? 3 : type === 'puzzle' ? 10 : 0;
+    const current = getUsage(type);
+    if (current >= limit) {
+      setUpgradeReason(message);
+      setShowUpgradeModal(true);
+      return false;
+    }
+    return true;
+  }, [isPremium, getUsage]);
+
   const boardThemes = BOARD_THEMES;
   const currentTheme = BOARD_THEMES[state.theme] || BOARD_THEMES.classic;
 
@@ -581,9 +814,24 @@ async function saveGameToCloud(state, finalStatus, history, fen) {
       playerElo,
       eloChange,
       aiStatus,
+      opponentDisconnectedCountdown,
+      userPlan,
+      isPremium,
+      upgradeToPremium,
+      checkFeatureLimit,
+      incrementUsage,
+      getUsage,
+      setShowUpgradeModal,
+      setUpgradeReason,
     }}>
       {children}
       <AchievementToast unlockedIds={unlockedAchievements} />
+      <UpgradeModal
+        show={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        onUpgrade={upgradeToPremium}
+        reason={upgradeReason}
+      />
     </GameContext.Provider>
   );
 }

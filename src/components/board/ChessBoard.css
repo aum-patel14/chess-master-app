@@ -106,48 +106,65 @@
 }
 
 /* ── Coordinate Labels (Outside the Board) ── */
-.rank-labels-column {
+.board-outer-container {
   display: flex;
   flex-direction: column;
-  width: 20px;
-  margin-right: 6px;
+  width: min(calc(100vh - 180px), calc(100vw - 370px));
+  margin: 0 auto;
   box-sizing: border-box;
 }
 
-.rank-label {
-  flex: 1;
+.board-main-row {
   display: flex;
+  flex-direction: row;
+  width: 100%;
+}
+
+.board-container {
+  flex: 1;
+  aspect-ratio: 1 / 1;
+  position: relative;
+}
+
+.rank-labels-column {
+  width: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
   align-items: center;
-  justify-content: center;
-  font-size: clamp(11px, 2.5vw, 14px);
-  font-weight: bold;
-  color: rgba(212, 175, 55, 0.8);
-  user-select: none;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  box-sizing: border-box;
+  margin-right: 4px;
 }
 
 .file-labels-row {
   display: flex;
-  width: 100%;
+  flex-direction: row;
   height: 20px;
-  margin-top: 6px;
-  padding-left: 26px; /* 20px column width + 6px column margin */
+  width: 100%;
   box-sizing: border-box;
+  margin-top: 4px;
+}
+
+.coordinate-label {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
+
+.rank-label {
+  height: 12.5%;
 }
 
 .file-label {
   flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: clamp(11px, 2.5vw, 14px);
-  font-weight: bold;
-  color: rgba(212, 175, 55, 0.8);
-  user-select: none;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
 }
 
-/* ── Error Shake Animation (full spec) ── */
+/* ── Error Shake Animation ── */
 @keyframes shake {
   0%,100% { transform: translateX(0); }
   20% { transform: translateX(-6px); }
@@ -182,18 +199,19 @@
 /* ── Chess Board Grid ── */
 .chess-board {
   display: grid;
-  flex: 1;
   width: 100%;
-  aspect-ratio: 1 / 1;
+  height: 100%;
   grid-template-columns: repeat(8, 1fr);
   grid-template-rows: repeat(8, 1fr);
-  border-radius: 2px;
+  border-radius: 4px;
   overflow: hidden;
   position: relative;
-  border: 2px solid rgba(0,0,0,0.6);
+  border: 3px solid #8B6914 !important; /* Wood Gold Border */
   box-shadow:
+    0 10px 30px rgba(0,0,0,0.6),
     inset 0 0 0 1px rgba(255,255,255,0.04),
     inset 0 0 30px rgba(0,0,0,0.3);
+  box-sizing: border-box;
 }
 
 /* AI thinking — disable board interaction */
@@ -234,7 +252,7 @@
   overflow: visible;
 }
 
-/* Hover: subtle white shine via pseudo-element */
+/* Hover: subtle white shine */
 .board-square::before {
   content: '';
   position: absolute;
@@ -249,36 +267,33 @@
   background: rgba(255, 255, 255, 0.13);
 }
 
-/* ── #3: Last Move Highlight — golden/yellow overlay (rgba(255,200,0,0.35)) ── */
-.dark-square.last-move::before {
-  background: rgba(255, 200, 0, 0.38) !important;
+/* ── #3: Last Move Highlight — Chess.com yellow-green (rgba(155, 199, 0, 0.41)) ── */
+.board-square.last-move::before {
+  background: rgba(155, 199, 0, 0.41) !important;
+  z-index: 1;
 }
 
-.light-square.last-move::before {
-  background: rgba(255, 200, 0, 0.28) !important;
-}
-
-/* ── #15: Selected Square — thick blue ring ── */
+/* ── #15: Selected Square — green tint (rgba(20, 85, 30, 0.5)) ── */
 .board-square.selected::before {
-  background: rgba(100, 200, 255, 0.25) !important;
-  box-shadow: inset 0 0 0 4px rgba(100, 200, 255, 0.9);
+  background: rgba(20, 85, 30, 0.5) !important;
+  z-index: 1;
 }
 
 /* ── #2: King in Check — red pulsing glow ── */
 .board-square.in-check {
-  animation: checkFlash 0.6s ease infinite;
+  animation: check-pulse 1.2s ease-in-out infinite;
 }
 
-@keyframes checkFlash {
-  0%, 100% { box-shadow: inset 0 0 0 4px rgba(220, 50, 50, 0.85); }
-  50%       { box-shadow: inset 0 0 0 4px rgba(220, 50, 50, 0.3); }
+@keyframes check-pulse {
+  0%, 100% { box-shadow: inset 0 0 0 3px rgba(220, 50, 50, 0.8); }
+  50%       { box-shadow: inset 0 0 0 6px rgba(220, 50, 50, 0.4); }
 }
 
 .board-square.in-check::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at center, rgba(255,50,50,0.45) 0%, rgba(255,0,0,0.1) 55%, transparent 100%);
+  background: radial-gradient(circle at center, rgba(220,50,50,0.6) 0%, rgba(220,0,0,0.1) 70%, transparent 100%);
   z-index: 2;
   pointer-events: none;
 }

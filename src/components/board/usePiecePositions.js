@@ -27,8 +27,9 @@ export function usePiecePositions(fen) {
         }
       }
 
-      // If initializing or complete mismatch, generate fresh
-      if (currentPieces.length === 0 || Math.abs(currentPieces.length - boardList.length) > 5) {
+      // If starting FEN, or initializing, or complete mismatch, generate fresh
+      const isStartingFen = fen === 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+      if (isStartingFen || currentPieces.length === 0 || Math.abs(currentPieces.length - boardList.length) > 5) {
         return boardList.map(p => ({ ...p, id: `p_${nextId++}` }));
       }
 

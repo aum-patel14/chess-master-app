@@ -111,9 +111,16 @@ export default function HomePage() {
                 </button>
                 <button
                   className="btn-hero secondary"
+                  onClick={() => navigate('/game', { state: { mode: 'online' } })}
+                  style={{ background: 'linear-gradient(135deg, #c4a028 0%, #e6b84a 50%, #c4a028 100%)', color: '#0a0a14', border: 'none' }}
+                >
+                  🌐 Play Online
+                </button>
+                <button
+                  className="btn-hero secondary"
                   onClick={() => navigate('/game', { state: { mode: 'two-player', timeControl } })}
                 >
-                  Play vs Friend
+                  Local Pass & Play
                 </button>
               </div>
               {hasSaved && (

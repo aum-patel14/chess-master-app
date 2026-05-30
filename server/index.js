@@ -2,40 +2,30 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const app = express();
 app.use(cors());
+app.use(express.json());
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.send({ status: 'ok', onlinePlayers: io.engine.clientsCount });
-});
-
+const PORT = process.env.PORT || 3001;
 const httpServer = createServer(app);
+
 const io = new Server(httpServer, {
   cors: {
-    origin: '*', // Allow all origins for simple connection
-    methods: ['GET', 'POST'],
+    origin: '*', // Allow connections from any origin for ease of use/deployment
+    methods: ['GET', 'POST']
   }
 });
 
-// Active game rooms map
-// Room structure:
-// {
-//   code: string,
-//   timeControl: number, // minutes
-//   players: [ { id: string, socketId: string, name: string, rating: number, color: 'w' | 'b' } ],
-//   fen: string,
-//   history: Array,
-//   disconnectTimeout: TimeoutId
-// }
-const rooms = new Map();
+// Server states
+const activePlayers = new Map(); // socket.id => { name, rating, roomCode }
+const queue = []; // Array of players waiting for Quick Match: { socket, name, rating, timeControl }
+const rooms = new Map(); // roomCode => Room state
 
-// Matchmaking queues mapped by timeControl (minutes)
-// e.g. { '10': [player1, player2...] }
-const queues = new Map();
-
-// Helper to generate unique room code
+// Helper: Generate unique 6-character room code
 function generateRoomCode() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let code = '';
@@ -48,297 +38,342 @@ function generateRoomCode() {
   return code;
 }
 
+// Helper: End a game and notify players
+function endGame(roomCode, result, reason, winnerColor = null) {
+  const room = rooms.get(roomCode);
+  if (!room) return;
+
+  if (room.disconnectTimeout) {
+    clearTimeout(room.disconnectTimeout);
+  }
+
+  const whiteSocket = io.sockets.sockets.get(room.white.socketId);
+  const blackSocket = io.sockets.sockets.get(room.black?.socketId);
+
+  const gameOverPayload = { result, reason, winnerColor };
+
+  if (whiteSocket) whiteSocket.emit('game-over', gameOverPayload);
+  if (blackSocket) blackSocket.emit('game-over', gameOverPayload);
+
+  // Clean up references
+  if (room.white) activePlayers.delete(room.white.socketId);
+  if (room.black) activePlayers.delete(room.black.socketId);
+  rooms.delete(roomCode);
+  console.log(`Room ${roomCode} closed. Reason: ${reason}`);
+}
+
 io.on('connection', (socket) => {
   console.log(`Player connected: ${socket.id}`);
-  let currentRoomCode = null;
-  let playerDetails = { name: 'Guest', rating: 1200 };
 
-  // Matchmaking: Join Queue
-  socket.on('join-queue', ({ timeControl, name, rating }) => {
-    playerDetails = { name: name || 'Guest', rating: rating || 1200 };
-    const tcStr = String(timeControl || 'unlimited');
-    
-    console.log(`Player ${playerDetails.name} (${playerDetails.rating}) joined queue for ${tcStr}m`);
+  // ── 1. JOIN QUICK MATCH QUEUE ──
+  socket.on('join-queue', ({ name, rating, timeControl }) => {
+    // Clean up if already in queue or game
+    removeFromQueue(socket.id);
+    handlePlayerDisconnect(socket);
 
-    if (!queues.has(tcStr)) {
-      queues.set(tcStr, []);
-    }
-    const queue = queues.get(tcStr);
-
-    // Remove if already in queue
-    const filteredQueue = queue.filter(p => p.socketId !== socket.id);
-    filteredQueue.push({ socketId: socket.id, name: playerDetails.name, rating: playerDetails.rating });
-    queues.set(tcStr, filteredQueue);
-
-    // Check if we can pair
-    if (filteredQueue.length >= 2) {
-      const p1 = filteredQueue.shift();
-      const p2 = filteredQueue.shift();
-      queues.set(tcStr, filteredQueue);
-
-      const code = generateRoomCode();
-      const p1Color = Math.random() > 0.5 ? 'w' : 'b';
-      const p2Color = p1Color === 'w' ? 'b' : 'w';
-
-      const newRoom = {
-        code,
-        timeControl,
-        players: [
-          { id: p1.socketId, socketId: p1.socketId, name: p1.name, rating: p1.rating, color: p1Color },
-          { id: p2.socketId, socketId: p2.socketId, name: p2.name, rating: p2.rating, color: p2Color }
-        ],
-        fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
-        history: [],
-        disconnectTimeout: null
-      };
-
-      rooms.set(code, newRoom);
-
-      // Join sockets to room
-      const s1 = io.sockets.sockets.get(p1.socketId);
-      const s2 = io.sockets.sockets.get(p2.socketId);
-      if (s1) s1.join(code);
-      if (s2) s2.join(code);
-
-      // Notify clients
-      io.to(p1.socketId).emit('game-start', {
-        roomCode: code,
-        color: p1Color,
-        opponentName: p2.name,
-        opponentRating: p2.rating,
-        fen: newRoom.fen,
-        timeControl
-      });
-
-      io.to(p2.socketId).emit('game-start', {
-        roomCode: code,
-        color: p2Color,
-        opponentName: p1.name,
-        opponentRating: p1.rating,
-        fen: newRoom.fen,
-        timeControl
-      });
-
-      console.log(`Game started in room ${code} between ${p1.name} and ${p2.name}`);
-    }
-  });
-
-  // Custom Room: Create
-  socket.on('create-room', ({ timeControl, name, rating }) => {
-    playerDetails = { name: name || 'Guest', rating: rating || 1200 };
-    const code = generateRoomCode();
-    
-    const newRoom = {
-      code,
-      timeControl,
-      players: [
-        { id: socket.id, socketId: socket.id, name: playerDetails.name, rating: playerDetails.rating, color: 'w' }
-      ],
-      fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
-      history: [],
-      disconnectTimeout: null
+    const playerEntry = {
+      socketId: socket.id,
+      name: name || 'Guest Player',
+      rating: rating || 1200,
+      timeControl: timeControl || 600
     };
 
-    rooms.set(code, newRoom);
-    socket.join(code);
-    currentRoomCode = code;
+    // Try matchmaking with similar timeControl
+    const opponentIndex = queue.findIndex(p => p.timeControl === playerEntry.timeControl);
 
-    socket.emit('room-created', { roomCode: code });
-    console.log(`Room created: ${code} by ${playerDetails.name}`);
-  });
+    if (opponentIndex !== -1) {
+      // Match found!
+      const opponent = queue.splice(opponentIndex, 1)[0];
+      const roomCode = generateRoomCode();
+      const whiteIsFirst = Math.random() > 0.5;
 
-  // Custom Room: Join
-  socket.on('join-room', ({ roomCode, name, rating }) => {
-    playerDetails = { name: name || 'Guest', rating: rating || 1200 };
-    const room = rooms.get(roomCode?.toUpperCase());
+      const roomState = {
+        code: roomCode,
+        timeControl: playerEntry.timeControl,
+        white: whiteIsFirst ? playerEntry : opponent,
+        black: whiteIsFirst ? opponent : playerEntry,
+        fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+        history: [],
+        inactivePlayer: null,
+        disconnectTimeout: null,
+        chat: []
+      };
 
-    if (!room) {
-      socket.emit('error-msg', { message: 'Room not found.' });
-      return;
-    }
+      rooms.set(roomCode, roomState);
 
-    // Check if player is reconnecting
-    const existingPlayer = room.players.find(p => p.name === playerDetails.name);
-    
-    if (existingPlayer) {
-      // Reconnect flow
-      console.log(`Player ${playerDetails.name} is reconnecting to room ${roomCode}`);
-      existingPlayer.socketId = socket.id;
-      existingPlayer.id = socket.id;
-      socket.join(roomCode);
-      currentRoomCode = roomCode;
+      // Register both in active game mapping
+      activePlayers.set(roomState.white.socketId, { roomCode, color: 'w', opponentSocketId: roomState.black.socketId });
+      activePlayers.set(roomState.black.socketId, { roomCode, color: 'b', opponentSocketId: roomState.white.socketId });
 
-      // Cancel disconnection timeout
-      if (room.disconnectTimeout) {
-        clearTimeout(room.disconnectTimeout);
-        room.disconnectTimeout = null;
-      }
+      // Join rooms
+      const s1 = io.sockets.sockets.get(roomState.white.socketId);
+      const s2 = io.sockets.sockets.get(roomState.black.socketId);
+      if (s1) s1.join(roomCode);
+      if (s2) s2.join(roomCode);
 
-      // Notify reconnect
-      socket.to(roomCode).emit('opponent-reconnected', { socketId: socket.id });
-      
-      // Resend state to reconnecting player
-      const opponent = room.players.find(p => p.socketId !== socket.id);
-      socket.emit('game-start', {
-        roomCode,
-        color: existingPlayer.color,
-        opponentName: opponent ? opponent.name : 'Opponent',
-        opponentRating: opponent ? opponent.rating : 1200,
-        fen: room.fen,
-        timeControl: room.timeControl,
-        history: room.history
+      // Notify clients
+      io.to(roomState.white.socketId).emit('game-start', {
+        color: 'w',
+        opponentName: roomState.black.name,
+        opponentRating: roomState.black.rating,
+        timeControl: roomState.timeControl,
+        roomCode
       });
-      return;
+
+      io.to(roomState.black.socketId).emit('game-start', {
+        color: 'b',
+        opponentName: roomState.white.name,
+        opponentRating: roomState.white.rating,
+        timeControl: roomState.timeControl,
+        roomCode
+      });
+
+      console.log(`Matched Quickplay Room ${roomCode}: ${roomState.white.name} vs ${roomState.black.name}`);
+    } else {
+      // Add to queue
+      queue.push(playerEntry);
+      console.log(`Player queued: ${playerEntry.name} (${playerEntry.timeControl}s)`);
     }
-
-    if (room.players.length >= 2) {
-      socket.emit('error-msg', { message: 'Room is full.' });
-      return;
-    }
-
-    // Join as player 2 (black)
-    const p1 = room.players[0];
-    const newPlayer = { id: socket.id, socketId: socket.id, name: playerDetails.name, rating: playerDetails.rating, color: 'b' };
-    room.players.push(newPlayer);
-    
-    socket.join(roomCode);
-    currentRoomCode = roomCode;
-
-    // Start game
-    io.to(p1.socketId).emit('game-start', {
-      roomCode,
-      color: p1.color,
-      opponentName: newPlayer.name,
-      opponentRating: newPlayer.rating,
-      fen: room.fen,
-      timeControl: room.timeControl
-    });
-
-    socket.emit('game-start', {
-      roomCode,
-      color: newPlayer.color,
-      opponentName: p1.name,
-      opponentRating: p1.rating,
-      fen: room.fen,
-      timeControl: room.timeControl
-    });
-
-    console.log(`Player ${playerDetails.name} joined room ${roomCode}. Game started.`);
   });
 
-  // Game Logic: Move broadcast
+  // ── 2. CREATE PRIVATE FRIEND ROOM ──
+  socket.on('create-room', ({ name, rating, timeControl }) => {
+    handlePlayerDisconnect(socket);
+
+    const roomCode = generateRoomCode();
+    const playerEntry = {
+      socketId: socket.id,
+      name: name || 'Guest Player',
+      rating: rating || 1200,
+      timeControl: timeControl || 600
+    };
+
+    const roomState = {
+      code: roomCode,
+      timeControl: playerEntry.timeControl,
+      white: playerEntry, // Creator plays White
+      black: null,
+      fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+      history: [],
+      inactivePlayer: null,
+      disconnectTimeout: null,
+      chat: []
+    };
+
+    rooms.set(roomCode, roomState);
+    activePlayers.set(socket.id, { roomCode, color: 'w', opponentSocketId: null });
+    socket.join(roomCode);
+
+    socket.emit('room-created', { roomCode, timeControl: playerEntry.timeControl });
+    console.log(`Private Room Created: ${roomCode} by ${playerEntry.name}`);
+  });
+
+  // ── 3. JOIN PRIVATE FRIEND ROOM ──
+  socket.on('join-room', ({ roomCode, name, rating }) => {
+    const room = rooms.get(roomCode);
+    if (!room) {
+      socket.emit('error-msg', 'Room not found. Check the code!');
+      return;
+    }
+    if (room.black) {
+      socket.emit('error-msg', 'This room is already full!');
+      return;
+    }
+
+    const playerEntry = {
+      socketId: socket.id,
+      name: name || 'Guest Player',
+      rating: rating || 1200,
+      timeControl: room.timeControl
+    };
+
+    room.black = playerEntry;
+    activePlayers.set(socket.id, { roomCode, color: 'b', opponentSocketId: room.white.socketId });
+    
+    // Update white's opponent hook mapping
+    const whitePlayerEntry = activePlayers.get(room.white.socketId);
+    if (whitePlayerEntry) whitePlayerEntry.opponentSocketId = socket.id;
+
+    socket.join(roomCode);
+
+    // Notify clients of game start
+    io.to(room.white.socketId).emit('game-start', {
+      color: 'w',
+      opponentName: room.black.name,
+      opponentRating: room.black.rating,
+      timeControl: room.timeControl,
+      roomCode
+    });
+
+    io.to(room.black.socketId).emit('game-start', {
+      color: 'b',
+      opponentName: room.white.name,
+      opponentRating: room.white.rating,
+      timeControl: room.timeControl,
+      roomCode
+    });
+
+    console.log(`Player ${playerEntry.name} joined room ${roomCode}`);
+  });
+
+  // ── 4. RECONNECTION HANDLING ──
+  socket.on('reconnect-game', ({ roomCode, color, name, rating }) => {
+    const room = rooms.get(roomCode);
+    if (!room) {
+      socket.emit('reconnect-failed', 'Game no longer exists.');
+      return;
+    }
+
+    const isWhite = color === 'w';
+    const activeUser = isWhite ? room.white : room.black;
+
+    if (!activeUser || room.inactivePlayer !== color) {
+      socket.emit('reconnect-failed', 'Reconnection mismatch.');
+      return;
+    }
+
+    // Cancel the disconnection countdown
+    if (room.disconnectTimeout) {
+      clearTimeout(room.disconnectTimeout);
+      room.disconnectTimeout = null;
+      room.inactivePlayer = null;
+    }
+
+    // Update socket mapping
+    activeUser.socketId = socket.id;
+    activePlayers.set(socket.id, { roomCode, color, opponentSocketId: isWhite ? room.black?.socketId : room.white.socketId });
+    socket.join(roomCode);
+
+    // Update opponent's mapping as well
+    const opponentSocket = isWhite ? room.black?.socketId : room.white.socketId;
+    if (opponentSocket) {
+      const oppMap = activePlayers.get(opponentSocket);
+      if (oppMap) oppMap.opponentSocketId = socket.id;
+      
+      // Notify opponent of successful reconnect
+      io.to(opponentSocket).emit('opponent-reconnected');
+    }
+
+    // Restore board state for returning user
+    socket.emit('game-restored', {
+      color,
+      opponentName: isWhite ? room.black?.name : room.white.name,
+      opponentRating: isWhite ? room.black?.rating : room.white.rating,
+      fen: room.fen,
+      history: room.history,
+      timeControl: room.timeControl
+    });
+
+    console.log(`Player reconnected: ${name} in room ${roomCode}`);
+  });
+
+  // ── 5. MAKE MOVE RELAY ──
   socket.on('make-move', ({ from, to, promotion, fen, san }) => {
-    if (!currentRoomCode) return;
-    const room = rooms.get(currentRoomCode);
+    const player = activePlayers.get(socket.id);
+    if (!player) return;
+
+    const room = rooms.get(player.roomCode);
     if (!room) return;
 
+    // Record latest state in case of connection drops
     room.fen = fen;
     room.history.push({ from, to, promotion, san });
 
-    // Send move to opponent
-    socket.to(currentRoomCode).emit('move-made', { from, to, promotion, fen, san });
+    // Send to other player
+    if (player.opponentSocketId) {
+      io.to(player.opponentSocketId).emit('move-made', { from, to, promotion, fen, san });
+    }
   });
 
-  // In-Game Logic: Resignation
-  socket.on('resign', () => {
-    if (!currentRoomCode) return;
-    const room = rooms.get(currentRoomCode);
-    if (!room) return;
-
-    const resigningPlayer = room.players.find(p => p.socketId === socket.id);
-    const winner = room.players.find(p => p.socketId !== socket.id);
-    if (!resigningPlayer || !winner) return;
-
-    io.to(currentRoomCode).emit('game-over', {
-      result: winner.color === 'w' ? 'win_white' : 'win_black',
-      reason: `${resigningPlayer.name} resigned.`,
-      winnerName: winner.name
-    });
-
-    rooms.delete(currentRoomCode);
-  });
-
-  // In-Game Logic: Draw offer & accept
+  // ── 6. DRAW OFFER & RESIGNATIONS ──
   socket.on('offer-draw', () => {
-    if (currentRoomCode) {
-      socket.to(currentRoomCode).emit('draw-offered');
+    const player = activePlayers.get(socket.id);
+    if (player?.opponentSocketId) {
+      io.to(player.opponentSocketId).emit('draw-offered');
     }
   });
 
   socket.on('accept-draw', () => {
-    if (!currentRoomCode) return;
-    io.to(currentRoomCode).emit('game-over', {
-      result: 'draw',
-      reason: 'Draw by mutual agreement.'
-    });
-    rooms.delete(currentRoomCode);
-  });
-
-  // Chat message broadcast
-  socket.on('chat-message', ({ message }) => {
-    if (currentRoomCode) {
-      socket.to(currentRoomCode).emit('chat-message', {
-        sender: playerDetails.name,
-        message
-      });
+    const player = activePlayers.get(socket.id);
+    if (player) {
+      endGame(player.roomCode, 'draw', 'agreement');
     }
   });
 
-  // Matchmaking: Leave Queue
-  socket.on('leave-queue', ({ timeControl }) => {
-    const tcStr = String(timeControl || 'unlimited');
-    if (queues.has(tcStr)) {
-      const queue = queues.get(tcStr);
-      queues.set(tcStr, queue.filter(p => p.socketId !== socket.id));
-      console.log(`Player ${playerDetails.name} left queue for ${tcStr}m`);
+  socket.on('resign', () => {
+    const player = activePlayers.get(socket.id);
+    if (player) {
+      const winnerColor = player.color === 'w' ? 'b' : 'w';
+      endGame(player.roomCode, 'loss', 'resignation', winnerColor);
     }
   });
 
-  // Disconnection handler
+  // ── 7. CHAT MESSAGE ROUTER ──
+  socket.on('chat-message', ({ text, senderName }) => {
+    const player = activePlayers.get(socket.id);
+    if (!player) return;
+
+    const room = rooms.get(player.roomCode);
+    if (!room) return;
+
+    const message = { id: Date.now(), text, senderName, senderSocket: socket.id };
+    room.chat.push(message);
+
+    // Broadcast to room members
+    io.to(player.roomCode).emit('chat-message-received', message);
+  });
+
+  // ── 8. SYSTEM LEAVE/DISCONNECTS ──
   socket.on('disconnect', () => {
     console.log(`Player disconnected: ${socket.id}`);
-
-    // Remove from queues
-    for (const [tc, queue] of queues.entries()) {
-      queues.set(tc, queue.filter(p => p.socketId !== socket.id));
-    }
-
-    if (currentRoomCode) {
-      const room = rooms.get(currentRoomCode);
-      if (room) {
-        const remainingPlayer = room.players.find(p => p.socketId !== socket.id);
-        const disconnectedPlayer = room.players.find(p => p.socketId === socket.id);
-
-        if (remainingPlayer && disconnectedPlayer) {
-          console.log(`Opponent ${disconnectedPlayer.name} disconnected from room ${currentRoomCode}. Starting 30s countdown.`);
-          
-          // Alert remaining player
-          socket.to(currentRoomCode).emit('opponent-disconnected', {
-            secondsToReconnect: 30
-          });
-
-          // Set 30 second timer
-          room.disconnectTimeout = setTimeout(() => {
-            console.log(`Player ${disconnectedPlayer.name} failed to reconnect to room ${currentRoomCode}. Opponent wins.`);
-            
-            io.to(remainingPlayer.socketId).emit('game-over', {
-              result: remainingPlayer.color === 'w' ? 'win_white' : 'win_black',
-              reason: `${disconnectedPlayer.name} disconnected.`,
-              winnerName: remainingPlayer.name
-            });
-
-            rooms.delete(currentRoomCode);
-          }, 30000);
-        } else {
-          // No players left, clean up
-          rooms.delete(currentRoomCode);
-        }
-      }
-    }
+    removeFromQueue(socket.id);
+    handlePlayerDisconnect(socket);
   });
 });
 
-const PORT = process.env.PORT || 3001;
+// Helper: Remove socket from Quick Match Queue
+function removeFromQueue(socketId) {
+  const index = queue.findIndex(p => p.socketId === socketId);
+  if (index !== -1) {
+    queue.splice(index, 1);
+    console.log(`Removed from queue: ${socketId}`);
+  }
+}
+
+// Helper: Handle drop-outs & reconnection timers
+function handlePlayerDisconnect(socket) {
+  const player = activePlayers.get(socket.id);
+  if (!player) return;
+
+  const room = rooms.get(player.roomCode);
+  if (!room) return;
+
+  const isWhite = player.color === 'w';
+
+  // Mark player as inactive
+  room.inactivePlayer = player.color;
+  console.log(`Player ${isWhite ? room.white.name : room.black?.name} disconnected. starting 30s reconnect window.`);
+
+  // Send warnings to remaining player (if present)
+  if (player.opponentSocketId) {
+    io.to(player.opponentSocketId).emit('opponent-disconnected', { secondsToReconnect: 30 });
+  }
+
+  // Set 30-second disconnect timeout
+  room.disconnectTimeout = setTimeout(() => {
+    console.log(`Reconnection timeout elapsed in room ${room.code}.`);
+    const winnerColor = player.color === 'w' ? 'b' : 'w';
+    endGame(room.code, 'win', 'disconnect-timeout', winnerColor);
+  }, 30000);
+
+  // Remove current socket association
+  activePlayers.delete(socket.id);
+}
+
+app.get('/', (req, res) => {
+  res.send('ChessMaster Pro Socket Server is running.');
+});
+
 httpServer.listen(PORT, () => {
-  console.log(`ChessMaster Pro server listening on port ${PORT}`);
+  console.log(`Socket server is running on port ${PORT}`);
 });

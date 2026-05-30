@@ -1,81 +1,82 @@
-.history-panel {
+.move-history-scroll-container {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: var(--bg-card);
-}
-
-.history-list {
-  flex: 1;
+  width: 100%;
   overflow-y: auto;
-  padding: 4px 0;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
+  box-sizing: border-box;
 }
 
-.history-list::-webkit-scrollbar {
-  width: 4px;
+.move-history-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 13px;
+  font-style: italic;
+  padding: 24px;
+  text-align: center;
 }
 
-.history-list::-webkit-scrollbar-track {
+.move-history-table {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.move-history-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  height: 32px;
+  min-height: 32px;
+  width: 100%;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  box-sizing: border-box;
+}
+
+.even-row {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.odd-row {
   background: transparent;
 }
 
-.history-list::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 2px;
-}
-
-.history-empty {
-  text-align: center;
-  color: var(--text-muted);
-  font-size: 12px;
-  padding: 20px;
-}
-
-.history-row {
-  display: grid;
-  grid-template-columns: 28px 1fr 1fr;
+.move-col {
+  display: flex;
   align-items: center;
-  padding: 3px 8px;
-  gap: 4px;
-  border-radius: 4px;
-  transition: background 0.1s;
+  height: 100%;
+  box-sizing: border-box;
 }
 
-.history-row:nth-child(even) {
-  background: rgba(255,255,255,0.02);
-}
-
-/* ── #11: Highlight latest move row ── */
-.history-row-latest {
-  background: rgba(196, 160, 40, 0.08) !important;
-}
-
-.move-num {
-  font-size: 11px;
-  color: var(--text-muted);
-  font-weight: 600;
-  text-align: right;
-}
-
-.move-san {
-  font-size: 13px;
-  font-weight: 500;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-family: 'Courier New', monospace;
-  cursor: pointer;
-  transition: background 0.1s;
-}
-
-.move-white { color: #f0f0f0; }
-.move-black { color: #aaa; }
-
-/* ── #11: Latest move highlighted in gold ── */
-.move-latest {
-  background: rgba(196, 160, 40, 0.22);
-  color: var(--gold, #c4a028) !important;
+.move-num-col {
+  width: 50px;
+  padding-left: 16px;
+  color: rgba(255, 255, 255, 0.35);
   font-weight: 700;
-  box-shadow: 0 0 6px rgba(196, 160, 40, 0.15);
+}
+
+.move-san-col {
+  flex: 1;
+  padding-left: 8px;
+  color: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.move-san-col:hover {
+  background: rgba(226, 176, 74, 0.08);
+  color: #e2b04a;
+}
+
+/* Active reviewing move highlight in gold */
+.active-move {
+  background: rgba(226, 176, 74, 0.2) !important;
+  color: #e2b04a !important;
+  font-weight: 700;
+  border-radius: 4px;
 }

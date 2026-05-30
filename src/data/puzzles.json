@@ -1,0 +1,162 @@
+[
+  {
+    "id": "puz001",
+    "fen": "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4",
+    "moves": ["f3e5", "d8g5", "e5f7"],
+    "rating": 1200,
+    "themes": ["fork", "winning material"],
+    "title": "Knight Fork"
+  },
+  {
+    "id": "puz002",
+    "fen": "6k1/5ppp/8/8/8/8/8/4R1K1 w - - 0 1",
+    "moves": ["e1e8"],
+    "rating": 800,
+    "themes": ["mate", "back rank mate", "mate in 1"],
+    "title": "Back Rank Smother"
+  },
+  {
+    "id": "puz003",
+    "fen": "r3k2r/pppq1ppp/2np1n2/2b1p1B1/2B1P3/2NP1N2/PPP1QPPP/R3K2R b KQkq - 0 1",
+    "moves": ["f6e4"],
+    "rating": 1000,
+    "themes": ["pin", "winning material"],
+    "title": "Absolute Pin"
+  },
+  {
+    "id": "puz004",
+    "fen": "2k5/8/8/8/8/q7/2R5/2K5 w - - 0 1",
+    "moves": ["c2a2"],
+    "rating": 1100,
+    "themes": ["skewer"],
+    "title": "Queen Skewer"
+  },
+  {
+    "id": "puz005",
+    "fen": "r1bqk2r/ppp2ppp/2np1n2/4p3/1bB1P3/P1NP1N2/1PP2PPP/R1BQK2R b KQkq - 0 6",
+    "moves": ["b4c3", "b2c3"],
+    "rating": 950,
+    "themes": ["discovered attack", "winning material"],
+    "title": "Discovered Strike"
+  },
+  {
+    "id": "puz006",
+    "fen": "r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5Q2/PPPP1PPP/RNB1K1NR b KQkq - 3 3",
+    "moves": ["c6d4", "f3f7"],
+    "rating": 700,
+    "themes": ["mate", "mate in 1"],
+    "title": "Scholar's Defense"
+  },
+  {
+    "id": "puz007",
+    "fen": "8/1k6/8/8/3R4/8/1r6/2K5 w - - 0 1",
+    "moves": ["c1b2"],
+    "rating": 600,
+    "themes": ["skewer", "winning material"],
+    "title": "Rook Skewer"
+  },
+  {
+    "id": "puz008",
+    "fen": "6rk/5Qpp/8/8/5N2/8/8/6K1 w - - 0 1",
+    "moves": ["f7g8", "g8g8", "f4g6"],
+    "rating": 1400,
+    "themes": ["mate", "smothered mate", "mate in 2"],
+    "title": "Smothered Legacy"
+  },
+  {
+    "id": "puz009",
+    "fen": "r1bqk2r/pp2bppp/2n1pn2/2pp4/4P3/2NP1NP1/PPP2PBP/R1BQK2R w KQkq - 1 7",
+    "moves": ["e4d5", "e6d5", "d3d4"],
+    "rating": 1150,
+    "themes": ["discovered attack"],
+    "title": "Center Strike"
+  },
+  {
+    "id": "puz010",
+    "fen": "r2qkb1r/pp2pppp/2n2n2/1B1p4/3P4/2N2N2/PPP2PPP/R1BQK2R w KQkq - 2 8",
+    "moves": ["f3e5", "a8c8", "e1g1"],
+    "rating": 1300,
+    "themes": ["fork", "pin"],
+    "title": "Knight Pressure"
+  },
+  {
+    "id": "puz011",
+    "fen": "8/8/8/8/5k2/3K4/2Q5/8 w - - 0 1",
+    "moves": ["c2f2", "f4g5", "f2g3"],
+    "rating": 1500,
+    "themes": ["mate", "mate in 2"],
+    "title": "Queen Trap"
+  },
+  {
+    "id": "puz012",
+    "fen": "rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2",
+    "moves": ["e4d5", "d8d5", "b1c3"],
+    "rating": 900,
+    "themes": ["discovered attack"],
+    "title": "Scandinavia Trap"
+  },
+  {
+    "id": "puz013",
+    "fen": "rn1qkbnr/pbpppppp/1p6/8/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3",
+    "moves": ["b1c3", "e7e6", "d2d4"],
+    "rating": 1050,
+    "themes": ["pin"],
+    "title": "Owen Deflection"
+  },
+  {
+    "id": "puz014",
+    "fen": "rnbqk1nr/ppp2ppp/3b4/3p4/3P4/5N2/PPP2PPP/RNBQKB1R w KQkq - 1 5",
+    "moves": ["c2c4", "c7c6", "b1c3"],
+    "rating": 1100,
+    "themes": ["fork"],
+    "title": "French Center"
+  },
+  {
+    "id": "puz015",
+    "fen": "rnbq1bnr/pppppkpp/5p2/8/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3",
+    "moves": ["b1c3", "f7g6", "d2d4"],
+    "rating": 950,
+    "themes": ["mate"],
+    "title": "King Hunt"
+  },
+  {
+    "id": "puz016",
+    "fen": "rn1qkb1r/pbpp1ppp/1p2pn2/8/3PP3/2NB1N2/PPP2PPP/R1BQK2R b KQkq - 1 5",
+    "moves": ["d7d5", "e4e5", "f6d7"],
+    "rating": 1250,
+    "themes": ["pin", "fork"],
+    "title": "Symmetrical Wall"
+  },
+  {
+    "id": "puz017",
+    "fen": "8/8/6k1/p7/P7/2r5/3R4/4K3 w - - 0 1",
+    "moves": ["d2d5", "c3b3", "d5a5"],
+    "rating": 1350,
+    "themes": ["skewer", "winning material"],
+    "title": "Rook Skew"
+  },
+  {
+    "id": "puz018",
+    "fen": "5k2/5ppp/8/8/8/2q5/3R4/4K3 w - - 0 1",
+    "moves": ["d2e2", "c3g3", "e1d2"],
+    "rating": 1600,
+    "themes": ["pin"],
+    "title": "Deflection Block"
+  },
+  {
+    "id": "puz019",
+    "fen": "6rk/pp4pp/2n1N3/8/8/Q7/8/6K1 w - - 0 1",
+    "moves": ["a3f8", "g8f8", "e6f8"],
+    "rating": 1700,
+    "themes": ["mate", "winning material"],
+    "title": "Tempting Queen"
+  },
+  {
+    "id": "puz020",
+    "fen": "5r1k/1b4p1/pn6/8/8/5q2/5N2/5RK1 w - - 0 1",
+    "moves": ["f1e1", "f3f2"],
+    "rating": 1800,
+    "themes": ["mate", "mate in 2"],
+    "title": "Mortal Pin"
+  }
+]

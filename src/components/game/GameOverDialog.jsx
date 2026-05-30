@@ -61,6 +61,11 @@ export default function GameOverDialog({ status, onNewGame, onMenu, moveCount })
           <button id="btn-play-again" className="btn btn-primary result-btn" onClick={onNewGame}>
             ♟ Play Again
           </button>
+          {onAnalyze && (
+            <button id="btn-analyze" className="btn btn-secondary result-btn" onClick={onAnalyze} style={{ border: '1px solid var(--gold)', color: 'var(--gold)' }}>
+              📊 Analyze Game
+            </button>
+          )}
           <button id="btn-go-menu" className="btn btn-secondary result-btn" onClick={onMenu}>
             ⌂ Main Menu
           </button>
