@@ -1,8 +1,8 @@
 /* FULL SCREEN LAYOUT */
 .game-screen-wrapper {
   display: flex;
-  height: 100vh;
-  width: 100vw;
+  height: 100%;
+  width: 100%;
   background: var(--bg-base, #1e1e1e);
   color: var(--text-primary, #fff);
   font-family: var(--font-main, sans-serif);
@@ -449,29 +449,24 @@
 .game-page {
   display: flex;
   flex-direction: row;
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  height: calc(100vh - 52px); /* Fits perfectly below the 52px TopBar */
   overflow: hidden;
-  background: #1a1a2e;
-  --board-size: min(calc(100vw - 380px), calc(100vh - 160px));
-}
-
-.sidebar {
-  width: 64px;
-  min-width: 64px;
-  height: 100vh;
-  background: #0f1923;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 12px 0;
-  gap: 8px;
-  flex-shrink: 0;
+  background: #302e2b; /* Chess.com dark charcoal background */
+  /* Dynamically budget space:
+     Horizontally: 100vw - sidebar width - right-panel (320px) - padding (80px)
+     Vertically: 100vh - topbar (52px) - players info + files labels + padding (140px)
+     Cap at 580px max for professional premium feel */
+  --board-size: min(
+    calc(100vw - var(--sidebar-width, 64px) - 400px),
+    calc(100vh - 52px - 140px),
+    580px
+  );
 }
 
 .game-center {
   flex: 1;
-  height: 100vh;
+  height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -486,21 +481,22 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  width: calc(var(--board-size) + 40px);
+  width: var(--board-size); /* Changed to var(--board-size) to align perfectly flush with the board! */
   flex-shrink: 0;
   align-items: flex-start;
   box-sizing: border-box;
 }
 
 .right-panel {
-  width: 260px;
-  min-width: 260px;
-  height: 100vh;
-  background: #16213e;
+  width: 320px; /* Redesigned wider panel for Chess.com Play Bots look */
+  min-width: 320px;
+  height: 100%;
+  background: #262421; /* Chess.com right panel background */
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
   overflow: hidden;
+  border-left: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 .board-outer {
@@ -518,6 +514,311 @@
   grid-template-rows: repeat(8, 1fr);
   border: 3px solid #8B6914;
 }
+
+/* ── CHESS.COM PLAY BOTS PANEL ── */
+.play-bots-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 20px 16px;
+  box-sizing: border-box;
+  color: #fff;
+  overflow-y: auto;
+  gap: 16px;
+  background: #262421;
+}
+
+.play-bots-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.play-bots-header h2 {
+  font-family: 'Inter', sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  margin: 0;
+  color: #fff;
+}
+
+.bot-info-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #211f1c;
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  padding: 14px;
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+
+.bot-info-avatar {
+  font-size: 28px;
+  width: 48px;
+  height: 48px;
+  background: radial-gradient(circle, #3e3c39 0%, #2b2a27 100%);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+.bot-info-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.bot-info-details h3 {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+}
+
+.bot-rating {
+  font-size: 11px;
+  font-weight: 700;
+  color: #81b64c; /* Green rating */
+}
+
+.bot-desc {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  margin: 4px 0 0 0;
+  line-height: 1.35;
+}
+
+.bot-categories-label {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.4);
+  letter-spacing: 0.5px;
+  margin-top: 4px;
+}
+
+.bot-categories-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 180px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.bot-category-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.bot-category-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  transform: translateX(2px);
+}
+
+.bot-category-item.selected {
+  background: rgba(129, 182, 76, 0.1);
+  border-color: rgba(129, 182, 76, 0.3);
+}
+
+.bot-item-avatar {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.bot-item-details {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.bot-item-label {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.bot-item-elo {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.bot-item-count {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.engine-slider-container {
+  background: #211f1c;
+  border-radius: 8px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.engine-slider-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.engine-bots-count {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+/* Custom Chess.com Green Slider styling */
+.engine-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: #3c3a37;
+  outline: none;
+  cursor: pointer;
+}
+
+.engine-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid #81b64c; /* Green outline */
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  transition: transform 0.1s ease;
+}
+
+.engine-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+.engine-slider-ticks {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 4px;
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.35);
+  font-weight: 700;
+}
+
+.play-bots-options-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.options-dropdown {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.8);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: background 0.15s;
+}
+
+.options-dropdown:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.color-selector-group {
+  display: flex;
+  background: #211f1c;
+  padding: 4px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  gap: 2px;
+}
+
+.color-btn {
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 18px;
+  font-weight: bold;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  min-height: auto !important;
+}
+
+.color-btn:hover {
+  color: #fff;
+  background: rgba(255,255,255,0.05);
+}
+
+.color-btn.active {
+  background: #81b64c;
+  color: #ffffff !important;
+  box-shadow: 0 2px 6px rgba(129, 182, 76, 0.4);
+}
+
+/* Giant Premium Chess.com Green Play Button */
+.play-bots-start-btn {
+  width: 100%;
+  height: 48px;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #95cc58 0%, #81b64c 100%);
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 15px rgba(129, 182, 76, 0.35);
+  border-bottom: 3px solid #6b9e3b;
+  margin-top: auto;
+}
+
+.play-bots-start-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(129, 182, 76, 0.5);
+  filter: brightness(1.05);
+}
+
+.play-bots-start-btn:active {
+  transform: translateY(1px);
+  border-bottom-width: 1px;
+}
+
 
 
 

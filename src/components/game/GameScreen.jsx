@@ -10,7 +10,7 @@ import MultiplayerLobby from './MultiplayerLobby';
 import ChatPanel from './ChatPanel';
 import AnalysisPanel from './AnalysisPanel';
 import { stockfishEngine } from '../../engine/StockfishService';
-import { Play, RotateCcw, Flag, Sparkles, RefreshCw, Save, Share2 } from 'lucide-react';
+import { Play, RotateCcw, Flag, Sparkles, RefreshCw, Save, Share2, Settings } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
 
 const DIFFICULTY_NAMES = { 1:'Beginner', 2:'Easy', 3:'Medium', 4:'Hard', 5:'Master' };
@@ -53,6 +53,17 @@ export default function GameScreen() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisArrow, setAnalysisArrow] = useState(null);
   const [showGameOver, setShowGameOver] = useState(false);
+
+  // New Setup Phase state for Chess.com Play Bots Setup screen
+  const [isSetupPhase, setIsSetupPhase] = useState(history.length === 0);
+
+  useEffect(() => {
+    if (history.length === 0) {
+      setIsSetupPhase(true);
+    } else {
+      setIsSetupPhase(false);
+    }
+  }, [history.length]);
 
   const prevStatusRef = useRef(null);
   const prevIsGameOver = useRef(false);
@@ -320,6 +331,133 @@ export default function GameScreen() {
   const avatarLetterTop = topPlayer.name ? topPlayer.name.trim().charAt(0).toUpperCase() : 'A';
   const avatarLetterBottom = bottomPlayer.name ? bottomPlayer.name.trim().charAt(0).toUpperCase() : 'Y';
 
+  const BOT_LEVELS = {
+    1: { label: 'Beginner', elo: 600, bots: '5 bots', avatar: '🤖', desc: 'Friendly bots that make lots of mistakes.' },
+    2: { label: 'Casual', elo: 1000, bots: '36 bots', avatar: '👩‍💼', desc: 'Decent players that play realistic moves.' },
+    3: { label: 'Club', elo: 1400, bots: '22 bots', avatar: '🧔', desc: 'Tough competitors with solid tactical skills.' },
+    4: { label: 'Advanced', elo: 1800, bots: '14 bots', avatar: '👨‍🎨', desc: 'Expert players that punish small blunders.' },
+    5: { label: 'Master', elo: 2800, bots: '25 bots', avatar: '🧠', desc: 'Grandmaster strength Stockfish engine.' },
+  };
+
+  const activeBot = BOT_LEVELS[aiDifficulty] || BOT_LEVELS[3];
+
+  const handleStartGame = () => {
+    startNewGame({ mode: 'vsAI', playerColor, difficulty: aiDifficulty });
+    setIsSetupPhase(false);
+  };
+
+  const playBotsPanel = (
+    <div className="play-bots-panel">
+      {/* HEADER */}
+      <div className="play-bots-header">
+        <span style={{ fontSize: '18px' }}>🖥</span>
+        <h2>Play Bots</h2>
+      </div>
+
+      {/* BOT INFO CARD */}
+      <div className="bot-info-card">
+        <div className="bot-info-avatar">
+          {activeBot.avatar}
+        </div>
+        <div className="bot-info-details">
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+            <h3 style={{ margin: 0, fontSize: '15px', color: '#fff', fontWeight: '700' }}>{activeBot.label}</h3>
+            <span className="bot-rating">({activeBot.elo})</span>
+          </div>
+          <p className="bot-desc">{activeBot.desc}</p>
+        </div>
+      </div>
+
+      {/* BOT CATEGORIES LIST */}
+      <div className="bot-categories-label">Choose Category</div>
+      <div className="bot-categories-list">
+        {Object.entries(BOT_LEVELS).map(([level, data]) => {
+          const isSelected = aiDifficulty === parseInt(level);
+          return (
+            <div 
+              key={level} 
+              className={`bot-category-item ${isSelected ? 'selected' : ''}`}
+              onClick={() => dispatch({ type: 'SET_DIFFICULTY', payload: parseInt(level) })}
+            >
+              <span className="bot-item-avatar">{data.avatar}</span>
+              <div className="bot-item-details">
+                <span className="bot-item-label">{data.label}</span>
+                <span className="bot-item-elo">{data.elo} ELO</span>
+              </div>
+              <span className="bot-item-count">{data.bots}</span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ELO SLIDER */}
+      <div className="engine-slider-container">
+        <div className="engine-slider-header">
+          <span>Engine</span>
+          <span className="engine-bots-count">{activeBot.bots}</span>
+        </div>
+        
+        <input 
+          type="range" 
+          min="1" 
+          max="5" 
+          step="1" 
+          value={aiDifficulty} 
+          onChange={(e) => dispatch({ type: 'SET_DIFFICULTY', payload: parseInt(e.target.value) })}
+          className="engine-slider"
+        />
+
+        <div className="engine-slider-ticks">
+          <span>600</span>
+          <span>1000</span>
+          <span>1400</span>
+          <span>1800</span>
+          <span>2800</span>
+        </div>
+      </div>
+
+      {/* OPTIONS ROW & COLOR SELECTOR */}
+      <div className="play-bots-options-row">
+        <div className="options-dropdown">
+          <span>⚙ Options</span>
+          <span style={{ fontSize: '9px', marginLeft: '6px' }}>▼</span>
+        </div>
+
+        <div className="color-selector-group">
+          {/* Play as White */}
+          <button 
+            className={`color-btn ${playerColor === 'w' ? 'active' : ''}`}
+            onClick={() => dispatch({ type: 'SET_PLAYER_COLOR', payload: 'w' })}
+            title="Play as White"
+          >
+            ♔
+          </button>
+          {/* Play as Random */}
+          <button 
+            className={`color-btn ${playerColor === 'r' ? 'active' : ''}`}
+            onClick={() => dispatch({ type: 'SET_PLAYER_COLOR', payload: 'r' })}
+            title="Random Color"
+          >
+            ?
+          </button>
+          {/* Play as Black */}
+          <button 
+            className={`color-btn ${playerColor === 'b' ? 'active' : ''}`}
+            onClick={() => dispatch({ type: 'SET_PLAYER_COLOR', payload: 'b' })}
+            title="Play as Black"
+          >
+            ♚
+          </button>
+        </div>
+      </div>
+
+      {/* GIANT GREEN PLAY BUTTON */}
+      <button className="play-bots-start-btn" onClick={handleStartGame}>
+        Play
+      </button>
+    </div>
+  );
+
   return (
     <div className="game-page">
       {/* CENTER BOARD ZONE */}
@@ -328,32 +466,42 @@ export default function GameScreen() {
           {/* BLACK player bar — above board (aligned with board) */}
           <div style={{
             width: 'var(--board-size)',
-            height: '44px',
-            background: 'rgba(255,255,255,0.05)',
-            borderRadius: '8px',
+            height: '40px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '0 12px',
-            marginLeft: '40px',
+            padding: '0 4px',
+            marginLeft: '20px', /* Flush with the board edge (eval bar 12px + gap 8px) */
             boxSizing: 'border-box',
             flexShrink: 0
           }}>
             <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
-              <div style={{width:'32px',height:'32px',borderRadius:'50%',background:'#374151',
+              <div style={{
+                width:'28px',height:'28px',borderRadius:'4px',
+                background:'linear-gradient(135deg, #3a3a3c, #2c2c2e)',
+                border: '1px solid rgba(255,255,255,0.1)',
                 display:'flex',alignItems:'center',justifyContent:'center',
-                fontSize:'14px',fontWeight:'600',color:'white'}}>{avatarLetterTop}</div>
-              <span style={{fontSize:'14px',fontWeight:'500',color:'white'}}>{topPlayer.name}</span>
-              <span style={{fontSize:'12px',padding:'2px 8px',background:'rgba(255,255,255,0.1)',
-                borderRadius:'99px',color:'#aaa'}}>{topPlayer.rating}</span>
+                fontSize:'14px',fontWeight:'bold',color:'#e2b04a'
+              }}>
+                🤖
+              </div>
+              <span style={{fontSize:'14px',fontWeight:'600',color:'#ffffff'}}>{topPlayer.name}</span>
+              <span style={{fontSize:'11px',fontWeight:'600',padding:'1px 6px',background:'rgba(255,255,255,0.08)',
+                borderRadius:'3px',color:'rgba(255,255,255,0.5)'}}>{topPlayer.rating}</span>
             </div>
-            <span style={{fontSize:'16px',fontWeight:'600',color:'white',fontFamily:'monospace'}}>
-              {formatClockTime(topPlayer.time)}
-            </span>
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{fontSize:'16px',fontWeight:'700',color:'#ffffff',fontFamily:'monospace'}}>
+                {formatClockTime(topPlayer.time)}
+              </span>
+              <button style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.4)', padding: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                <Settings size={15} />
+              </button>
+            </div>
           </div>
 
-          {/* Board row: eval bar + rank labels + board */}
-          <div style={{display:'flex', flexDirection:'row', alignItems:'flex-start', gap:'4px', flexShrink:0, width:'100%'}}>
+          {/* Board row: eval bar + board */}
+          <div style={{display:'flex', flexDirection:'row', alignItems:'flex-start', gap:'8px', flexShrink:0, width:'100%'}}>
             {/* Eval Bar */}
             <div className="eval-bar" style={{ height: 'var(--board-size)', width: '12px' }}>
               <div className="eval-fill-black" />
@@ -362,16 +510,6 @@ export default function GameScreen() {
                 {stockfishEngine.isReady ? stockfishEval.text : ((materialAdv.w - materialAdv.b) > 0 ? `+${materialAdv.w - materialAdv.b}` : materialAdv.w - materialAdv.b)}
               </div>
             </div>
-            
-            {/* Rank numbers LEFT (spans the board height perfectly) */}
-            <div style={{display:'flex',flexDirection:'column',height:'var(--board-size)',width:'20px',flexShrink:0}}>
-              {(flippedView?[1,2,3,4,5,6,7,8]:[8,7,6,5,4,3,2,1]).map(r=>(
-                <div key={r} style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',
-                  fontSize:'12px',fontWeight:'600',color:'rgba(255,255,255,0.6)'}}>
-                  {r}
-                </div>
-              ))}
-            </div>
 
             {/* The actual 8x8 board */}
             <div className="board-outer">
@@ -379,39 +517,33 @@ export default function GameScreen() {
             </div>
           </div>
 
-          {/* File letters BOTTOM (aligned with board) */}
-          <div style={{display:'flex',flexDirection:'row',width:'var(--board-size)',marginLeft:'40px',flexShrink:0}}>
-            {(flippedView?['h','g','f','e','d','c','b','a']:['a','b','c','d','e','f','g','h']).map(f=>(
-              <div key={f} style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',
-                fontSize:'12px',fontWeight:'600',color:'rgba(255,255,255,0.6)',height:'20px'}}>
-                {f}
-              </div>
-            ))}
-          </div>
-
           {/* WHITE player bar — below board (aligned with board) */}
           <div style={{
             width: 'var(--board-size)',
-            height: '44px',
-            background: 'rgba(255,255,255,0.05)',
-            borderRadius: '8px',
+            height: '40px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '0 12px',
-            marginLeft: '40px',
+            padding: '0 4px',
+            marginLeft: '20px', /* Flush with the board edge (eval bar 12px + gap 8px) */
             boxSizing: 'border-box',
             flexShrink: 0
           }}>
             <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
-              <div style={{width:'32px',height:'32px',borderRadius:'50%',background:'#4B5563',
+              <div style={{
+                width:'28px',height:'28px',borderRadius:'4px',
+                background:'linear-gradient(135deg, #e2b04a, #b8861b)',
+                border: '1px solid rgba(255,255,255,0.15)',
                 display:'flex',alignItems:'center',justifyContent:'center',
-                fontSize:'14px',fontWeight:'600',color:'white'}}>{avatarLetterBottom}</div>
-              <span style={{fontSize:'14px',fontWeight:'500',color:'white'}}>{bottomPlayer.name}</span>
-              <span style={{fontSize:'12px',padding:'2px 8px',background:'rgba(255,255,255,0.1)',
-                borderRadius:'99px',color:'#aaa'}}>{bottomPlayer.rating}</span>
+                fontSize:'14px',fontWeight:'bold',color:'#100f20'
+              }}>
+                👤
+              </div>
+              <span style={{fontSize:'14px',fontWeight:'600',color:'#ffffff'}}>{bottomPlayer.name}</span>
+              <span style={{fontSize:'11px',fontWeight:'600',padding:'1px 6px',background:'rgba(255,255,255,0.08)',
+                borderRadius:'3px',color:'rgba(255,255,255,0.5)'}}>{bottomPlayer.rating}</span>
             </div>
-            <span style={{fontSize:'16px',fontWeight:'600',color:'white',fontFamily:'monospace'}}>
+            <span style={{fontSize:'16px',fontWeight:'700',color:'#ffffff',fontFamily:'monospace'}}>
               {formatClockTime(bottomPlayer.time)}
             </span>
           </div>
@@ -431,10 +563,10 @@ export default function GameScreen() {
               handleJumpToMove(null);
             }}
           />
+        ) : gameMode === 'vsAI' && isSetupPhase ? (
+          playBotsPanel
         ) : (
-          <div style={{width:'260px', height:'100vh', 
-            background:'#16213e', display:'flex', flexDirection:'column', 
-            borderLeft:'1px solid rgba(255,255,255,0.08)'}}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
 
             {/* Header */}
             <div style={{padding:'16px', borderBottom:'1px solid rgba(255,255,255,0.08)'}}>

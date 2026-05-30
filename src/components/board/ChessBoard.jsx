@@ -257,6 +257,9 @@ export default function ChessBoard({ bestMoveArrow }) {
               }`
             : 'empty';
 
+          const showRankLabel = showCoords && (boardFile === (flippedView ? 7 : 0));
+          const showFileLabel = showCoords && (boardRank === (flippedView ? 0 : 7));
+
           return (
             <div
               key={squareName}
@@ -271,9 +274,10 @@ export default function ChessBoard({ bestMoveArrow }) {
                 isKeyboardFocused ? 'keyboard-focus' : '',
               ].filter(Boolean).join(' ')}
               style={{
-                backgroundColor: sqColor === 'light' ? '#f0d9b5' : '#b58863',
+                backgroundColor: sqColor === 'light' ? currentTheme.light : currentTheme.dark,
                 width: '100%',
                 height: '100%',
+                position: 'relative',
               }}
               onClick={() => handleSquareClick(squareName)}
               onDragOver={(e) => { e.preventDefault(); setDragOver(squareName); }}
@@ -281,6 +285,42 @@ export default function ChessBoard({ bestMoveArrow }) {
               onDrop={(e) => handleDrop(e, squareName)}
               onTouchStart={(e) => handleTouchStart(e, squareName)}
             >
+              {/* Rank Label (Top Left) */}
+              {showRankLabel && (
+                <span style={{
+                  position: 'absolute',
+                  top: '2px',
+                  left: '4px',
+                  fontSize: '11px',
+                  fontWeight: '700',
+                  color: sqColor === 'light' ? currentTheme.dark : currentTheme.light,
+                  opacity: 0.85,
+                  userSelect: 'none',
+                  pointerEvents: 'none',
+                  zIndex: 3
+                }}>
+                  {rank}
+                </span>
+              )}
+
+              {/* File Label (Bottom Right) */}
+              {showFileLabel && (
+                <span style={{
+                  position: 'absolute',
+                  bottom: '2px',
+                  right: '4px',
+                  fontSize: '11px',
+                  fontWeight: '700',
+                  color: sqColor === 'light' ? currentTheme.dark : currentTheme.light,
+                  opacity: 0.85,
+                  userSelect: 'none',
+                  pointerEvents: 'none',
+                  zIndex: 3
+                }}>
+                  {file}
+                </span>
+              )}
+
               {showMoveIndicators && isValidTarget && (
                 <MoveIndicator hasCapture={!!cell} themeAccent={currentTheme.accent} />
               )}

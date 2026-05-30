@@ -188,3 +188,26 @@
 @media (min-width: 901px) {
   .mobile-only { display: none !important; }
 }
+
+/* COLLAPSED SIDEBAR CENTERING & FULL-WIDTH ALIGNMENT */
+.sidebar.collapsed .sidebar-inner {
+  width: 100%;
+}
+
+.sidebar.collapsed .sidebar-nav {
+  padding: 16px 0;
+}
+
+.sidebar.collapsed .sidebar-nav-btn {
+  justify-content: center;
+  padding: 0;
+  border-radius: 0;
+}
+
+.sidebar.collapsed .sidebar-nav-btn.active {
+  border-left: 3px solid #e2b04a;
+  padding-left: 0;
+  padding-right: 3px; /* Mathematically offsets the 3px left border for perfect centering */
+}
+
+

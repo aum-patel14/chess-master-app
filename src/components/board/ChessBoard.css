@@ -105,64 +105,7 @@
   gap: 4px;
 }
 
-/* ── Coordinate Labels (Outside the Board) ── */
-.board-outer-container {
-  display: flex;
-  flex-direction: column;
-  width: min(calc(100vh - 180px), calc(100vw - 370px));
-  margin: 0 auto;
-  box-sizing: border-box;
-}
-
-.board-main-row {
-  display: flex;
-  flex-direction: row;
-  width: 100%;
-}
-
-.board-container {
-  flex: 1;
-  aspect-ratio: 1 / 1;
-  position: relative;
-}
-
-.rank-labels-column {
-  width: 20px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-around;
-  align-items: center;
-  box-sizing: border-box;
-  margin-right: 4px;
-}
-
-.file-labels-row {
-  display: flex;
-  flex-direction: row;
-  height: 20px;
-  width: 100%;
-  box-sizing: border-box;
-  margin-top: 4px;
-}
-
-.coordinate-label {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 11px;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.45);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  user-select: none;
-}
-
-.rank-label {
-  height: 12.5%;
-}
-
-.file-label {
-  flex: 1;
-}
+/* Legacy coordinate labels outside the board removed for inline square coordinates */
 
 /* ── Error Shake Animation ── */
 @keyframes shake {
@@ -378,51 +321,5 @@
   50%       { opacity: 1;   transform: scale(1); }
 }
 
-/* User exact board container layout overrides */
-.board-wrapper {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 4px;
-}
-
-.rank-labels {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-around;
-  height: var(--board-size);
-}
-
-.board-and-files {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.file-labels {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-around;
-  width: var(--board-size);
-}
-
-.board-container {
-  --board-size: min(
-    calc(100vh - 104px),
-    calc(100vw - 330px)
-  );
-  width: var(--board-size) !important;
-  height: var(--board-size) !important;
-  flex-shrink: 0;
-  position: relative;
-  aspect-ratio: 1 / 1 !important;
-}
-
-.board-grid {
-  display: grid;
-  grid-template-columns: repeat(8, 1fr) !important;
-  grid-template-rows: repeat(8, 1fr) !important;
-  width: 100% !important;
-  height: 100% !important;
-}
+/* Legacy overrides removed to prevent layout conflicts */
 
