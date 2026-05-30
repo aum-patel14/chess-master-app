@@ -300,42 +300,40 @@ export default function GameScreen() {
   }
 
   return (
-    <div className="game-screen-wrapper">
+    <div className="game-page">
       {/* CENTER BOARD ZONE */}
-      <div className="game-center-panel">
-        <div className="board-center-column">
-          {/* Black Player Info Bar */}
-          <PlayerInfoBar player={topPlayer} isAIThinking={isAIThinking} />
-          
-          <div className="board-layout-wrapper">
-            {/* Eval Bar */}
-            <div className="eval-bar">
-              <div className="eval-fill-black" />
-              <div className="eval-fill-white" style={{ height: `${clampedEval}%` }} />
-              <div className="eval-score">
-                {stockfishEngine.isReady ? stockfishEval.text : ((materialAdv.w - materialAdv.b) > 0 ? `+${materialAdv.w - materialAdv.b}` : materialAdv.w - materialAdv.b)}
-              </div>
-            </div>
-
-            <div className="board-and-controls">
-              {state.opponentDisconnected && (
-                <div style={disconnectBannerStyle}>
-                  ⚠️ Opponent disconnected! Auto-win in {opponentDisconnectedCountdown}s...
-                </div>
-              )}
-              <div className="board-wrapper-inner">
-                <ChessBoard bestMoveArrow={analysisArrow} />
-              </div>
+      <div className="center-area">
+        {/* Black Player Info Bar */}
+        <PlayerInfoBar player={topPlayer} isAIThinking={isAIThinking} />
+        
+        <div className="board-layout-wrapper">
+          {/* Eval Bar */}
+          <div className="eval-bar">
+            <div className="eval-fill-black" />
+            <div className="eval-fill-white" style={{ height: `${clampedEval}%` }} />
+            <div className="eval-score">
+              {stockfishEngine.isReady ? stockfishEval.text : ((materialAdv.w - materialAdv.b) > 0 ? `+${materialAdv.w - materialAdv.b}` : materialAdv.w - materialAdv.b)}
             </div>
           </div>
 
-          {/* White Player Info Bar */}
-          <PlayerInfoBar player={bottomPlayer} isAIThinking={isAIThinking} />
+          <div className="board-and-controls">
+            {state.opponentDisconnected && (
+              <div style={disconnectBannerStyle}>
+                ⚠️ Opponent disconnected! Auto-win in {opponentDisconnectedCountdown}s...
+              </div>
+            )}
+            <div className="board-wrapper-inner">
+              <ChessBoard bestMoveArrow={analysisArrow} />
+            </div>
+          </div>
         </div>
+
+        {/* White Player Info Bar */}
+        <PlayerInfoBar player={bottomPlayer} isAIThinking={isAIThinking} />
       </div>
 
       {/* RIGHT CONTROL PANEL */}
-      <div className="game-right-panel">
+      <div className="right-panel">
         {isAnalyzing ? (
           <AnalysisPanel
             history={history}

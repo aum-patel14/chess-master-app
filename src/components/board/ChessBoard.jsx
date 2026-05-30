@@ -219,8 +219,8 @@ export default function ChessBoard({ bestMoveArrow }) {
   }, [bestMoveArrow, flippedView]);
 
   return (
-    <div className="board-outer-container">
-      {/* ── #4: AI Thinking Indicator above board ── */}
+    <div className="board-wrapper">
+      {/* AI Thinking Indicator */}
       {isAIThinking && gameMode === 'vsAI' && (
         <div className="ai-thinking-overlay">
           <div className="ai-thinking-dot" />
@@ -230,63 +230,21 @@ export default function ChessBoard({ bestMoveArrow }) {
         </div>
       )}
 
-      {/* Top control bar */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%', marginBottom: '6px', position: 'relative' }}>
-        {/* AI Status indicator */}
-        {gameMode === 'vsAI' && (
-          <div style={{
-            marginRight: 'auto',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            fontSize: '12px',
-            fontWeight: 'bold',
-            color: aiStatus === 'ready' ? '#4caf50' : aiStatus === 'loading' ? '#ff9800' : '#f44336',
-            background: 'var(--surface-dark)',
-            padding: '4px 12px',
-            borderRadius: '12px',
-            border: '1px solid var(--border)'
-          }}>
-            {aiStatus === 'ready' ? 'Stockfish ✓' :
-             aiStatus === 'loading' ? 'Loading AI...' :
-             'Simple AI Mode'}
+      {/* Rank numbers — LEFT side only */}
+      <div className="rank-labels" style={{height: 'var(--board-size)', display:'flex', flexDirection:'column'}}>
+        {(flippedView ? [1,2,3,4,5,6,7,8] : [8,7,6,5,4,3,2,1]).map(n => (
+          <div key={n} style={{flex:1, display:'flex', alignItems:'center', justifyContent:'center', width:'18px', fontSize:'11px', color:'rgba(255,255,255,0.5)', fontWeight:500}}>
+            {n}
           </div>
-        )}
-        <div className="icon-btn-wrapper">
-          <button
-            className="small-icon-btn"
-            onClick={() => dispatch({ type: 'TOGGLE_BOARD_FLIP' })}
-            title="Flip board"
-            style={{
-              width: '32px', height: '32px', background: 'transparent', border: '1px solid var(--border)',
-              borderRadius: '6px', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex',
-              alignItems: 'center', justifyContent: 'center', fontSize: '18px', transition: 'all 0.2s'
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--gold)'; e.currentTarget.style.borderColor = 'var(--gold)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
-          >
-            ⇅
-          </button>
-        </div>
+        ))}
       </div>
 
-      <div className="board-main-row">
-        {/* LEFT Rank Labels Column (Outside, 20px wide) */}
-        {showCoords && (
-          <div className="rank-labels-column">
-            {ranks.map((rank) => (
-              <div key={rank} className="coordinate-label rank-label">
-                {rank}
-              </div>
-            ))}
-          </div>
-        )}
-
+      <div className="board-and-files">
+        {/* The 8x8 board grid */}
         <div className="board-container">
           {/* Ambient glow */}
           <div className="board-glow" style={{ '--theme-accent': currentTheme.accent }} />
 
-          {/* The chess board grid */}
           <div
             ref={boardRef}
             role="grid"
@@ -295,7 +253,7 @@ export default function ChessBoard({ bestMoveArrow }) {
             onKeyDown={handleKeyDown}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
-            className={`chess-board ${isNeonTheme ? 'board-neon' : ''} ${isAIThinking ? 'ai-thinking' : ''}`}
+            className={`board-grid chess-board ${isNeonTheme ? 'board-neon' : ''} ${isAIThinking ? 'ai-thinking' : ''}`}
             style={{
               touchAction: 'none',
               '--board-light': '#f0d9b5',
@@ -313,12 +271,9 @@ export default function ChessBoard({ bestMoveArrow }) {
                 const isValidTarget = validMoves.includes(squareName);
                 const sqColor = getSquareColor(file, rank);
 
-                // Error shake
                 const isErrorShake = errorSquare === squareName;
-                // Keyboard focus
                 const isKeyboardFocused = keyboardFocus === squareName;
 
-                // ARIA: describe the piece on this square
                 const pieceDesc = cell
                   ? `${cell.color === 'w' ? 'white' : 'black'} ${
                       { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king' }[cell.type]
@@ -349,7 +304,6 @@ export default function ChessBoard({ bestMoveArrow }) {
                     onDrop={(e) => handleDrop(e, squareName)}
                     onTouchStart={(e) => handleTouchStart(e, squareName)}
                   >
-                    {/* ── #1: Legal Move Indicators (grey dot / capture ring) ── */}
                     {showMoveIndicators && isValidTarget && (
                       <MoveIndicator hasCapture={!!cell} themeAccent={currentTheme.accent} />
                     )}
@@ -358,7 +312,7 @@ export default function ChessBoard({ bestMoveArrow }) {
               })
             )}
 
-            {/* ── Pieces Layer (absolute, on top of grid) ── */}
+            {/* ── Pieces Layer ── */}
             {pieces.map((p) => {
               const isSelected = selectedSquare === p.square;
               const isLanding = movingPiece === p.square;
@@ -416,7 +370,7 @@ export default function ChessBoard({ bestMoveArrow }) {
             {/* Neon grid lines */}
             {isNeonTheme && <div className="neon-grid" style={{ '--accent': currentTheme.accent }} />}
 
-            {/* ── #7: Pawn Promotion Modal ── */}
+            {/* Pawn Promotion Modal */}
             {promotionPending && (
               <PromotionModal
                 color={chess.turn()}
@@ -427,19 +381,16 @@ export default function ChessBoard({ bestMoveArrow }) {
             )}
           </div>
         </div>
-      </div>
 
-      {/* BOTTOM File Labels Row (Outside, 20px tall, offset by 20px if coordinates shown) */}
-      {showCoords && (
-        <div className="file-labels-row">
-          <div style={{ width: '20px', marginRight: '4px' }} /> {/* Spacer */}
-          {files.map((file) => (
-            <div key={file} className="coordinate-label file-label">
-              {file}
+        {/* File letters — BOTTOM only */}
+        <div className="file-labels" style={{width:'var(--board-size)', display:'flex', flexDirection:'row'}}>
+          {(flippedView ? ['h','g','f','e','d','c','b','a'] : ['a','b','c','d','e','f','g','h']).map(f => (
+            <div key={f} style={{flex:1, display:'flex', alignItems:'center', justifyContent:'center', height:'18px', fontSize:'11px', color:'rgba(255,255,255,0.5)', fontWeight:500}}>
+              {f}
             </div>
           ))}
         </div>
-      )}
+      </div>
     </div>
   );
 }
