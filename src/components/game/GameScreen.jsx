@@ -531,91 +531,46 @@ export default function GameScreen() {
     <div className="game-page">
       {/* CENTER BOARD ZONE */}
       <div className="game-center">
-        <div className="board-and-players-wrapper">
-          {/* BLACK player bar — above board (aligned with board) */}
-          <div style={{
-            width: 'var(--board-size)',
-            height: '40px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '0 4px',
-            marginLeft: '20px', /* Flush with the board edge (eval bar 12px + gap 8px) */
-            boxSizing: 'border-box',
-            flexShrink: 0
-          }}>
-            <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
-              <div style={{
-                width:'28px',height:'28px',borderRadius:'4px',
-                background:'linear-gradient(135deg, #3a3a3c, #2c2c2e)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                display:'flex',alignItems:'center',justifyContent:'center',
-                fontSize:'14px',fontWeight:'bold',color:'#e2b04a'
-              }}>
-                🤖
-              </div>
-              <span style={{fontSize:'14px',fontWeight:'600',color:'#ffffff'}}>{topPlayer.name}</span>
-              <span style={{fontSize:'11px',fontWeight:'600',padding:'1px 6px',background:'rgba(255,255,255,0.08)',
-                borderRadius:'3px',color:'rgba(255,255,255,0.5)'}}>{topPlayer.rating}</span>
-            </div>
-            
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{fontSize:'16px',fontWeight:'700',color:'#ffffff',fontFamily:'monospace'}}>
-                {formatClockTime(topPlayer.time)}
-              </span>
-              <button style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.4)', padding: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
-                <Settings size={15} />
-              </button>
-            </div>
+        {/* Black player bar */}
+        <div style={{width:'calc(var(--board-size) + 24px)',height:'44px',background:'rgba(255,255,255,0.05)',borderRadius:'8px',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 12px',flexShrink:0}}>
+          <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
+            <div style={{width:'32px',height:'32px',borderRadius:'50%',background:'#374151',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'14px',fontWeight:'600',color:'white'}}>{avatarLetterTop}</div>
+            <span style={{fontSize:'14px',fontWeight:'500',color:'white'}}>{topPlayer.name}</span>
+            <span style={{fontSize:'12px',padding:'2px 8px',background:'rgba(255,255,255,0.1)',borderRadius:'99px',color:'#aaa'}}>{topPlayer.rating}</span>
           </div>
+          <span style={{fontSize:'16px',fontWeight:'600',color:'white',fontFamily:'monospace'}}>{formatClockTime(topPlayer.time)}</span>
+        </div>
 
-          {/* Board row: eval bar + board */}
-          <div style={{display:'flex', flexDirection:'row', alignItems:'flex-start', gap:'8px', flexShrink:0, width:'100%'}}>
-            {/* Eval Bar */}
-            <div className="eval-bar" style={{ height: 'var(--board-size)', width: '12px' }}>
-              <div className="eval-fill-black" />
-              <div className="eval-fill-white" style={{ height: `${clampedEval}%` }} />
-              <div className="eval-score">
-                {stockfishEngine.isReady ? stockfishEval.text : ((materialAdv.w - materialAdv.b) > 0 ? `+${materialAdv.w - materialAdv.b}` : materialAdv.w - materialAdv.b)}
-              </div>
-            </div>
-
-            {/* The actual 8x8 board */}
+        {/* Board row */}
+        <div style={{display:'flex',flexDirection:'row',alignItems:'flex-start',gap:'4px',flexShrink:0}}>
+          {/* Rank labels LEFT */}
+          <div style={{display:'flex',flexDirection:'column',height:'var(--board-size)',width:'20px',flexShrink:0}}>
+            {(flippedView?[1,2,3,4,5,6,7,8]:[8,7,6,5,4,3,2,1]).map(r=>(
+              <div key={r} style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'12px',fontWeight:'600',color:'rgba(255,255,255,0.6)'}}>{r}</div>
+            ))}
+          </div>
+          {/* Board + file labels */}
+          <div style={{display:'flex',flexDirection:'column',gap:'4px'}}>
             <div className="board-outer">
               <ChessBoard bestMoveArrow={analysisArrow} />
             </div>
-          </div>
-
-          {/* WHITE player bar — below board (aligned with board) */}
-          <div style={{
-            width: 'var(--board-size)',
-            height: '40px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '0 4px',
-            marginLeft: '20px', /* Flush with the board edge (eval bar 12px + gap 8px) */
-            boxSizing: 'border-box',
-            flexShrink: 0
-          }}>
-            <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
-              <div style={{
-                width:'28px',height:'28px',borderRadius:'4px',
-                background:'linear-gradient(135deg, #e2b04a, #b8861b)',
-                border: '1px solid rgba(255,255,255,0.15)',
-                display:'flex',alignItems:'center',justifyContent:'center',
-                fontSize:'14px',fontWeight:'bold',color:'#100f20'
-              }}>
-                👤
-              </div>
-              <span style={{fontSize:'14px',fontWeight:'600',color:'#ffffff'}}>{bottomPlayer.name}</span>
-              <span style={{fontSize:'11px',fontWeight:'600',padding:'1px 6px',background:'rgba(255,255,255,0.08)',
-                borderRadius:'3px',color:'rgba(255,255,255,0.5)'}}>{bottomPlayer.rating}</span>
+            {/* File labels BOTTOM */}
+            <div style={{display:'flex',flexDirection:'row',width:'var(--board-size)',flexShrink:0}}>
+              {(flippedView?['h','g','f','e','d','c','b','a']:['a','b','c','d','e','f','g','h']).map(f=>(
+                <div key={f} style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'12px',fontWeight:'600',color:'rgba(255,255,255,0.6)'}}>{f}</div>
+              ))}
             </div>
-            <span style={{fontSize:'16px',fontWeight:'700',color:'#ffffff',fontFamily:'monospace'}}>
-              {formatClockTime(bottomPlayer.time)}
-            </span>
           </div>
+        </div>
+
+        {/* White player bar */}
+        <div style={{width:'calc(var(--board-size) + 24px)',height:'44px',background:'rgba(255,255,255,0.05)',borderRadius:'8px',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 12px',flexShrink:0}}>
+          <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
+            <div style={{width:'32px',height:'32px',borderRadius:'50%',background:'#4B5563',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'14px',fontWeight:'600',color:'white'}}>{avatarLetterBottom}</div>
+            <span style={{fontSize:'14px',fontWeight:'500',color:'white'}}>{bottomPlayer.name}</span>
+            <span style={{fontSize:'12px',padding:'2px 8px',background:'rgba(255,255,255,0.1)',borderRadius:'99px',color:'#aaa'}}>{bottomPlayer.rating}</span>
+          </div>
+          <span style={{fontSize:'16px',fontWeight:'600',color:'white',fontFamily:'monospace'}}>{formatClockTime(bottomPlayer.time)}</span>
         </div>
       </div>
 
