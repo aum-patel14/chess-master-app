@@ -144,12 +144,33 @@ export default function PuzzlePage() {
 
   // Reset solving states on puzzle switch
   useEffect(() => {
+    let freshChess;
     try {
-      setChess(new Chess(activePuzzle.fen));
+      freshChess = new Chess(activePuzzle.fen);
     } catch(e) {
-      setChess(new Chess());
+      freshChess = new Chess();
     }
-    setMoveIdx(0);
+    
+    // Auto-play opponent's first move (index 0)
+    const opponentMove = activePuzzle.moves[0];
+    if (opponentMove) {
+      try {
+        if (opponentMove.length >= 4 && /^[a-h][1-8][a-h][1-8]/i.test(opponentMove)) {
+          freshChess.move({
+            from: opponentMove.substring(0, 2),
+            to: opponentMove.substring(2, 4),
+            promotion: opponentMove.length === 5 ? opponentMove[4] : undefined
+          });
+        } else {
+          freshChess.move(opponentMove);
+        }
+      } catch (e) {
+        console.warn("Failed to apply opponent's first move:", e);
+      }
+    }
+
+    setChess(freshChess);
+    setMoveIdx(1); // Player starts at index 1
     setSelected(null);
     setLegal([]);
     setHintsUsed(0);
@@ -157,9 +178,11 @@ export default function PuzzlePage() {
     setFlashClass('');
     setWrongAttempts(0);
     setShowSuccessModal(false);
-    // Automatic board flipping if it is black to play
-    const pChess = new Chess(activePuzzle.fen);
-    setIsFlipped(pChess.turn() === 'b');
+    
+    // Automatic board flipping: if the player is Black, flip the board.
+    // The player's color is determined by the starting FEN turn.
+    const startingChess = new Chess(activePuzzle.fen);
+    setIsFlipped(startingChess.turn() === 'b');
   }, [activePuzzle]);
 
   const solutionMoves = activePuzzle.moves;
@@ -183,69 +206,82 @@ export default function PuzzlePage() {
       if (hit) {
         // Attempt move
         const testChess = new Chess(chess.fen());
-        const mv = testChess.move({ from: selected, to: sq, promotion: hit.promotion });
+        const expected = solutionMoves[moveIdx];
+        const playerUCI = selected + sq;
+        const expectedUCI = expected.slice(0, 4);
 
-        if (mv) {
-          const expected = solutionMoves[moveIdx];
-          const playedCoord = mv.from + mv.to + (mv.promotion || '');
-          const cleanMv = mv.san.replace(/\+|#/g, '').toLowerCase();
-          const cleanExpected = expected.replace(/\+|#/g, '').toLowerCase();
+        // Compare UCI to expected UCI
+        if (playerUCI === expectedUCI) {
+          // Correct move! Apply the move
+          let applied = null;
+          try {
+            const promo = expected.length === 5 ? expected[4] : 'q';
+            applied = testChess.move({ from: selected, to: sq, promotion: promo });
+          } catch (e) {
+            console.warn("Error applying correct move:", e);
+          }
 
-          const isCorrect = (playedCoord.toLowerCase() === cleanExpected) || (cleanMv === cleanExpected);
-
-          if (isCorrect) {
-            // Correct move!
-            setFlashClass('correct-flash');
-            setTimeout(() => setFlashClass(''), 400);
-
-            // Apply move to active board
-            setChess(new Chess(testChess.fen()));
-            setSelected(null);
-            setLegal([]);
-            const nextIdx = moveIdx + 1;
-            setMoveIdx(nextIdx);
-
-            if (nextIdx >= solutionMoves.length) {
-              // Puzzle fully solved!
-              handlePuzzleSolved();
-            } else {
-              // Opponent auto-reply after 500ms
-              const replyMove = solutionMoves[nextIdx];
-              setTimeout(() => {
-                const opponentChess = new Chess(testChess.fen());
-                
-                // Safely execute opponent reply move in coordinate or SAN format
-                if (typeof replyMove === 'string' && replyMove.length >= 4 && /^[a-h][1-8][a-h][1-8]/i.test(replyMove)) {
-                  opponentChess.move({
-                    from: replyMove.substring(0, 2),
-                    to: replyMove.substring(2, 4),
-                    promotion: replyMove.substring(4, 5)?.toLowerCase() || undefined
-                  });
-                } else {
-                  opponentChess.move(replyMove);
-                }
-                
-                setChess(new Chess(opponentChess.fen()));
-                setMoveIdx(nextIdx + 1);
-                
-                // If opponent reply finishes the puzzle
-                if (nextIdx + 1 >= solutionMoves.length) {
-                  handlePuzzleSolved();
-                }
-              }, 500);
-            }
-          } else {
-            // Wrong move! Flash red, flash "Try again", and undo after 800ms
+          if (!applied) {
             setFlashClass('wrong-flash');
             setWrongAttempts(prev => prev + 1);
-            showToast('Wrong move. Try again!', 'warning', 1500);
-
+            showToast('Illegal move. Try again!', 'warning', 1500);
             setTimeout(() => {
               setFlashClass('');
               setSelected(null);
               setLegal([]);
             }, 800);
+            return;
           }
+
+          setFlashClass('correct-flash');
+          setTimeout(() => setFlashClass(''), 400);
+
+          setChess(new Chess(testChess.fen()));
+          setSelected(null);
+          setLegal([]);
+          const nextIdx = moveIdx + 1;
+          setMoveIdx(nextIdx);
+
+          if (nextIdx >= solutionMoves.length) {
+            // Puzzle fully solved!
+            handlePuzzleSolved();
+          } else {
+            // Opponent auto-reply after 600ms
+            const replyMove = solutionMoves[nextIdx];
+            setTimeout(() => {
+              const opponentChess = new Chess(testChess.fen());
+              
+              // Safely execute opponent reply move in coordinate or SAN format
+              if (typeof replyMove === 'string' && replyMove.length >= 4 && /^[a-h][1-8][a-h][1-8]/i.test(replyMove)) {
+                opponentChess.move({
+                  from: replyMove.substring(0, 2),
+                  to: replyMove.substring(2, 4),
+                  promotion: replyMove.length === 5 ? replyMove[4] : undefined
+                });
+              } else {
+                opponentChess.move(replyMove);
+              }
+              
+              setChess(new Chess(opponentChess.fen()));
+              setMoveIdx(nextIdx + 1); // Move index to player's next move
+              
+              // If opponent reply finishes the puzzle
+              if (nextIdx + 1 >= solutionMoves.length) {
+                handlePuzzleSolved();
+              }
+            }, 600);
+          }
+        } else {
+          // Wrong move! Flash red, flash "Try again", and undo after 800ms
+          setFlashClass('wrong-flash');
+          setWrongAttempts(prev => prev + 1);
+          showToast('Wrong move. Try again!', 'warning', 1500);
+
+          setTimeout(() => {
+            setFlashClass('');
+            setSelected(null);
+            setLegal([]);
+          }, 800);
         }
       } else {
         // Clicked another square - change selection if own piece
@@ -303,7 +339,7 @@ export default function PuzzlePage() {
     const target = moves.find(m => {
       const coord = m.from + m.to + (m.promotion || '');
       const san = m.san.toLowerCase().replace(/\+|#/g, '');
-      return coord === cleanExpected || san === cleanExpected;
+      return coord === cleanExpected.slice(0, 4) || san === cleanExpected;
     });
 
     if (target) {
@@ -332,8 +368,33 @@ export default function PuzzlePage() {
   };
 
   const handleRetry = () => {
-    setChess(new Chess(activePuzzle.fen));
-    setMoveIdx(0);
+    let freshChess;
+    try {
+      freshChess = new Chess(activePuzzle.fen);
+    } catch(e) {
+      freshChess = new Chess();
+    }
+    
+    // Auto-play opponent's first move (index 0)
+    const opponentMove = activePuzzle.moves[0];
+    if (opponentMove) {
+      try {
+        if (opponentMove.length >= 4 && /^[a-h][1-8][a-h][1-8]/i.test(opponentMove)) {
+          freshChess.move({
+            from: opponentMove.substring(0, 2),
+            to: opponentMove.substring(2, 4),
+            promotion: opponentMove.length === 5 ? opponentMove[4] : undefined
+          });
+        } else {
+          freshChess.move(opponentMove);
+        }
+      } catch (e) {
+        console.warn("Failed to apply opponent's first move:", e);
+      }
+    }
+
+    setChess(freshChess);
+    setMoveIdx(1); // Player starts at index 1
     setSelected(null);
     setLegal([]);
     setHintsUsed(0);
@@ -341,7 +402,7 @@ export default function PuzzlePage() {
     setFlashClass('');
     setWrongAttempts(0);
     setShowSuccessModal(false);
-  };
+  };;
 
   const toggleBookmark = () => {
     const isBookmarked = bookmarked.includes(activePuzzle.id);
