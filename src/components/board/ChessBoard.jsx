@@ -251,10 +251,13 @@ export default function ChessBoard({ bestMoveArrow }) {
       {/* Ambient glow */}
       <div className="board-glow" style={{ '--theme-accent': currentTheme.accent }} />
 
-      {/* ── Square Grid ── */}
       {ranks.map((rank) =>
         files.map((file) => {
           const squareName = `${file}${rank}`;
+          const boardRank = RANKS.indexOf(rank);
+          const boardFile = FILES.indexOf(file);
+          const cell = board[boardRank]?.[boardFile];
+
           const fileIdx = FILES.indexOf(file);
           const rankIdx = parseInt(rank) - 1;
           const sqColor = getSquareColor(fileIdx, rankIdx, selectedSquare, lastMove, validMoves, checkSquare);
@@ -268,9 +271,6 @@ export default function ChessBoard({ bestMoveArrow }) {
               }`
             : 'empty';
 
-          const boardRank = RANKS.indexOf(rank);
-          const boardFile = FILES.indexOf(file);
-          const cell = board[boardRank]?.[boardFile];
           const isValidTarget = validMoves.includes(squareName);
           const showRankLabel = showCoords && (boardFile === (flippedView ? 7 : 0));
           const showFileLabel = showCoords && (boardRank === (flippedView ? 0 : 7));
