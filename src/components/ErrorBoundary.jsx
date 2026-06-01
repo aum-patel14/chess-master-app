@@ -1,14 +1,17 @@
 import { Component } from 'react'
 
 export default class ErrorBoundary extends Component {
-  state = { hasError: false }
+  state = { hasError: false, error: null }
 
-  static getDerivedStateFromError() {
-    return { hasError: true }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error }
   }
 
-  componentDidCatch(err, info) {
-    console.error('ErrorBoundary:', err, info)
+  componentDidCatch(error, info) {
+    console.error('=== CHESS APP CRASH ===');
+    console.error('Error:', error.message);
+    console.error('Stack:', error.stack);
+    console.error('Component:', info.componentStack);
   }
 
   render() {
@@ -30,11 +33,14 @@ export default class ErrorBoundary extends Component {
         >
           <div style={{ fontSize: 64, marginBottom: 16 }}>♟</div>
           <h1 style={{ fontFamily: 'Cinzel, Georgia, serif', color: '#d4af37', marginBottom: 8 }}>Something went wrong</h1>
-          <p style={{ opacity: 0.85, marginBottom: 28 }}>The game encountered an error.</p>
+          <p style={{ opacity: 0.85, marginBottom: 8 }}>The game encountered an error.</p>
+          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '13px', marginBottom: 28 }}>
+            {this.state.error?.message}
+          </p>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
             <button
               type="button"
-              onClick={() => window.location.reload()}
+              onClick={() => this.setState({ hasError: false, error: null })}
               style={{
                 minHeight: 44,
                 padding: '0 20px',

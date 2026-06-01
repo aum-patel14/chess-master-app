@@ -8,32 +8,42 @@ const DIFFICULTY = {
   5: { skill: 20, depth: 20, movetime: 3000, label: 'Master',   elo: '~2000' },
 };
 
+export const createStockfishWorker = () => {
+  const basePath = import.meta.env.BASE_URL || '/';
+  const paths = [
+    `${basePath}stockfish.js`.replace(/\/+/g, '/'),
+    '/stockfish.js',
+    '/chess-master-app/stockfish.js',  // GitHub Pages subdirectory path
+    'https://cdn.jsdelivr.net/npm/stockfish@16/src/stockfish-nnue-16.js',
+  ];
+
+  for (const path of paths) {
+    try {
+      const worker = new Worker(path);
+      return worker;
+    } catch (e) {
+      console.warn(`Stockfish failed at ${path}:`, e);
+    }
+  }
+  console.error('All Stockfish paths failed — AI disabled');
+  return null;
+};
+
 export const useStockfish = () => {
   const workerRef = useRef(null);
 
   const init = useCallback(() => {
-    try {
-      const basePath = import.meta.env.BASE_URL || '/';
-      const stockfishUrl = `${basePath}stockfish.js`.replace(/\/+/g, '/');
-      workerRef.current = new Worker(stockfishUrl);
-    } catch (err) {
-      console.warn('Stockfish local worker initialization failed, trying JS fallback', err);
-      try {
-        workerRef.current = new Worker('https://cdn.jsdelivr.net/npm/stockfish@16/src/stockfish-nnue-16.js');
-      } catch (fallbackErr) {
-        console.error('Stockfish CDN fallback worker failed:', fallbackErr);
-      }
-    }
+    workerRef.current = createStockfishWorker();
   }, []);
 
   const getBestMove = useCallback((fen, level) => {
     return new Promise((resolve, reject) => {
       if (!workerRef.current) init();
-      const cfg = DIFFICULTY[level] || DIFFICULTY[3];
+      const cfg = DIFFICULTY[Number(level)] || DIFFICULTY[3];
       const worker = workerRef.current;
 
       if (!worker) {
-        reject('Worker not initialized');
+        reject('stockfish_unavailable');
         return;
       }
 

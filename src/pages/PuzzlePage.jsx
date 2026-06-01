@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Chess } from 'chess.js';
+
+const initGame = (fen) => {
+  try {
+    return fen ? new Chess(fen) : new Chess();
+  } catch (e) {
+    console.error('Chess init failed in PuzzlePage:', e);
+    return new Chess();
+  }
+};
 import { useNavigate } from 'react-router-dom';
 import confetti from 'canvas-confetti';
 import PageShell from '../components/PageShell';
@@ -132,7 +141,7 @@ export default function PuzzlePage() {
   const activePuzzle = activePuzzleMode === 'daily' ? dailyPuzzle : (filteredPuzzles[puzzleIndex] || puzzlesData[0]);
 
   // Solving states
-  const [chess, setChess] = useState(() => new Chess(activePuzzle.fen));
+  const [chess, setChess] = useState(() => initGame(activePuzzle.fen));
   const [moveIdx, setMoveIdx] = useState(0);
   const [selected, setSelected] = useState(null);
   const [legal, setLegal] = useState([]);
@@ -146,9 +155,9 @@ export default function PuzzlePage() {
   useEffect(() => {
     let freshChess;
     try {
-      freshChess = new Chess(activePuzzle.fen);
+      freshChess = initGame(activePuzzle.fen);
     } catch(e) {
-      freshChess = new Chess();
+      freshChess = initGame();
     }
     
     // Auto-play opponent's first move (index 0)
@@ -181,7 +190,7 @@ export default function PuzzlePage() {
     
     // Automatic board flipping: if the player is Black, flip the board.
     // The player's color is determined by the starting FEN turn.
-    const startingChess = new Chess(activePuzzle.fen);
+    const startingChess = initGame(activePuzzle.fen);
     setIsFlipped(startingChess.turn() === 'b');
   }, [activePuzzle]);
 
@@ -205,7 +214,7 @@ export default function PuzzlePage() {
 
       if (hit) {
         // Attempt move
-        const testChess = new Chess(chess.fen());
+        const testChess = initGame(chess.fen());
         const expected = solutionMoves[moveIdx];
         const playerUCI = selected + sq;
         const expectedUCI = expected.slice(0, 4);
@@ -236,7 +245,7 @@ export default function PuzzlePage() {
           setFlashClass('correct-flash');
           setTimeout(() => setFlashClass(''), 400);
 
-          setChess(new Chess(testChess.fen()));
+          setChess(initGame(testChess.fen()));
           setSelected(null);
           setLegal([]);
           const nextIdx = moveIdx + 1;
@@ -249,7 +258,7 @@ export default function PuzzlePage() {
             // Opponent auto-reply after 600ms
             const replyMove = solutionMoves[nextIdx];
             setTimeout(() => {
-              const opponentChess = new Chess(testChess.fen());
+              const opponentChess = initGame(testChess.fen());
               
               // Safely execute opponent reply move in coordinate or SAN format
               if (typeof replyMove === 'string' && replyMove.length >= 4 && /^[a-h][1-8][a-h][1-8]/i.test(replyMove)) {
@@ -262,7 +271,7 @@ export default function PuzzlePage() {
                 opponentChess.move(replyMove);
               }
               
-              setChess(new Chess(opponentChess.fen()));
+              setChess(initGame(opponentChess.fen()));
               setMoveIdx(nextIdx + 1); // Move index to player's next move
               
               // If opponent reply finishes the puzzle

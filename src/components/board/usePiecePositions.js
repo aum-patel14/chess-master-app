@@ -1,6 +1,15 @@
 import { useEffect, useState, useRef } from 'react';
 import { Chess } from 'chess.js';
 
+const initGame = (fen) => {
+  try {
+    return fen ? new Chess(fen) : new Chess();
+  } catch (e) {
+    console.error('Chess init failed in usePiecePositions:', e);
+    return new Chess();
+  }
+};
+
 let nextId = 1;
 
 export function usePiecePositions(fen) {
@@ -11,7 +20,7 @@ export function usePiecePositions(fen) {
     if (fen === prevFen.current) return;
     prevFen.current = fen;
 
-    const chess = new Chess(fen);
+    const chess = initGame(fen);
     const board = chess.board();
     
     setPieces(currentPieces => {

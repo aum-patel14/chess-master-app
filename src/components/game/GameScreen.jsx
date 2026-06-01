@@ -1,6 +1,15 @@
 import './GameScreen.css';
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { Chess } from 'chess.js';
+
+const initGame = (fen) => {
+  try {
+    return fen ? new Chess(fen) : new Chess();
+  } catch (e) {
+    console.error('Chess init failed in GameScreen:', e);
+    return new Chess(); // fallback to start position
+  }
+};
 import { useGame } from '../../context/GameContext';
 import ChessBoard from '../board/ChessBoard';
 import GameOverDialog from './GameOverDialog';
@@ -181,7 +190,7 @@ export default function GameScreen() {
     isAI: gameMode === 'vsAI' && playerColor !== topColor,
     color: topColor,
     time: topColor === 'w' ? whiteTime : blackTime,
-    isActive: new Chess(reviewFen || fen).turn() === topColor,
+    isActive: initGame(reviewFen || fen).turn() === topColor,
     captured: capturedPieces[topColor === 'w' ? 'b' : 'w'], // Pieces captured BY top player
     material: materialAdv[topColor]
   };
@@ -198,7 +207,7 @@ export default function GameScreen() {
     isAI: gameMode === 'vsAI' && playerColor !== bottomColor,
     color: bottomColor,
     time: bottomColor === 'w' ? whiteTime : blackTime,
-    isActive: new Chess(reviewFen || fen).turn() === bottomColor,
+    isActive: initGame(reviewFen || fen).turn() === bottomColor,
     captured: capturedPieces[bottomColor === 'w' ? 'b' : 'w'], // Pieces captured BY bottom player
     material: materialAdv[bottomColor]
   };
@@ -277,7 +286,7 @@ export default function GameScreen() {
     }
     
     if (!bestMove) {
-      const fallbackChess = new Chess(fen);
+      const fallbackChess = initGame(fen);
       const moves = fallbackChess.moves({ verbose: true });
       if (moves.length > 0) {
         const capture = moves.find(m => m.captured);
@@ -295,7 +304,7 @@ export default function GameScreen() {
   };
 
   const handleSaveGame = () => {
-    const c = new Chess(fen);
+    const c = initGame(fen);
     navigator.clipboard.writeText(c.fen());
     showToast('FEN copied to clipboard! 💾', 'success');
   };

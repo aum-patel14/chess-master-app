@@ -1,5 +1,14 @@
 import { createContext, useContext, useReducer, useCallback, useRef, useEffect, useState } from 'react';
 import { Chess } from 'chess.js';
+
+const initGame = (fen) => {
+  try {
+    return fen ? new Chess(fen) : new Chess();
+  } catch (e) {
+    console.error('Chess init failed:', e);
+    return new Chess(); // fallback to start position
+  }
+};
 import { getGameStatus, getBestMove as getFallbackBestMove } from '../engine/chessEngine';
 import { stockfishEngine } from '../engine/StockfishService';
 import { soundManager } from '../engine/soundManager';
@@ -39,7 +48,7 @@ const initialTime = (() => {
 })();
 
 const initialState = {
-  fen: new Chess().fen(),
+  fen: initGame().fen(),
   history: [],
   selectedSquare: null,
   validMoves: [],
@@ -144,7 +153,7 @@ function gameReducer(state, action) {
     };
     case 'TICK_TIMER': {
       if (!state.timerRunning || !state.timeControl) return state;
-      const chess = new Chess(state.fen);
+      const chess = initGame(state.fen);
       const turn = chess.turn();
       if (turn === 'w') return { ...state, whiteTime: Math.max(0, state.whiteTime - 0.1) };
       return { ...state, blackTime: Math.max(0, state.blackTime - 0.1) };
@@ -240,7 +249,7 @@ function gameReducer(state, action) {
       };
     }
     case 'RESIGN': {
-      const winner = new Chess(state.fen).turn() === 'w' ? 'Black' : 'White';
+      const winner = initGame(state.fen).turn() === 'w' ? 'Black' : 'White';
       return {
         ...state,
         status: { type: 'resign', message: `${winner} wins by resignation!`, winner },
@@ -535,41 +544,82 @@ async function saveGameToCloud(state, finalStatus, history, fen) {
   }, [applyMove]);
 
   const requestAIMoveStockfish = useCallback(async (fen, difficulty) => {
-    dispatch({ type: 'SET_AI_THINKING', payload: true });
-    
-    let bestMoveObj = null;
-    if (aiStatus === 'ready') {
-      const uciMove = await stockfishEngine.getBestMove(fen, difficulty);
-      if (uciMove && uciMove !== '(none)') {
-        bestMoveObj = {
-          from: uciMove.substring(0, 2),
-          to: uciMove.substring(2, 4),
-          promotion: uciMove.length > 4 ? uciMove[4] : undefined
-        };
+    try {
+      const activeChess = initGame(fen);
+      if (activeChess.isGameOver()) return;
+      if (activeChess.turn() === state.playerColor) return;
+
+      dispatch({ type: 'SET_AI_THINKING', payload: true });
+      
+      let bestMoveObj = null;
+      const numDifficulty = Number(difficulty);
+
+      try {
+        if (aiStatus === 'ready') {
+          const uciMove = await stockfishEngine.getBestMove(fen, numDifficulty);
+          if (uciMove && uciMove !== '(none)') {
+            bestMoveObj = {
+              from: uciMove.substring(0, 2),
+              to: uciMove.substring(2, 4),
+              promotion: uciMove.length > 4 ? uciMove[4] : undefined
+            };
+          }
+        }
+      } catch (err) {
+        console.warn('Stockfish engine getBestMove failed, using chessEngine fallback:', err);
       }
+      
+      // Fallback if Stockfish failed or threw error
+      if (!bestMoveObj) {
+        try {
+          const aiChess = initGame(fen);
+          bestMoveObj = getFallbackBestMove(aiChess, numDifficulty);
+        } catch (fallbackErr) {
+          console.warn('chessEngine fallback failed, trying random move:', fallbackErr);
+        }
+      }
+
+      // Safe final fallback to a random legal move if everything else fails
+      if (!bestMoveObj) {
+        try {
+          const aiChess = initGame(fen);
+          const moves = aiChess.moves({ verbose: true });
+          if (moves.length > 0) {
+            const randomMove = moves[Math.floor(Math.random() * moves.length)];
+            bestMoveObj = {
+              from: randomMove.from,
+              to: randomMove.to,
+              promotion: randomMove.promotion || undefined
+            };
+          }
+        } catch (randErr) {
+          console.error('Random move generator failed:', randErr);
+        }
+      }
+      
+      if (bestMoveObj && applyMoveRef.current) {
+        const aiChess = initGame(fen);
+        const aiResult = aiChess.move(bestMoveObj);
+        if (aiResult) applyMoveRef.current(aiResult, aiChess);
+      }
+    } catch (error) {
+      console.error('AI move generation crash caught safely:', error);
+    } finally {
+      dispatch({ type: 'SET_AI_THINKING', payload: false });
     }
-    
-    // Fallback if Stockfish failed
-    if (!bestMoveObj) {
-      const aiChess = new Chess(fen);
-      bestMoveObj = getFallbackBestMove(aiChess, difficulty);
-    }
-    
-    if (bestMoveObj && applyMoveRef.current) {
-      const aiChess = new Chess(fen);
-      const aiResult = aiChess.move(bestMoveObj);
-      if (aiResult) applyMoveRef.current(aiResult, aiChess);
-    }
-    dispatch({ type: 'SET_AI_THINKING', payload: false });
-  }, [aiStatus]);
+  }, [aiStatus, state.playerColor]);
 
   // Auto-trigger AI if it's the AI's turn
   useEffect(() => {
-    if (state.gameMode === 'vsAI' && !state.isAIThinking && (state.status.type === 'playing' || state.status.type === 'check')) {
-      const chess = new Chess(state.fen);
-      if (chess.turn() !== state.playerColor) {
-        requestAIMoveStockfish(state.fen, state.aiDifficulty);
+    try {
+      if (state.gameMode === 'vsAI' && !state.isAIThinking && (state.status.type === 'playing' || state.status.type === 'check')) {
+        const chess = initGame(state.fen);
+        if (chess.turn() !== state.playerColor) {
+          requestAIMoveStockfish(state.fen, state.aiDifficulty);
+        }
       }
+    } catch (err) {
+      console.error('AI trigger error in useEffect:', err);
     }
   }, [state.gameMode, state.isAIThinking, state.status.type, state.fen, state.playerColor, state.aiDifficulty, requestAIMoveStockfish]);
 
@@ -578,7 +628,7 @@ async function saveGameToCloud(state, finalStatus, history, fen) {
     if (state.status.type !== 'playing' && state.status.type !== 'check') return;
     if (state.isAIThinking) return;
 
-    const chess = new Chess(state.fen);
+    const chess = initGame(state.fen);
     const currentTurn = chess.turn();
 
     // In vsAI or online mode, only allow player's turn
@@ -640,7 +690,7 @@ async function saveGameToCloud(state, finalStatus, history, fen) {
 
   const handlePromotion = useCallback((piece) => {
     if (!state.promotionPending) return;
-    const chess = new Chess(state.fen);
+    const chess = initGame(state.fen);
     const moveResult = chess.move({
       from: state.promotionPending.from,
       to: state.promotionPending.to,
@@ -730,7 +780,7 @@ async function saveGameToCloud(state, finalStatus, history, fen) {
     } else {
       historySlice = historySlice.slice(0, -1);
     }
-    const chess = new Chess();
+    const chess = initGame();
     for (const m of historySlice) {
       chess.move({ from: m.from, to: m.to, promotion: m.promotion });
     }

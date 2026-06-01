@@ -1,6 +1,16 @@
 import './ChessBoard.css';
 import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import { Chess } from 'chess.js';
+
+const initGame = (fen) => {
+  try {
+    return fen ? new Chess(fen) : new Chess();
+  } catch (e) {
+    console.error('Chess init failed in ChessBoard:', e);
+    return new Chess();
+  }
+};
+
 import { useGame } from '../../context/GameContext';
 import ChessPiece from './ChessPiece';
 import MoveIndicator from './MoveIndicator';
@@ -21,7 +31,7 @@ export default function ChessBoard({ bestMoveArrow }) {
   } = state;
 
   const effectiveFen = reviewFen || fen;
-  const chess = useMemo(() => new Chess(effectiveFen), [effectiveFen]);
+  const chess = useMemo(() => initGame(effectiveFen), [effectiveFen]);
   const board = chess.board();
   const pieces = usePiecePositions(effectiveFen);
 
