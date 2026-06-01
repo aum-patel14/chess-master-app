@@ -58,13 +58,19 @@ export default function GamePage() {
       if (!paramDiff || !paramColor) {
         setShowAISetup(true);
       } else if (state.gameMode !== 'vsAI' || state.aiDifficulty !== paramDiff || state.playerColor !== paramColor) {
-        startNewGame({ mode: 'vsAI', playerColor: paramColor, difficulty: paramDiff, fen: paramFen });
+        startNewGame({ 
+          mode: 'vsAI', 
+          playerColor: paramColor, 
+          difficulty: paramDiff, 
+          fen: paramFen,
+          timeControl: location.state?.timeControl
+        });
       }
     } else if (state.gameMode !== requestedMode || (paramFen && state.moveCount === 0 && state.fen !== paramFen)) {
       // If it's a puzzle, lesson, or local mode, load it!
       startNewGame({ mode: requestedMode, fen: paramFen });
     }
-  }, [requestedMode, paramDiff, paramColor, paramFen, state.gameMode, state.aiDifficulty, state.playerColor, state.moveCount, state.fen, startNewGame]);
+  }, [requestedMode, paramDiff, paramColor, paramFen, state.gameMode, state.aiDifficulty, state.playerColor, state.moveCount, state.fen, startNewGame, location.state]);
 
   const handleStartAI = (config) => {
     let chosenColor = config.color;
@@ -72,7 +78,15 @@ export default function GamePage() {
       chosenColor = Math.random() > 0.5 ? 'w' : 'b';
     }
     setShowAISetup(false);
-    navigate(`/play?mode=ai&difficulty=${config.difficulty}&color=${chosenColor}`, { replace: true });
+    navigate(`/play?mode=ai&difficulty=${config.difficulty}&color=${chosenColor}`, { 
+      replace: true, 
+      state: {
+        mode: 'ai',
+        difficulty: config.difficulty,
+        playerColor: chosenColor,
+        timeControl: config.timeControl
+      }
+    });
   };
 
   const handleCloseAISetup = () => {

@@ -1,5 +1,5 @@
 import './GameScreen.css';
-import { useMemo, useState, useEffect, useRef } from 'react';
+import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import { Chess } from 'chess.js';
 import { useGame } from '../../context/GameContext';
 import ChessBoard from '../board/ChessBoard';
@@ -12,6 +12,7 @@ import AnalysisPanel from './AnalysisPanel';
 import { stockfishEngine } from '../../engine/StockfishService';
 import { Play, RotateCcw, Flag, Sparkles, RefreshCw, Save, Share2, Settings } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
+import { useChessClock } from '../../hooks/useChessClock';
 
 const initGame = (fen) => {
   try {
@@ -42,6 +43,78 @@ function getMaterialAdvantage(capturedByW, capturedByB) {
   return { w: diff > 0 ? diff : 0, b: diff < 0 ? Math.abs(diff) : 0 };
 }
 
+const clockStyle = (seconds, isActive) => ({
+  fontSize: '18px',
+  fontWeight: '700',
+  fontFamily: 'monospace',
+  color: seconds < 10 ? '#ef4444' : seconds < 30 ? '#f97316' : 'white',
+  opacity: isActive ? 1 : 0.5,
+  animation: seconds < 10 && isActive ? 'pulse 1s ease-in-out infinite' : 'none',
+  transition: 'color 0.3s',
+  background: isActive ? 'rgba(255,255,255,0.08)' : 'transparent',
+  padding: '4px 10px',
+  borderRadius: '6px',
+});
+
+const EvalBar = ({ score, isMate, mateIn, flipped }) => {
+  let pct = isMate
+    ? (score > 0 ? 5 : 95)
+    : Math.min(95, Math.max(5, 50 - (score / 10)));
+
+  if (flipped) {
+    pct = 100 - pct;
+  }
+
+  return (
+    <div style={{
+      width: '10px',
+      height: 'var(--board-size)',
+      borderRadius: '4px',
+      overflow: 'hidden',
+      position: 'relative',
+      background: '#1a1a2e',
+      flexShrink: 0,
+      border: '1px solid rgba(255,255,255,0.1)'
+    }}>
+      {/* Black side (top if not flipped, bottom if flipped) */}
+      <div style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: `${pct}%`,
+        background: '#1a1a2e',
+        transition: 'height 0.4s ease'
+      }}/>
+      {/* White side (bottom if not flipped, top if flipped) */}
+      <div style={{
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: `${100 - pct}%`,
+        background: '#f0d9b5',
+        transition: 'height 0.4s ease'
+      }}/>
+      {/* Score label */}
+      <div style={{
+        position: 'absolute',
+        top: pct < 50 ? '4px' : 'auto',
+        bottom: pct >= 50 ? '4px' : 'auto',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        fontSize: '9px',
+        fontWeight: '700',
+        color: pct < 50 ? 'white' : '#333',
+        writingMode: 'horizontal-tb',
+        whiteSpace: 'nowrap'
+      }}>
+        {isMate ? `M${Math.abs(mateIn || 0)}` : (score > 0 ? `+${(score / 100).toFixed(1)}` : (score / 100).toFixed(1))}
+      </div>
+    </div>
+  );
+};
+
 export default function GameScreen() {
   const { 
     state, dispatch, resign, offerDraw, undoMove, startNewGame, 
@@ -51,9 +124,72 @@ export default function GameScreen() {
   const {
     fen, status, isAIThinking, gameMode, playerColor,
     aiDifficulty, capturedPieces, history,
-    whiteTime, blackTime, timeControl, moveCount, boardFlipped, reviewFen,
+    timeControl, moveCount, boardFlipped, reviewFen,
     soundEnabled, showCoords
   } = state;
+
+  const baseSecs = timeControl ? (timeControl.base > 30 ? timeControl.base : timeControl.base * 60) : 600;
+  const incrementSecs = timeControl ? timeControl.increment : 0;
+  const { 
+    whiteTime: clockWhiteTime, 
+    blackTime: clockBlackTime, 
+    formatTime, 
+    start: startClock, 
+    switchClock, 
+    stop: stopClock, 
+    reset: resetClock, 
+    activeColor 
+  } = useChessClock(baseSecs, incrementSecs);
+
+  const isGameOver = status.type !== 'playing' && status.type !== 'check';
+
+  const onGameOver = (winnerColor, reason) => {
+    const winnerName = winnerColor === 'w' ? 'White' : 'Black';
+    dispatch({
+      type: 'SET_GAME_OVER_STATUS',
+      payload: {
+        type: 'timeout',
+        message: `Time's up! ${winnerName} wins!`,
+        winner: winnerName
+      }
+    });
+    stopClock();
+  };
+
+  useEffect(() => {
+    if (clockWhiteTime <= 0) onGameOver('b', 'timeout');
+  }, [clockWhiteTime]);
+
+  useEffect(() => {
+    if (clockBlackTime <= 0) onGameOver('w', 'timeout');
+  }, [clockBlackTime]);
+
+  const prevHistoryLengthRef = useRef(history.length);
+
+  useEffect(() => {
+    if (isGameOver || !timeControl) {
+      stopClock();
+      return;
+    }
+
+    if (history.length === 0) {
+      resetClock();
+      stopClock();
+      prevHistoryLengthRef.current = 0;
+      return;
+    }
+
+    if (history.length > prevHistoryLengthRef.current) {
+      const lastMove = history[history.length - 1];
+      if (lastMove) {
+        switchClock(lastMove.color);
+      }
+    } else if (history.length < prevHistoryLengthRef.current) {
+      const chess = initGame(reviewFen || fen);
+      startClock(chess.turn());
+    }
+    prevHistoryLengthRef.current = history.length;
+  }, [history.length, isGameOver, timeControl, reviewFen, fen, switchClock, resetClock, stopClock, startClock]);
 
   const [elapsedTime, setElapsedTime] = useState(0);
   const [confirmResign, setConfirmResign] = useState(false);
@@ -102,7 +238,6 @@ export default function GameScreen() {
   }, [status.type, showToast]);
 
   // Elapsed game time
-  const isGameOver = status.type !== 'playing' && status.type !== 'check';
   useEffect(() => {
     if (isGameOver) return;
     const t = setInterval(() => setElapsedTime(s => s + 1), 1000);
@@ -134,37 +269,56 @@ export default function GameScreen() {
 
   const activeReviewFen = reviewFen || fen;
 
-  // Real-time Stockfish evaluation state
-  const [stockfishEval, setStockfishEval] = useState({ score: 0, text: '0.0', type: 'cp' });
+  // Vertical evaluation bar states
+  const [evalScore, setEvalScore] = useState(0);
+  const [isMate, setIsMate] = useState(false);
+  const [mateIn, setMateIn] = useState(0);
+
+  const updateEval = useCallback(async (fenString) => {
+    const worker = stockfishEngine.worker;
+    if (!worker || !stockfishEngine.isReady) return;
+
+    worker.postMessage('ucinewgame');
+    worker.postMessage(`position fen ${fenString}`);
+    worker.postMessage('go depth 12');
+
+    const activeTurn = fenString.split(' ')[1]; // 'w' or 'b'
+
+    const onMsg = (e) => {
+      const msg = typeof e.data === 'string' ? e.data : e.data?.data;
+      if (!msg) return;
+
+      if (msg.includes('score cp')) {
+        const match = msg.match(/score cp (-?\d+)/);
+        if (match) {
+          const cp = parseInt(match[1]);
+          // Normalize so white is positive, black is negative
+          const normalizedCp = activeTurn === 'w' ? cp : -cp;
+          setEvalScore(normalizedCp);
+          setIsMate(false);
+        }
+      } else if (msg.includes('score mate')) {
+        const match = msg.match(/score mate (-?\d+)/);
+        if (match) {
+          const m = parseInt(match[1]);
+          const normalizedM = activeTurn === 'w' ? m : -m;
+          setMateIn(normalizedM);
+          setIsMate(true);
+          setEvalScore(normalizedM > 0 ? 10000 : -10000);
+        }
+      }
+
+      if (msg.startsWith('bestmove')) {
+        worker.removeEventListener('message', onMsg);
+      }
+    };
+
+    worker.addEventListener('message', onMsg);
+  }, []);
 
   useEffect(() => {
-    let active = true;
-    async function updateEval() {
-      if (!stockfishEngine.isReady) return;
-      
-      const res = await stockfishEngine.evaluatePosition(activeReviewFen, 8);
-      if (!active) return;
-      
-      const score = res.score;
-      let text = '0.0';
-      let type = 'cp';
-
-      if (Math.abs(score) >= 90) {
-        text = 'M';
-        type = 'mate';
-      } else {
-        text = (score > 0 ? `+${score.toFixed(1)}` : score.toFixed(1));
-      }
-      
-      setStockfishEval({ score, text, type });
-    }
-
-    updateEval();
-
-    return () => {
-      active = false;
-    };
-  }, [activeReviewFen]);
+    updateEval(activeReviewFen);
+  }, [activeReviewFen, updateEval]);
 
   const handleBack = () => dispatch({ type: 'SET_MODE', payload: 'menu' });
 
@@ -189,7 +343,7 @@ export default function GameScreen() {
       : 1500,
     isAI: gameMode === 'vsAI' && playerColor !== topColor,
     color: topColor,
-    time: topColor === 'w' ? whiteTime : blackTime,
+    time: topColor === 'w' ? clockWhiteTime : clockBlackTime,
     isActive: initGame(reviewFen || fen).turn() === topColor,
     captured: capturedPieces[topColor === 'w' ? 'b' : 'w'], // Pieces captured BY top player
     material: materialAdv[topColor]
@@ -206,22 +360,11 @@ export default function GameScreen() {
       : 1500,
     isAI: gameMode === 'vsAI' && playerColor !== bottomColor,
     color: bottomColor,
-    time: bottomColor === 'w' ? whiteTime : blackTime,
+    time: bottomColor === 'w' ? clockWhiteTime : clockBlackTime,
     isActive: initGame(reviewFen || fen).turn() === bottomColor,
     captured: capturedPieces[bottomColor === 'w' ? 'b' : 'w'], // Pieces captured BY bottom player
     material: materialAdv[bottomColor]
   };
-
-  // Evaluation Bar based on Stockfish if ready, else material + basic positional heuristic
-  const clampedEval = useMemo(() => {
-    let score = stockfishEval.score;
-    if (!stockfishEngine.isReady) {
-      score = materialAdv.w - materialAdv.b;
-    }
-    // Scale score: e.g. +3 is 65%, -3 is 35%
-    const percentage = 50 + score * 5;
-    return Math.max(5, Math.min(95, percentage));
-  }, [stockfishEval, materialAdv]);
 
   // PLAYBACK NAVIGATION
   const handleJumpToMove = (index) => {
@@ -367,7 +510,7 @@ export default function GameScreen() {
   const activeBot = BOT_LEVELS[aiDifficulty] || BOT_LEVELS[3];
 
   const handleStartGame = () => {
-    startNewGame({ mode: 'vsAI', playerColor, difficulty: aiDifficulty });
+    startNewGame({ mode: 'vsAI', playerColor, difficulty: aiDifficulty, timeControl });
     setIsSetupPhase(false);
   };
 
@@ -475,10 +618,10 @@ export default function GameScreen() {
 
             {[
               { label: 'Casual (∞)', value: null },
-              { label: '10 Minutes', value: { base: 10, increment: 0 } },
-              { label: '5 Minutes', value: { base: 5, increment: 0 } },
-              { label: '3 Minutes', value: { base: 3, increment: 0 } },
-              { label: '1 Minute', value: { base: 1, increment: 0 } }
+              { label: '1+0 (Bullet)', value: { base: 60, increment: 0 } },
+              { label: '3+2 (Blitz)', value: { base: 180, increment: 2 } },
+              { label: '10+0 (Rapid)', value: { base: 600, increment: 0 } },
+              { label: '30+0 (Classical)', value: { base: 1800, increment: 0 } }
             ].map((tcOption, index) => {
               const isSelected = (!timeControl && !tcOption.value) || 
                                  (timeControl && tcOption.value && timeControl.base === tcOption.value.base);
@@ -543,6 +686,29 @@ export default function GameScreen() {
     else if (action === 'new') startNewGame({ mode: gameMode, playerColor, difficulty: aiDifficulty });
   };
 
+  const renderClock = (player) => {
+    if (!timeControl) {
+      return (
+        <span style={{
+          fontSize: '18px',
+          fontWeight: '700',
+          fontFamily: 'monospace',
+          color: 'rgba(255,255,255,0.4)',
+          background: 'transparent',
+          padding: '4px 10px',
+          borderRadius: '6px'
+        }}>∞</span>
+      );
+    }
+    const isPlayerActive = activeColor === player.color;
+    const playerSeconds = player.color === 'w' ? clockWhiteTime : clockBlackTime;
+    return (
+      <span style={clockStyle(playerSeconds, isPlayerActive)}>
+        {formatTime(playerSeconds)}
+      </span>
+    );
+  };
+
   return (
     <div className="game-page">
       {/* CENTER BOARD ZONE */}
@@ -564,11 +730,12 @@ export default function GameScreen() {
               )}
             </div>
           </div>
-          <span style={{fontSize:'16px',fontWeight:'600',color:'white',fontFamily:'monospace'}}>{formatClockTime(topPlayer.time)}</span>
+          {renderClock(topPlayer)}
         </div>
 
         {/* Board row */}
-        <div style={{display:'flex',flexDirection:'row',alignItems:'flex-start',gap:'4px',flexShrink:0}}>
+        <div style={{display:'flex',flexDirection:'row',alignItems:'flex-start',gap:'6px',flexShrink:0}}>
+          <EvalBar score={evalScore} isMate={isMate} mateIn={mateIn} flipped={flippedView} />
           {/* Rank labels LEFT */}
           <div style={{display:'flex',flexDirection:'column',height:'var(--board-size)',width:'20px',flexShrink:0}}>
             {(flippedView?[1,2,3,4,5,6,7,8]:[8,7,6,5,4,3,2,1]).map(r=>(
@@ -606,7 +773,7 @@ export default function GameScreen() {
               )}
             </div>
           </div>
-          <span style={{fontSize:'16px',fontWeight:'600',color:'white',fontFamily:'monospace'}}>{formatClockTime(bottomPlayer.time)}</span>
+          {renderClock(bottomPlayer)}
         </div>
       </div>
 

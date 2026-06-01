@@ -9,6 +9,13 @@ export default function PlayAIModal({ show, onClose, onStart }) {
   });
   const [color, setColor] = useState('w');
 
+  const TIME_CONTROLS = {
+    bullet:    { base: 60,    increment: 0,  label: '1+0' },
+    blitz:     { base: 180,   increment: 2,  label: '3+2' },
+    rapid:     { base: 600,   increment: 0,  label: '10+0' },
+    classical: { base: 1800,  increment: 0,  label: '30+0' },
+  };
+
   const DIFFICULTY = {
     1: { skill: 0,  depth: 1,  movetime: 100,  label: 'Beginner', elo: '~600' },
     2: { skill: 5,  depth: 3,  movetime: 300,  label: 'Easy',     elo: '~800' },
@@ -16,6 +23,8 @@ export default function PlayAIModal({ show, onClose, onStart }) {
     4: { skill: 15, depth: 15, movetime: 2000, label: 'Hard',     elo: '~1600' },
     5: { skill: 20, depth: 20, movetime: 3000, label: 'Master',   elo: '~2000' },
   };
+
+  const [timeControl, setTimeControl] = useState('rapid');
 
   // Save selection on change
   useEffect(() => {
@@ -84,10 +93,25 @@ export default function PlayAIModal({ show, onClose, onStart }) {
           </div>
         </div>
 
+        {/* Time Control Section */}
+        <div className="ai-color-selection" style={{ marginTop: '16px' }}>
+          <h4 className="color-section-title font-cinzel" style={{ marginBottom: '12px' }}>TIME CONTROL</h4>
+          <div style={{display:'flex',gap:'8px',flexWrap:'wrap',justifyContent:'center'}}>
+            {Object.entries(TIME_CONTROLS).map(([key,tc])=>(
+              <button key={key} onClick={()=>setTimeControl(key)}
+                style={{padding:'8px 16px',borderRadius:'8px',border:timeControl===key?'2px solid #e2b04a':'1px solid rgba(255,255,255,0.2)',background:timeControl===key?'rgba(226,176,74,0.1)':'transparent',color:'white',cursor:'pointer',fontWeight:timeControl===key?'600':'400',transition:'all 0.15s'}}>
+                <div style={{fontSize:'14px'}}>{tc.label}</div>
+                <div style={{fontSize:'11px',opacity:0.6,textTransform:'capitalize'}}>{key}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Play Button */}
         <button 
           className="ai-play-submit-btn font-cinzel"
-          onClick={() => onStart({ difficulty, color })}
+          style={{ marginTop: '24px' }}
+          onClick={() => onStart({ difficulty, color, timeControl: TIME_CONTROLS[timeControl] })}
         >
           PLAY GAME
         </button>
