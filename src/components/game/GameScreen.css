@@ -479,6 +479,7 @@
   padding: 12px;
   overflow: hidden;
   gap: 6px;
+  --board-size: min(calc(100vw - 370px), calc(100vh - 120px));
 }
 
 .right-panel {

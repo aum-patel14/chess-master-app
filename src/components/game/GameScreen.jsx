@@ -128,8 +128,27 @@ export default function GameScreen() {
     soundEnabled, showCoords
   } = state;
 
-  const baseSecs = timeControl ? (timeControl.base > 30 ? timeControl.base : timeControl.base * 60) : 600;
-  const incrementSecs = timeControl ? timeControl.increment : 0;
+  let baseSecs = 600;
+  let incrementSecs = 0;
+  if (timeControl) {
+    if (typeof timeControl === 'object') {
+      const base = Number(timeControl.base);
+      const inc = Number(timeControl.increment);
+      if (!isNaN(base)) {
+        baseSecs = base > 30 ? base : base * 60;
+      }
+      if (!isNaN(inc)) {
+        incrementSecs = inc;
+      }
+    } else if (typeof timeControl === 'number') {
+      baseSecs = timeControl > 30 ? timeControl : timeControl * 60;
+    } else if (typeof timeControl === 'string') {
+      const parsed = Number(timeControl);
+      if (!isNaN(parsed)) {
+        baseSecs = parsed > 30 ? parsed : parsed * 60;
+      }
+    }
+  }
   const { 
     whiteTime: clockWhiteTime, 
     blackTime: clockBlackTime, 
@@ -623,8 +642,9 @@ export default function GameScreen() {
               { label: '10+0 (Rapid)', value: { base: 600, increment: 0 } },
               { label: '30+0 (Classical)', value: { base: 1800, increment: 0 } }
             ].map((tcOption, index) => {
+              const tcBase = timeControl ? (typeof timeControl === 'object' ? timeControl.base : (Number(timeControl) > 30 ? Number(timeControl) : Number(timeControl) * 60)) : null;
               const isSelected = (!timeControl && !tcOption.value) || 
-                                 (timeControl && tcOption.value && timeControl.base === tcOption.value.base);
+                                 (timeControl && tcOption.value && tcBase === tcOption.value.base);
               return (
                 <div 
                   key={index} 
@@ -714,7 +734,7 @@ export default function GameScreen() {
       {/* CENTER BOARD ZONE */}
       <div className="game-center">
         {/* Black player bar */}
-        <div style={{width:'calc(var(--board-size) + 24px)',height:'44px',background:'rgba(255,255,255,0.05)',borderRadius:'8px',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 12px',flexShrink:0}}>
+        <div style={{width:'calc(var(--board-size) + 36px)',height:'44px',background:'rgba(255,255,255,0.05)',borderRadius:'8px',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 12px',flexShrink:0}}>
           <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
             <div style={{width:'32px',height:'32px',borderRadius:'50%',background:'#374151',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'14px',fontWeight:'600',color:'white'}}>{avatarLetterTop}</div>
             <div style={{display:'flex',flexDirection:'column'}}>
@@ -757,7 +777,7 @@ export default function GameScreen() {
         </div>
 
         {/* White player bar */}
-        <div style={{width:'calc(var(--board-size) + 24px)',height:'44px',background:'rgba(255,255,255,0.05)',borderRadius:'8px',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 12px',flexShrink:0}}>
+        <div style={{width:'calc(var(--board-size) + 36px)',height:'44px',background:'rgba(255,255,255,0.05)',borderRadius:'8px',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 12px',flexShrink:0}}>
           <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
             <div style={{width:'32px',height:'32px',borderRadius:'50%',background:'#4B5563',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'14px',fontWeight:'600',color:'white'}}>{avatarLetterBottom}</div>
             <div style={{display:'flex',flexDirection:'column'}}>
