@@ -527,6 +527,13 @@ export default function GameScreen() {
     </div>
   );
 
+  const handleAction = (action) => {
+    if (action === 'undo') handleUndo();
+    else if (action === 'hint') handleHint();
+    else if (action === 'flip') dispatch({ type: 'TOGGLE_BOARD_FLIP' });
+    else if (action === 'new') startNewGame({ mode: gameMode, playerColor, difficulty: aiDifficulty });
+  };
+
   return (
     <div className="game-page">
       {/* CENTER BOARD ZONE */}
@@ -590,135 +597,51 @@ export default function GameScreen() {
         ) : gameMode === 'vsAI' && isSetupPhase ? (
           playBotsPanel
         ) : (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
-
-            {/* Header */}
-            <div style={{padding:'16px', borderBottom:'1px solid rgba(255,255,255,0.08)'}}>
-              <span style={{fontSize:'11px',fontWeight:'600',letterSpacing:'0.08em',
-                color:'rgba(255,255,255,0.4)',textTransform:'uppercase'}}>Moves</span>
+          <>
+            {/* MOVES HEADER */}
+            <div style={{padding:'14px 16px',borderBottom:'1px solid rgba(255,255,255,0.08)'}}>
+              <span style={{fontSize:'11px',fontWeight:'600',letterSpacing:'0.08em',color:'rgba(255,255,255,0.4)',textTransform:'uppercase'}}>Moves</span>
             </div>
 
-            {/* Move list */}
-            <div style={{flex:1, overflowY:'auto', padding:'8px'}}>
-              {moves.length === 0 ? (
-                <p style={{fontSize:'13px',color:'rgba(255,255,255,0.3)',
-                  textAlign:'center',marginTop:'20px'}}>No moves yet</p>
-              ) : (
-                movesPaired.map(([white, black], i) => (
-                  <div key={i} style={{display:'grid',gridTemplateColumns:'32px 1fr 1fr',
-                    gap:'4px',padding:'4px 6px',borderRadius:'4px',
-                    background: currentMoveIndex === i*2 || currentMoveIndex === i*2+1 ? 'rgba(226,176,74,0.15)' : 'transparent'}}>
-                    <span style={{fontSize:'12px',color:'rgba(255,255,255,0.3)'}}>{i+1}.</span>
-                    <span 
-                      onClick={() => handleJumpToMove(i * 2)}
-                      style={{
-                        fontSize:'13px',
-                        color:'white',
-                        cursor:'pointer',
-                        background: currentMoveIndex === i * 2 ? 'rgba(226,176,74,0.3)' : 'transparent',
-                        padding: '1px 3px',
-                        borderRadius: '3px'
-                      }}
-                    >
-                      {white}
-                    </span>
-                    {black && (
-                      <span 
-                        onClick={() => handleJumpToMove(i * 2 + 1)}
-                        style={{
-                          fontSize:'13px',
-                          color:'rgba(255,255,255,0.8)',
-                          cursor:'pointer',
-                          background: currentMoveIndex === i * 2 + 1 ? 'rgba(226,176,74,0.3)' : 'transparent',
-                          padding: '1px 3px',
-                          borderRadius: '3px'
-                        }}
-                      >
-                        {black}
-                      </span>
-                    )}
-                  </div>
-                ))
-              )}
+            {/* MOVE LIST - scrollable */}
+            <div style={{flex:1,overflowY:'auto',padding:'8px 12px'}}>
+              {movesPaired.length === 0 ? (
+                <p style={{fontSize:'13px',color:'rgba(255,255,255,0.25)',textAlign:'center',marginTop:'24px'}}>No moves yet</p>
+              ) : movesPaired.map(([w,b],i) => (
+                <div key={i} style={{display:'grid',gridTemplateColumns:'28px 1fr 1fr',gap:'4px',padding:'3px 6px',borderRadius:'4px',background:currentMoveIndex===i*2+1?'rgba(226,176,74,0.15)':'transparent'}}>
+                  <span style={{fontSize:'12px',color:'rgba(255,255,255,0.3)',lineHeight:'28px'}}>{i+1}.</span>
+                  <span onClick={()=>handleJumpToMove(i*2)} style={{fontSize:'13px',color:'white',padding:'4px 6px',borderRadius:'4px',cursor:'pointer',background:currentMoveIndex===i*2?'rgba(226,176,74,0.2)':'transparent'}}>{w}</span>
+                  <span onClick={()=>handleJumpToMove(i*2+1)} style={{fontSize:'13px',color:'rgba(255,255,255,0.75)',padding:'4px 6px',borderRadius:'4px',cursor:'pointer',background:currentMoveIndex===i*2+1?'rgba(226,176,74,0.2)':'transparent'}}>{b||''}</span>
+                </div>
+              ))}
             </div>
 
-            {/* Playback controls */}
-            <div style={{display:'flex',justifyContent:'center',gap:'8px',
-              padding:'12px',borderTop:'1px solid rgba(255,255,255,0.08)'}}>
-              {['|◀','◀','▶','▶|'].map((icon,i) => {
-                const handlers = [handleFirst, handlePrev, handleNext, handleLast];
-                const disabled = [
-                  history.length === 0,
-                  history.length === 0,
-                  history.length === 0 || reviewIndex === null,
-                  history.length === 0 || reviewIndex === null
-                ];
-                return (
-                  <button 
-                    key={i} 
-                    onClick={handlers[i]}
-                    disabled={disabled[i]}
-                    style={{width:'40px',height:'40px',background:'rgba(255,255,255,0.05)',
-                      border:'1px solid rgba(255,255,255,0.1)',borderRadius:'6px',
-                      color:'white',fontSize:'14px',cursor:'pointer', opacity: disabled[i] ? 0.35 : 1}}>
-                    {icon}
-                  </button>
-                );
-              })}
+            {/* PLAYBACK CONTROLS */}
+            <div style={{display:'flex',justifyContent:'center',gap:'8px',padding:'10px 12px',borderTop:'1px solid rgba(255,255,255,0.08)'}}>
+              {[['|◀',()=>handleJumpToMove(-1)],['◀',()=>handleJumpToMove(currentMoveIndex > -1 ? currentMoveIndex - 1 : -1)],['▶',()=>handleJumpToMove(currentMoveIndex < history.length - 1 ? (currentMoveIndex === null ? 0 : currentMoveIndex + 1) : null)],['▶|',()=>handleJumpToMove(null)]].map(([icon,fn],i)=>(
+                <button key={i} onClick={fn} style={{width:'44px',height:'36px',background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:'6px',color:'white',fontSize:'13px',cursor:'pointer'}}>
+                  {icon}
+                </button>
+              ))}
             </div>
 
-            {/* Action buttons */}
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px',
-              padding:'8px 12px'}}>
-              {[
-                ['↩ Undo', 'undo'],
-                ['💡 Hint', 'hint'],
-                ['⟲ Flip', 'flip'],
-                ['＋ New', 'new']
-              ].map(([label,action]) => {
-                const handlers = {
-                  undo: handleUndo,
-                  hint: handleHint,
-                  flip: () => dispatch({ type: 'TOGGLE_BOARD_FLIP' }),
-                  new: () => startNewGame({ mode: gameMode, playerColor, difficulty: aiDifficulty })
-                };
-                const disabled = {
-                  undo: isGameOver || isAIThinking || history.length === 0,
-                  hint: isGameOver || isAIThinking,
-                  flip: false,
-                  new: false
-                };
-                return (
-                  <button 
-                    key={action} 
-                    onClick={handlers[action]}
-                    disabled={disabled[action]}
-                    style={{height:'40px',background:'rgba(255,255,255,0.05)',
-                      border:'1px solid rgba(255,255,255,0.1)',borderRadius:'6px',
-                      color:'white',fontSize:'12px',cursor:'pointer',fontWeight:'500', opacity: disabled[action] ? 0.35 : 1}}>
-                    {label}
-                  </button>
-                );
-              })}
+            {/* ACTION BUTTONS 2x2 */}
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px',padding:'8px 12px'}}>
+              {[['↩ Undo','undo'],['💡 Hint','hint'],['⟲ Flip','flip'],['＋ New','new']].map(([label,action])=>(
+                <button key={action} onClick={()=>handleAction(action)} style={{height:'40px',background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:'6px',color:'white',fontSize:'12px',cursor:'pointer',fontWeight:'500'}}>
+                  {label}
+                </button>
+              ))}
             </div>
 
-            {/* Save + Share */}
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px',
-              padding:'0 12px 8px'}}>
-              <button onClick={handleSaveGame} style={{height:'36px',background:'rgba(255,255,255,0.05)',
-                border:'1px solid rgba(255,255,255,0.1)',borderRadius:'6px',
-                color:'white',fontSize:'12px',cursor:'pointer'}}>
-                💾 Save
-              </button>
-              <button onClick={handleShareGame} style={{height:'36px',background:'rgba(255,255,255,0.05)',
-                border:'1px solid rgba(255,255,255,0.1)',borderRadius:'6px',
-                color:'white',fontSize:'12px',cursor:'pointer'}}>
-                🔗 Share
-              </button>
+            {/* SAVE + SHARE */}
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px',padding:'0 12px 8px'}}>
+              <button onClick={handleSaveGame} style={{height:'36px',background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:'6px',color:'white',fontSize:'12px',cursor:'pointer'}}>💾 Save</button>
+              <button onClick={handleShareGame} style={{height:'36px',background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:'6px',color:'white',fontSize:'12px',cursor:'pointer'}}>🔗 Share</button>
             </div>
 
-            {/* Resign */}
-            <div style={{padding:'8px 12px 16px'}}>
+            {/* RESIGN */}
+            <div style={{padding:'0 12px 16px'}}>
               {isGameOver ? (
                 <button 
                   onClick={handleAnalyzeGameClick}
@@ -731,14 +654,12 @@ export default function GameScreen() {
                 <button 
                   onClick={() => { if(confirmResign) { resign(); setConfirmResign(false); } else setConfirmResign(true); }}
                   disabled={isGameOver}
-                  style={{width:'100%',height:'40px',background:'rgba(220,50,50,0.15)',
-                    border:'1px solid rgba(220,50,50,0.3)',borderRadius:'6px',
-                    color:'#f87171',fontSize:'13px',fontWeight:'600',cursor:'pointer', opacity: isGameOver ? 0.35 : 1}}>
-                  🏳 {confirmResign ? 'CONFIRM RESIGNATION' : 'Resign'}
+                  style={{width:'100%',height:'40px',background:'rgba(220,50,50,0.15)',border:'1px solid rgba(220,50,50,0.3)',borderRadius:'6px',color:'#f87171',fontSize:'13px',fontWeight:'600',cursor:'pointer', opacity: isGameOver ? 0.35 : 1}}>
+                  🏳 {confirmResign ? 'CONFIRM RESIGN' : 'Resign'}
                 </button>
               )}
             </div>
-          </div>
+          </>
         )}
       </div>
 
