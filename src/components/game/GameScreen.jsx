@@ -10,6 +10,9 @@ import MultiplayerLobby from './MultiplayerLobby';
 import ChatPanel from './ChatPanel';
 import AnalysisPanel from './AnalysisPanel';
 import { stockfishEngine } from '../../engine/StockfishService';
+import { useStockfish } from '../../hooks/useStockfish';
+import { AiStatusBar } from '../AiStatusBar';
+import { DifficultySelector } from '../DifficultySelector';
 import { Play, RotateCcw, Flag, Sparkles, RefreshCw, Save, Share2, Settings } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
 import { useChessClock } from '../../hooks/useChessClock';
@@ -118,7 +121,8 @@ const EvalBar = ({ score, isMate, mateIn, flipped }) => {
 export default function GameScreen() {
   const { 
     state, dispatch, resign, offerDraw, undoMove, startNewGame, 
-    opponentDisconnectedCountdown, checkFeatureLimit, incrementUsage 
+    opponentDisconnectedCountdown, checkFeatureLimit, incrementUsage,
+    isPremium, setShowUpgradeModal, isSimpleMode: contextSimpleMode,
   } = useGame();
   const { showToast } = useToast();
   const {
@@ -555,53 +559,15 @@ export default function GameScreen() {
         </div>
       </div>
 
-      {/* BOT CATEGORIES LIST */}
-      <div className="bot-categories-label">Choose Category</div>
-      <div className="bot-categories-list">
-        {Object.entries(BOT_LEVELS).map(([level, data]) => {
-          const isSelected = aiDifficulty === parseInt(level);
-          return (
-            <div 
-              key={level} 
-              className={`bot-category-item ${isSelected ? 'selected' : ''}`}
-              onClick={() => dispatch({ type: 'SET_DIFFICULTY', payload: parseInt(level) })}
-            >
-              <span className="bot-item-avatar">{data.avatar}</span>
-              <div className="bot-item-details">
-                <span className="bot-item-label">{data.label}</span>
-                <span className="bot-item-elo">{data.elo} ELO</span>
-              </div>
-              <span className="bot-item-count">{data.bots}</span>
-            </div>
-          );
-        })}
+      <div className="bot-categories-label" style={{ marginTop: '12px' }}>
+        Engine difficulty
       </div>
-
-      {/* ELO SLIDER */}
-      <div className="engine-slider-container">
-        <div className="engine-slider-header">
-          <span>Engine</span>
-          <span className="engine-bots-count">{activeBot.bots}</span>
-        </div>
-        
-        <input 
-          type="range" 
-          min="1" 
-          max="5" 
-          step="1" 
-          value={aiDifficulty} 
-          onChange={(e) => dispatch({ type: 'SET_DIFFICULTY', payload: parseInt(e.target.value) })}
-          className="engine-slider"
-        />
-
-        <div className="engine-slider-ticks">
-          <span style={{ cursor: 'pointer' }} onClick={() => dispatch({ type: 'SET_DIFFICULTY', payload: 1 })}>600</span>
-          <span style={{ cursor: 'pointer' }} onClick={() => dispatch({ type: 'SET_DIFFICULTY', payload: 2 })}>1000</span>
-          <span style={{ cursor: 'pointer' }} onClick={() => dispatch({ type: 'SET_DIFFICULTY', payload: 3 })}>1400</span>
-          <span style={{ cursor: 'pointer' }} onClick={() => dispatch({ type: 'SET_DIFFICULTY', payload: 4 })}>1800</span>
-          <span style={{ cursor: 'pointer' }} onClick={() => dispatch({ type: 'SET_DIFFICULTY', payload: 5 })}>2800</span>
-        </div>
-      </div>
+      <DifficultySelector
+        value={displayDifficulty}
+        onChange={handleDifficultyChange}
+        isPremium={isPremium}
+        onUpgradeClick={() => setShowUpgradeModal(true)}
+      />
 
       {/* OPTIONS ROW & COLOR SELECTOR */}
       <div className="play-bots-options-row" style={{ position: 'relative' }} ref={optionsRef}>
@@ -735,21 +701,24 @@ export default function GameScreen() {
       <div className="game-center">
         {/* Black player bar */}
         <div style={{width:'calc(var(--board-size) + 36px)',height:'44px',background:'rgba(255,255,255,0.05)',borderRadius:'8px',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 12px',flexShrink:0}}>
-          <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
-            <div style={{width:'32px',height:'32px',borderRadius:'50%',background:'#374151',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'14px',fontWeight:'600',color:'white'}}>{avatarLetterTop}</div>
-            <div style={{display:'flex',flexDirection:'column'}}>
-              <div style={{display:'flex',alignItems:'center',gap:'6px'}}>
-                <span style={{fontSize:'14px',fontWeight:'500',color:'white'}}>{topPlayer.name}</span>
-                <span style={{fontSize:'12px',padding:'2px 8px',background:'rgba(255,255,255,0.1)',borderRadius:'99px',color:'#aaa'}}>{topPlayer.rating}</span>
+          {topPlayer.isAI ? (
+            <AiStatusBar
+              isThinking={isAIThinking}
+              isSimpleMode={isSimpleMode}
+              difficulty={displayDifficulty}
+              label={DIFFICULTY_CONFIG[displayDifficulty]?.label ?? topPlayer.name}
+            />
+          ) : (
+            <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
+              <div style={{width:'32px',height:'32px',borderRadius:'50%',background:'#374151',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'14px',fontWeight:'600',color:'white'}}>{avatarLetterTop}</div>
+              <div style={{display:'flex',flexDirection:'column'}}>
+                <div style={{display:'flex',alignItems:'center',gap:'6px'}}>
+                  <span style={{fontSize:'14px',fontWeight:'500',color:'white'}}>{topPlayer.name}</span>
+                  <span style={{fontSize:'12px',padding:'2px 8px',background:'rgba(255,255,255,0.1)',borderRadius:'99px',color:'#aaa'}}>{topPlayer.rating}</span>
+                </div>
               </div>
-              {topPlayer.isAI && isAIThinking && (
-                <span style={{fontSize:'12px',color:'rgba(255,255,255,0.5)',textAlign:'left',lineHeight:'1'}}>
-                  thinking
-                  <span style={{animation:'dots 1.2s steps(4,end) infinite'}}>...</span>
-                </span>
-              )}
             </div>
-          </div>
+          )}
           {renderClock(topPlayer)}
         </div>
 
@@ -778,21 +747,24 @@ export default function GameScreen() {
 
         {/* White player bar */}
         <div style={{width:'calc(var(--board-size) + 36px)',height:'44px',background:'rgba(255,255,255,0.05)',borderRadius:'8px',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 12px',flexShrink:0}}>
-          <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
-            <div style={{width:'32px',height:'32px',borderRadius:'50%',background:'#4B5563',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'14px',fontWeight:'600',color:'white'}}>{avatarLetterBottom}</div>
-            <div style={{display:'flex',flexDirection:'column'}}>
-              <div style={{display:'flex',alignItems:'center',gap:'6px'}}>
-                <span style={{fontSize:'14px',fontWeight:'500',color:'white'}}>{bottomPlayer.name}</span>
-                <span style={{fontSize:'12px',padding:'2px 8px',background:'rgba(255,255,255,0.1)',borderRadius:'99px',color:'#aaa'}}>{bottomPlayer.rating}</span>
+          {bottomPlayer.isAI ? (
+            <AiStatusBar
+              isThinking={isAIThinking}
+              isSimpleMode={isSimpleMode}
+              difficulty={displayDifficulty}
+              label={DIFFICULTY_CONFIG[displayDifficulty]?.label ?? bottomPlayer.name}
+            />
+          ) : (
+            <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
+              <div style={{width:'32px',height:'32px',borderRadius:'50%',background:'#4B5563',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'14px',fontWeight:'600',color:'white'}}>{avatarLetterBottom}</div>
+              <div style={{display:'flex',flexDirection:'column'}}>
+                <div style={{display:'flex',alignItems:'center',gap:'6px'}}>
+                  <span style={{fontSize:'14px',fontWeight:'500',color:'white'}}>{bottomPlayer.name}</span>
+                  <span style={{fontSize:'12px',padding:'2px 8px',background:'rgba(255,255,255,0.1)',borderRadius:'99px',color:'#aaa'}}>{bottomPlayer.rating}</span>
+                </div>
               </div>
-              {bottomPlayer.isAI && isAIThinking && (
-                <span style={{fontSize:'12px',color:'rgba(255,255,255,0.5)',textAlign:'left',lineHeight:'1'}}>
-                  thinking
-                  <span style={{animation:'dots 1.2s steps(4,end) infinite'}}>...</span>
-                </span>
-              )}
             </div>
-          </div>
+          )}
           {renderClock(bottomPlayer)}
         </div>
       </div>

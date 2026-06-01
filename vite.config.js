@@ -5,14 +5,17 @@ import { VitePWA } from 'vite-plugin-pwa'
 const basePath = '/chess-master-app/';
 
 export default defineConfig({
+  base: basePath,
   plugins: [
     react(),
     VitePWA({
       registerType: 'autoUpdate',
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        globIgnores: ['**/stockfish.wasm'],
+        maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
         runtimeCaching: [{
-          urlPattern: /stockfish\.js$/,
+          urlPattern: /stockfish\.(js|wasm)$/,
           handler: 'CacheFirst',
           options: { cacheName: 'stockfish-cache' }
         }]
@@ -33,7 +36,6 @@ export default defineConfig({
       }
     })
   ],
-  base: basePath,
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
@@ -46,5 +48,8 @@ export default defineConfig({
       'Cross-Origin-Opener-Policy': 'same-origin',
       'Cross-Origin-Embedder-Policy': 'require-corp',
     },
+  },
+  optimizeDeps: {
+    exclude: ['stockfish'],
   },
 })

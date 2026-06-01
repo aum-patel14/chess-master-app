@@ -1,5 +1,7 @@
 import { Component } from 'react'
 
+const homeHref = `${import.meta.env.BASE_URL || '/chess-master-app/'}#/`
+
 export default class ErrorBoundary extends Component {
   state = { hasError: false, error: null }
 
@@ -8,46 +10,56 @@ export default class ErrorBoundary extends Component {
   }
 
   componentDidCatch(error, info) {
-    console.error('=== CHESS APP CRASH ===');
-    console.error('Error:', error.message);
-    console.error('Stack:', error.stack);
-    console.error('Component:', info.componentStack);
+    console.error('=== CHESS APP CRASH ===')
+    console.error('Message:', error.message)
+    console.error('Stack:', error.stack)
+    console.error('Component trace:', info.componentStack)
   }
 
   render() {
     if (this.state.hasError) {
+      const err = this.state.error
       return (
         <div
           style={{
             minHeight: '100vh',
-            background: '#0a0a14',
-            color: '#e8e8e8',
+            background: '#1a1a2e',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: 24,
+            padding: '24px',
             textAlign: 'center',
-            fontFamily: 'Inter, system-ui, sans-serif',
           }}
         >
-          <div style={{ fontSize: 64, marginBottom: 16 }}>♟</div>
-          <h1 style={{ fontFamily: 'Cinzel, Georgia, serif', color: '#d4af37', marginBottom: 8 }}>Something went wrong</h1>
-          <p style={{ opacity: 0.85, marginBottom: 8 }}>The game encountered an error.</p>
-          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '13px', marginBottom: 28 }}>
-            {this.state.error?.message}
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}>♟</div>
+          <h2 style={{ color: '#e2b04a', fontSize: '20px', margin: '0 0 8px' }}>
+            Something went wrong
+          </h2>
+          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '13px', margin: '0 0 4px' }}>
+            {err?.message ?? 'Unknown error'}
           </p>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
+          <p
+            style={{
+              color: 'rgba(255,255,255,0.25)',
+              fontSize: '11px',
+              fontFamily: 'monospace',
+              margin: '0 0 24px',
+              maxWidth: '500px',
+            }}
+          >
+            Check browser console (F12) for full details
+          </p>
+          <div style={{ display: 'flex', gap: '12px' }}>
             <button
               type="button"
               onClick={() => this.setState({ hasError: false, error: null })}
               style={{
-                minHeight: 44,
-                padding: '0 20px',
-                borderRadius: 10,
+                padding: '10px 24px',
+                background: '#e2b04a',
                 border: 'none',
-                background: '#d4af37',
-                color: '#0a0a14',
+                borderRadius: '8px',
+                color: '#1a1a2e',
                 fontWeight: 700,
                 cursor: 'pointer',
               }}
@@ -57,16 +69,14 @@ export default class ErrorBoundary extends Component {
             <button
               type="button"
               onClick={() => {
-                window.location.href = `${window.location.origin}${window.location.pathname}#/`
+                window.location.href = homeHref
               }}
               style={{
-                minHeight: 44,
-                padding: '0 20px',
-                borderRadius: 10,
-                border: '1px solid rgba(212,175,55,0.4)',
-                background: 'transparent',
-                color: '#d4af37',
-                fontWeight: 600,
+                padding: '10px 24px',
+                background: 'rgba(255,255,255,0.08)',
+                border: '1px solid rgba(255,255,255,0.15)',
+                borderRadius: '8px',
+                color: 'white',
                 cursor: 'pointer',
               }}
             >
