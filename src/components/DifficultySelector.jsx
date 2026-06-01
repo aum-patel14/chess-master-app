@@ -1,4 +1,5 @@
 import { DIFFICULTY_CONFIG } from '../services/stockfishService';
+import './DifficultySelector.css';
 
 const STARS = ['', '★', '★★', '★★★', '★★★★', '★★★★★'];
 const COLORS = {
@@ -15,98 +16,51 @@ export function DifficultySelector({
   isPremium = false,
   onUpgradeClick,
 }) {
+  const selected = Number(value) || 3;
+
   return (
-    <div
-      style={{
-        display: 'flex',
-        gap: '8px',
-        flexWrap: 'wrap',
-        justifyContent: 'center',
-      }}
-    >
+    <div className="difficulty-selector" role="group" aria-label="Engine difficulty">
       {Object.entries(DIFFICULTY_CONFIG).map(([lvl, cfg]) => {
         const level = Number(lvl);
         const locked = !isPremium && level >= 4;
-        const active = value === level;
+        const active = selected === level;
+        const color = COLORS[level];
+
+        const handleClick = () => {
+          if (locked) {
+            onUpgradeClick?.();
+            return;
+          }
+          onChange(level);
+        };
 
         return (
-          <div
+          <button
             key={lvl}
-            role="button"
-            tabIndex={0}
-            onClick={() => (locked ? onUpgradeClick?.() : onChange(level))}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                locked ? onUpgradeClick?.() : onChange(level);
-              }
-            }}
+            type="button"
+            className={[
+              'difficulty-selector__card',
+              active ? 'difficulty-selector__card--active' : '',
+              locked ? 'difficulty-selector__card--locked' : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
             style={{
-              position: 'relative',
-              width: '110px',
-              padding: '14px 10px',
-              borderRadius: '12px',
-              cursor: locked ? 'not-allowed' : 'pointer',
-              textAlign: 'center',
-              border: active
-                ? `2px solid ${COLORS[level]}`
-                : '1px solid rgba(255,255,255,0.12)',
-              background: active ? `${COLORS[level]}18` : 'rgba(255,255,255,0.04)',
-              opacity: locked ? 0.6 : 1,
-              transition: 'all 0.15s',
+              borderColor: active ? color : undefined,
+              background: active ? `${color}18` : undefined,
             }}
+            onClick={handleClick}
+            aria-pressed={active}
+            aria-label={`${cfg.label}, ${cfg.elo} Elo`}
           >
-            {locked && (
-              <div
-                style={{
-                  position: 'absolute',
-                  top: '8px',
-                  right: '8px',
-                  fontSize: '12px',
-                  opacity: 0.8,
-                }}
-              >
-                🔒
-              </div>
-            )}
-            <div
-              style={{
-                fontSize: '13px',
-                color: COLORS[level],
-                marginBottom: '4px',
-                letterSpacing: '1px',
-              }}
-            >
+            {locked && <span className="difficulty-selector__lock">🔒</span>}
+            <span className="difficulty-selector__stars" style={{ color }}>
               {STARS[level]}
-            </div>
-            <div
-              style={{
-                fontSize: '13px',
-                fontWeight: 600,
-                color: 'white',
-                marginBottom: '2px',
-              }}
-            >
-              {cfg.label}
-            </div>
-            <div
-              style={{
-                fontSize: '11px',
-                color: 'rgba(255,255,255,0.4)',
-                marginBottom: '4px',
-              }}
-            >
-              {cfg.elo} Elo
-            </div>
-            <div
-              style={{
-                fontSize: '10px',
-                color: 'rgba(255,255,255,0.35)',
-                lineHeight: 1.3,
-              }}
-            >
-              {cfg.description}
-            </div>
-          </div>
+            </span>
+            <span className="difficulty-selector__label">{cfg.label}</span>
+            <span className="difficulty-selector__elo">{cfg.elo} Elo</span>
+            <span className="difficulty-selector__desc">{cfg.description}</span>
+          </button>
         );
       })}
     </div>

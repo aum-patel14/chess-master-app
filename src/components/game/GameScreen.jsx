@@ -133,23 +133,21 @@ export default function GameScreen() {
     soundEnabled, showCoords, whiteTime, blackTime,
   } = state;
 
-  const {
-    isSimpleMode: hookSimpleMode,
-    difficulty: hookDifficulty,
-    setDifficulty: setHookDifficulty,
-  } = useStockfish(aiDifficulty);
+  const { isSimpleMode: hookSimpleMode, setDifficulty: setHookDifficulty } =
+    useStockfish(aiDifficulty);
 
   const isSimpleMode = contextSimpleMode ?? hookSimpleMode;
-  const displayDifficulty = Number(hookDifficulty ?? aiDifficulty) || 3;
+  const selectedDifficulty = Number(aiDifficulty) || 3;
 
   const handleDifficultyChange = (level) => {
-    if (!isPremium && level >= 4) {
+    const lvl = Number(level);
+    if (!isPremium && lvl >= 4) {
       setShowUpgradeModal(true);
       return;
     }
-    setHookDifficulty(level);
-    dispatch({ type: 'SET_DIFFICULTY', payload: level });
-    localStorage.setItem('chess_difficulty', String(level));
+    setHookDifficulty(lvl);
+    dispatch({ type: 'SET_DIFFICULTY', payload: lvl });
+    localStorage.setItem('chess_difficulty', String(lvl));
   };
 
   let baseSecs = 600;
@@ -565,14 +563,14 @@ export default function GameScreen() {
   };
 
   const activeBot = {
-    ...(BOT_LEVELS[displayDifficulty] || BOT_LEVELS[3]),
-    label: DIFFICULTY_CONFIG[displayDifficulty]?.label ?? BOT_LEVELS[displayDifficulty]?.label,
-    elo: parseInt(DIFFICULTY_CONFIG[displayDifficulty]?.elo?.replace(/\D/g, '') || '1200', 10),
-    desc: DIFFICULTY_CONFIG[displayDifficulty]?.description ?? BOT_LEVELS[displayDifficulty]?.desc,
+    ...(BOT_LEVELS[selectedDifficulty] || BOT_LEVELS[3]),
+    label: DIFFICULTY_CONFIG[selectedDifficulty]?.label ?? BOT_LEVELS[selectedDifficulty]?.label,
+    elo: parseInt(DIFFICULTY_CONFIG[selectedDifficulty]?.elo?.replace(/\D/g, '') || '1200', 10),
+    desc: DIFFICULTY_CONFIG[selectedDifficulty]?.description ?? BOT_LEVELS[selectedDifficulty]?.desc,
   };
 
   const handleStartGame = () => {
-    startNewGame({ mode: 'vsAI', playerColor, difficulty: aiDifficulty, timeControl });
+    startNewGame({ mode: 'vsAI', playerColor, difficulty: selectedDifficulty, timeControl });
     setIsSetupPhase(false);
   };
 
@@ -603,7 +601,7 @@ export default function GameScreen() {
       </div>
       <div className="difficulty-selector-wrap">
         <DifficultySelector
-          value={displayDifficulty}
+          value={selectedDifficulty}
           onChange={handleDifficultyChange}
           isPremium={isPremium}
           onUpgradeClick={() => setShowUpgradeModal(true)}
@@ -756,8 +754,8 @@ export default function GameScreen() {
             <AiStatusBar
               isThinking={isAIThinking}
               isSimpleMode={isSimpleMode}
-              difficulty={displayDifficulty}
-              label={DIFFICULTY_CONFIG[displayDifficulty]?.label ?? topPlayer.name}
+              difficulty={selectedDifficulty}
+              label={DIFFICULTY_CONFIG[selectedDifficulty]?.label ?? topPlayer.name}
             />
           ) : (
             <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
@@ -775,7 +773,9 @@ export default function GameScreen() {
 
         {/* Board row */}
         <div style={{display:'flex',flexDirection:'row',alignItems:'flex-start',gap:'6px',flexShrink:0}}>
-          <EvalBar score={evalScore} isMate={isMate} mateIn={mateIn} flipped={flippedView} />
+          {gameMode === 'vsAI' && !isSetupPhase && history.length > 0 && (
+            <EvalBar score={evalScore} isMate={isMate} mateIn={mateIn} flipped={flippedView} />
+          )}
           {/* Rank labels LEFT */}
           <div style={{display:'flex',flexDirection:'column',height:'var(--board-size)',width:'20px',flexShrink:0}}>
             {(flippedView?[1,2,3,4,5,6,7,8]:[8,7,6,5,4,3,2,1]).map(r=>(
@@ -802,8 +802,8 @@ export default function GameScreen() {
             <AiStatusBar
               isThinking={isAIThinking}
               isSimpleMode={isSimpleMode}
-              difficulty={displayDifficulty}
-              label={DIFFICULTY_CONFIG[displayDifficulty]?.label ?? bottomPlayer.name}
+              difficulty={selectedDifficulty}
+              label={DIFFICULTY_CONFIG[selectedDifficulty]?.label ?? bottomPlayer.name}
             />
           ) : (
             <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
