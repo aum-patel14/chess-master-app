@@ -114,10 +114,13 @@ export default function ChessBoard({ bestMoveArrow }) {
   }, [history]);
 
   /* ── Square color ── */
-  const getSquareColor = (file, rank) => {
-    const fileIdx = FILES.indexOf(file);
-    const rankIdx = parseInt(rank) - 1;
-    return (fileIdx + rankIdx) % 2 === 0 ? 'dark' : 'light';
+  const getSquareColor = (file, rank, selectedSq, lastMove, legalMoves, kingInCheck) => {
+    const isLight = (file + rank) % 2 === 0;
+    const sq = 'abcdefgh'[file] + (rank + 1);
+    if (kingInCheck === sq) return 'rgba(220,50,50,0.7)';
+    if (selectedSq === sq) return isLight ? 'rgba(20,85,30,0.5)' : 'rgba(20,85,30,0.65)';
+    if (lastMove && (lastMove.from === sq || lastMove.to === sq)) return isLight ? 'rgba(155,199,0,0.41)' : 'rgba(155,199,0,0.41)';
+    return isLight ? '#f0d9b5' : '#b58863';
   };
 
   /* ── CSS classes for each square ── */
@@ -125,7 +128,7 @@ export default function ChessBoard({ bestMoveArrow }) {
     const classes = ['board-square'];
     if (selectedSquare === squareName) classes.push('selected');
     if (lastMove && (lastMove.from === squareName || lastMove.to === squareName)) classes.push('last-move');
-    if (checkSquare === squareName) classes.push('in-check');
+    if (checkSquare === squareName) classes.push('king-in-check');
     if (hintSquares?.from === squareName) classes.push('hint-from');
     if (hintSquares?.to === squareName) classes.push('hint-to');
     if (movingPiece === squareName) classes.push('sq-landing');
@@ -242,11 +245,9 @@ export default function ChessBoard({ bestMoveArrow }) {
       {ranks.map((rank) =>
         files.map((file) => {
           const squareName = `${file}${rank}`;
-          const boardRank = RANKS.indexOf(rank);
-          const boardFile = FILES.indexOf(file);
-          const cell = board[boardRank]?.[boardFile];
-          const isValidTarget = validMoves.includes(squareName);
-          const sqColor = getSquareColor(file, rank);
+          const fileIdx = FILES.indexOf(file);
+          const rankIdx = parseInt(rank) - 1;
+          const sqColor = getSquareColor(fileIdx, rankIdx, selectedSquare, lastMove, validMoves, checkSquare);
 
           const isErrorShake = errorSquare === squareName;
           const isKeyboardFocused = keyboardFocus === squareName;
@@ -257,6 +258,10 @@ export default function ChessBoard({ bestMoveArrow }) {
               }`
             : 'empty';
 
+          const boardRank = RANKS.indexOf(rank);
+          const boardFile = FILES.indexOf(file);
+          const cell = board[boardRank]?.[boardFile];
+          const isValidTarget = validMoves.includes(squareName);
           const showRankLabel = showCoords && (boardFile === (flippedView ? 7 : 0));
           const showFileLabel = showCoords && (boardRank === (flippedView ? 0 : 7));
 
@@ -269,12 +274,11 @@ export default function ChessBoard({ bestMoveArrow }) {
               aria-label={`${squareName}, ${pieceDesc}`}
               className={[
                 getSquareClasses(squareName),
-                `${sqColor}-square`,
                 isErrorShake ? 'shake' : '',
                 isKeyboardFocused ? 'keyboard-focus' : '',
               ].filter(Boolean).join(' ')}
               style={{
-                backgroundColor: sqColor === 'light' ? currentTheme.light : currentTheme.dark,
+                backgroundColor: sqColor,
                 width: '100%',
                 height: '100%',
                 position: 'relative',
@@ -321,8 +325,11 @@ export default function ChessBoard({ bestMoveArrow }) {
                 </span>
               )}
 
-              {showMoveIndicators && isValidTarget && (
-                <MoveIndicator hasCapture={!!cell} themeAccent={currentTheme.accent} />
+              {isValidTarget && !cell && (
+                <div style={{position:'absolute',width:'32%',height:'32%',borderRadius:'50%',background:'rgba(0,0,0,0.2)',top:'34%',left:'34%',pointerEvents:'none'}}/>
+              )}
+              {isValidTarget && cell && (
+                <div style={{position:'absolute',inset:0,borderRadius:'2px',border:'4px solid rgba(0,0,0,0.2)',pointerEvents:'none'}}/>
               )}
             </div>
           );
@@ -343,7 +350,6 @@ export default function ChessBoard({ bestMoveArrow }) {
               ...getSquareOffset(p.square),
               zIndex: isSelected || isLanding || draggedFrom === p.square ? 10 : 2,
               pointerEvents: 'none',
-              transition: animationsEnabled ? 'left 0.18s ease, top 0.18s ease' : 'none',
             }}
           >
             <div style={{ pointerEvents: 'auto', width: '100%', height: '100%' }}>
@@ -356,6 +362,7 @@ export default function ChessBoard({ bestMoveArrow }) {
                 onDrop={handleDrop}
                 onClick={() => handleSquareClick(p.square)}
                 animStyle={{ animation: isLanding ? 'slideIn 0.2s ease' : 'none' }}
+                flippedView={flippedView}
               />
             </div>
           </div>

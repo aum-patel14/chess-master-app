@@ -150,10 +150,7 @@
   overflow: hidden;
   position: relative;
   border: 3px solid #8B6914 !important; /* Wood Gold Border */
-  box-shadow:
-    0 10px 30px rgba(0,0,0,0.6),
-    inset 0 0 0 1px rgba(255,255,255,0.04),
-    inset 0 0 30px rgba(0,0,0,0.3);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
   box-sizing: border-box;
 }
 
@@ -223,23 +220,11 @@
 }
 
 /* ── #2: King in Check — red pulsing glow ── */
-.board-square.in-check {
-  animation: check-pulse 1.2s ease-in-out infinite;
-}
-
 @keyframes check-pulse {
-  0%, 100% { box-shadow: inset 0 0 0 3px rgba(220, 50, 50, 0.8); }
-  50%       { box-shadow: inset 0 0 0 6px rgba(220, 50, 50, 0.4); }
+  0%,100% { box-shadow: inset 0 0 0 3px rgba(220,50,50,0.9); }
+  50% { box-shadow: inset 0 0 0 8px rgba(220,50,50,0.4); }
 }
-
-.board-square.in-check::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle at center, rgba(220,50,50,0.6) 0%, rgba(220,0,0,0.1) 70%, transparent 100%);
-  z-index: 2;
-  pointer-events: none;
-}
+.king-in-check { animation: check-pulse 1s ease-in-out infinite; }
 
 /* Drag over valid target */
 .board-square.drag-over::before {
