@@ -1,15 +1,6 @@
 import './GameScreen.css';
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { Chess } from 'chess.js';
-
-const initGame = (fen) => {
-  try {
-    return fen ? new Chess(fen) : new Chess();
-  } catch (e) {
-    console.error('Chess init failed in GameScreen:', e);
-    return new Chess(); // fallback to start position
-  }
-};
 import { useGame } from '../../context/GameContext';
 import ChessBoard from '../board/ChessBoard';
 import GameOverDialog from './GameOverDialog';
@@ -21,6 +12,15 @@ import AnalysisPanel from './AnalysisPanel';
 import { stockfishEngine } from '../../engine/StockfishService';
 import { Play, RotateCcw, Flag, Sparkles, RefreshCw, Save, Share2, Settings } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
+
+const initGame = (fen) => {
+  try {
+    return fen ? new Chess(fen) : new Chess();
+  } catch (e) {
+    console.error('Chess init failed in GameScreen:', e);
+    return new Chess(); // fallback to start position
+  }
+};
 
 const DIFFICULTY_NAMES = { 1:'Beginner', 2:'Easy', 3:'Medium', 4:'Hard', 5:'Master' };
 const PIECE_VALUES = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };

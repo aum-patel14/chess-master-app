@@ -1,14 +1,5 @@
 import { createContext, useContext, useReducer, useCallback, useRef, useEffect, useState } from 'react';
 import { Chess } from 'chess.js';
-
-const initGame = (fen) => {
-  try {
-    return fen ? new Chess(fen) : new Chess();
-  } catch (e) {
-    console.error('Chess init failed:', e);
-    return new Chess(); // fallback to start position
-  }
-};
 import { getGameStatus, getBestMove as getFallbackBestMove } from '../engine/chessEngine';
 import { stockfishEngine } from '../engine/StockfishService';
 import { soundManager } from '../engine/soundManager';
@@ -20,6 +11,15 @@ import { checkAndUnlockAchievements } from '../utils/achievements';
 import AchievementToast from '../components/AchievementToast';
 import UpgradeModal from '../components/modals/UpgradeModal';
 import { getSocket } from '../hooks/useSocket';
+
+const initGame = (fen) => {
+  try {
+    return fen ? new Chess(fen) : new Chess();
+  } catch (e) {
+    console.error('Chess init failed:', e);
+    return new Chess(); // fallback to start position
+  }
+};
 
 const GameContext = createContext(null);
 

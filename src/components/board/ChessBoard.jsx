@@ -1,6 +1,12 @@
 import './ChessBoard.css';
 import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import { Chess } from 'chess.js';
+import { useGame } from '../../context/GameContext';
+import ChessPiece from './ChessPiece';
+import MoveIndicator from './MoveIndicator';
+import PromotionModal from './PromotionModal';
+import ParticleCanvas, { triggerCaptureEffect, triggerMoveEffect } from './ParticleCanvas';
+import { usePiecePositions } from './usePiecePositions';
 
 const initGame = (fen) => {
   try {
@@ -10,13 +16,6 @@ const initGame = (fen) => {
     return new Chess();
   }
 };
-
-import { useGame } from '../../context/GameContext';
-import ChessPiece from './ChessPiece';
-import MoveIndicator from './MoveIndicator';
-import PromotionModal from './PromotionModal';
-import ParticleCanvas, { triggerCaptureEffect, triggerMoveEffect } from './ParticleCanvas';
-import { usePiecePositions } from './usePiecePositions';
 
 const FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 const RANKS = ['8', '7', '6', '5', '4', '3', '2', '1'];
