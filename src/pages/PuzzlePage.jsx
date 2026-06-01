@@ -187,11 +187,13 @@ export default function PuzzlePage() {
 
         if (mv) {
           const expected = solutionMoves[moveIdx];
-          // Normalise SAN representations to match
-          const cleanMv = mv.san.replace(/\+|#/g, '');
-          const cleanExpected = expected.replace(/\+|#/g, '');
+          const playedCoord = mv.from + mv.to + (mv.promotion || '');
+          const cleanMv = mv.san.replace(/\+|#/g, '').toLowerCase();
+          const cleanExpected = expected.replace(/\+|#/g, '').toLowerCase();
 
-          if (cleanMv === cleanExpected) {
+          const isCorrect = (playedCoord.toLowerCase() === cleanExpected) || (cleanMv === cleanExpected);
+
+          if (isCorrect) {
             // Correct move!
             setFlashClass('correct-flash');
             setTimeout(() => setFlashClass(''), 400);
@@ -211,7 +213,18 @@ export default function PuzzlePage() {
               const replyMove = solutionMoves[nextIdx];
               setTimeout(() => {
                 const opponentChess = new Chess(testChess.fen());
-                opponentChess.move(replyMove);
+                
+                // Safely execute opponent reply move in coordinate or SAN format
+                if (typeof replyMove === 'string' && replyMove.length >= 4 && /^[a-h][1-8][a-h][1-8]/i.test(replyMove)) {
+                  opponentChess.move({
+                    from: replyMove.substring(0, 2),
+                    to: replyMove.substring(2, 4),
+                    promotion: replyMove.substring(4, 5)?.toLowerCase() || undefined
+                  });
+                } else {
+                  opponentChess.move(replyMove);
+                }
+                
                 setChess(new Chess(opponentChess.fen()));
                 setMoveIdx(nextIdx + 1);
                 
@@ -285,8 +298,13 @@ export default function PuzzlePage() {
     const testChess = new Chess(chess.fen());
     const moves = testChess.moves({ verbose: true });
     
-    // Find expected move in legal moves
-    const target = moves.find(m => m.san.replace(/\+|#/g, '') === expected.replace(/\+|#/g, ''));
+    // Find expected move in legal moves supporting both coordinate and SAN representations
+    const cleanExpected = expected.toLowerCase().replace(/\+|#/g, '');
+    const target = moves.find(m => {
+      const coord = m.from + m.to + (m.promotion || '');
+      const san = m.san.toLowerCase().replace(/\+|#/g, '');
+      return coord === cleanExpected || san === cleanExpected;
+    });
 
     if (target) {
       if (nextHint === 1) {

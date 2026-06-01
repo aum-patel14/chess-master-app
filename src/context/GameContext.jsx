@@ -199,10 +199,14 @@ function gameReducer(state, action) {
     case 'NEW_GAME': {
       const tc = action.timeControl !== undefined ? action.timeControl : state.timeControl;
       const baseSecs = tc ? tc.base * 60 : 600;
+      let pColor = action.playerColor || 'w';
+      if (pColor === 'r') {
+        pColor = Math.random() < 0.5 ? 'w' : 'b';
+      }
       return {
         ...initialState,
         gameMode: action.mode || 'vsAI',
-        playerColor: action.playerColor || 'w',
+        playerColor: pColor,
         aiDifficulty: action.difficulty ?? state.aiDifficulty,
         theme: state.theme,
         soundEnabled: state.soundEnabled,

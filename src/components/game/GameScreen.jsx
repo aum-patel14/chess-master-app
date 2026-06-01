@@ -42,7 +42,8 @@ export default function GameScreen() {
   const {
     fen, status, isAIThinking, gameMode, playerColor,
     aiDifficulty, capturedPieces, history,
-    whiteTime, blackTime, timeControl, moveCount, boardFlipped, reviewFen
+    whiteTime, blackTime, timeControl, moveCount, boardFlipped, reviewFen,
+    soundEnabled, showCoords
   } = state;
 
   const [elapsedTime, setElapsedTime] = useState(0);
@@ -56,6 +57,21 @@ export default function GameScreen() {
 
   // New Setup Phase state for Chess.com Play Bots Setup screen
   const [isSetupPhase, setIsSetupPhase] = useState(history.length === 0);
+
+  const [showOptions, setShowOptions] = useState(false);
+  const optionsRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (optionsRef.current && !optionsRef.current.contains(event.target)) {
+        setShowOptions(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   useEffect(() => {
     if (history.length === 0) {
@@ -408,20 +424,73 @@ export default function GameScreen() {
         />
 
         <div className="engine-slider-ticks">
-          <span>600</span>
-          <span>1000</span>
-          <span>1400</span>
-          <span>1800</span>
-          <span>2800</span>
+          <span style={{ cursor: 'pointer' }} onClick={() => dispatch({ type: 'SET_DIFFICULTY', payload: 1 })}>600</span>
+          <span style={{ cursor: 'pointer' }} onClick={() => dispatch({ type: 'SET_DIFFICULTY', payload: 2 })}>1000</span>
+          <span style={{ cursor: 'pointer' }} onClick={() => dispatch({ type: 'SET_DIFFICULTY', payload: 3 })}>1400</span>
+          <span style={{ cursor: 'pointer' }} onClick={() => dispatch({ type: 'SET_DIFFICULTY', payload: 4 })}>1800</span>
+          <span style={{ cursor: 'pointer' }} onClick={() => dispatch({ type: 'SET_DIFFICULTY', payload: 5 })}>2800</span>
         </div>
       </div>
 
       {/* OPTIONS ROW & COLOR SELECTOR */}
-      <div className="play-bots-options-row">
-        <div className="options-dropdown">
+      <div className="play-bots-options-row" style={{ position: 'relative' }} ref={optionsRef}>
+        <div className="options-dropdown" onClick={() => setShowOptions(!showOptions)}>
           <span>⚙ Options</span>
-          <span style={{ fontSize: '9px', marginLeft: '6px' }}>▼</span>
+          <span style={{ fontSize: '9px', marginLeft: '6px' }}>{showOptions ? '▲' : '▼'}</span>
         </div>
+
+        {showOptions && (
+          <div className="options-dropdown-menu">
+            <div className="options-menu-header">Game Settings</div>
+            
+            <div className="options-menu-item" onClick={() => { dispatch({ type: 'TOGGLE_BOARD_FLIP' }); showToast('Board orientation flipped', 'info'); }}>
+              <span className="options-menu-icon">🔄</span>
+              <span className="options-menu-text">Flip Board</span>
+              <span className="options-menu-value">{boardFlipped ? 'Black' : 'White'}</span>
+            </div>
+
+            <div className="options-menu-item" onClick={() => { dispatch({ type: 'TOGGLE_COORDS' }); showToast(showCoords ? 'Coordinates disabled' : 'Coordinates enabled', 'info'); }}>
+              <span className="options-menu-icon">🔡</span>
+              <span className="options-menu-text">Coordinates</span>
+              <span className="options-menu-value">{showCoords ? 'On' : 'Off'}</span>
+            </div>
+
+            <div className="options-menu-item" onClick={() => { dispatch({ type: 'TOGGLE_SOUND' }); showToast(soundEnabled ? 'Sounds muted' : 'Sounds enabled', 'info'); }}>
+              <span className="options-menu-icon">{soundEnabled ? '🔊' : '🔇'}</span>
+              <span className="options-menu-text">Sound</span>
+              <span className="options-menu-value">{soundEnabled ? 'On' : 'Off'}</span>
+            </div>
+
+            <div className="options-menu-divider" />
+            <div className="options-menu-header">Time Control</div>
+
+            {[
+              { label: 'Casual (∞)', value: null },
+              { label: '10 Minutes', value: { base: 10, increment: 0 } },
+              { label: '5 Minutes', value: { base: 5, increment: 0 } },
+              { label: '3 Minutes', value: { base: 3, increment: 0 } },
+              { label: '1 Minute', value: { base: 1, increment: 0 } }
+            ].map((tcOption, index) => {
+              const isSelected = (!timeControl && !tcOption.value) || 
+                                 (timeControl && tcOption.value && timeControl.base === tcOption.value.base);
+              return (
+                <div 
+                  key={index} 
+                  className={`options-menu-item tc-option ${isSelected ? 'selected' : ''}`}
+                  onClick={() => {
+                    dispatch({ type: 'SET_TIME_CONTROL', payload: tcOption.value });
+                    showToast(`Time Control: ${tcOption.label}`, 'success');
+                    setShowOptions(false);
+                  }}
+                >
+                  <span className="options-menu-icon">⏱</span>
+                  <span className="options-menu-text">{tcOption.label}</span>
+                  {isSelected && <span className="options-menu-check">✓</span>}
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         <div className="color-selector-group">
           {/* Play as White */}
