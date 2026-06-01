@@ -1,16 +1,27 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 
+const safeNum = (n, fallback = 600) => {
+  const v = Number(n);
+  return Number.isFinite(v) && v > 0 ? v : fallback;
+};
+
 export const useChessClock = (base, increment) => {
-  const [whiteTime, setWhiteTime] = useState(base);
-  const [blackTime, setBlackTime] = useState(base);
+  const safeBase = safeNum(base);
+  const safeInc = Number.isFinite(Number(increment)) && Number(increment) >= 0
+    ? Number(increment)
+    : 0;
+
+  const [whiteTime, setWhiteTime] = useState(safeBase);
+  const [blackTime, setBlackTime] = useState(safeBase);
   const [activeColor, setActiveColor] = useState(null);
   const intervalRef = useRef(null);
   const lastTickRef = useRef(Date.now());
 
   // Reset clock when base or increment changes (e.g. new game setup)
   useEffect(() => {
-    setWhiteTime(base);
-    setBlackTime(base);
+    const b = safeNum(base);
+    setWhiteTime(b);
+    setBlackTime(b);
     setActiveColor(null);
     if (intervalRef.current) clearInterval(intervalRef.current);
   }, [base, increment]);
@@ -22,11 +33,11 @@ export const useChessClock = (base, increment) => {
 
   const switchClock = useCallback((movedColor) => {
     const addTo = movedColor === 'w' ? setWhiteTime : setBlackTime;
-    addTo(t => t + increment);
+    addTo((t) => safeNum(safeNum(t, safeBase) + safeInc, safeBase));
     const next = movedColor === 'w' ? 'b' : 'w';
     setActiveColor(next);
     lastTickRef.current = Date.now();
-  }, [increment]);
+  }, [safeInc, safeBase]);
 
   const stop = useCallback(() => {
     setActiveColor(null);
@@ -46,18 +57,20 @@ export const useChessClock = (base, increment) => {
   }, [activeColor]);
 
   const reset = useCallback(() => {
-    setWhiteTime(base);
-    setBlackTime(base);
+    const b = safeNum(base);
+    setWhiteTime(b);
+    setBlackTime(b);
     setActiveColor(null);
     if (intervalRef.current) clearInterval(intervalRef.current);
   }, [base]);
 
   const formatTime = (seconds) => {
-    if (seconds <= 0) return '0:00.0';
-    const m = Math.floor(seconds / 60);
-    const s = Math.floor(seconds % 60);
-    if (seconds < 10) {
-      const tenths = Math.floor((seconds % 1) * 10);
+    const sec = safeNum(seconds, 0);
+    if (sec <= 0) return '0:00.0';
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    if (sec < 10) {
+      const tenths = Math.floor((sec % 1) * 10);
       return `0:0${s}.${tenths}`;
     }
     return `${m}:${String(s).padStart(2, '0')}`;

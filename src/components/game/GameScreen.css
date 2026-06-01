@@ -453,7 +453,7 @@
   height: 100vh;
   overflow: hidden;
   background: #1a1a2e;
-  --board-size: min(calc(100vw - 370px), calc(100vh - 120px));
+  --board-size: min(calc(100vw - 400px), calc(100vh - 140px));
 }
 
 .sidebar {
@@ -478,19 +478,48 @@
   justify-content: center;
   padding: 12px;
   overflow: hidden;
-  gap: 6px;
-  --board-size: min(calc(100vw - 370px), calc(100vh - 120px));
+  gap: 8px;
+  --board-size: min(calc(100vw - 400px), calc(100vh - 140px));
 }
 
 .right-panel {
-  width: 260px;
-  min-width: 260px;
+  width: min(340px, 34vw);
+  min-width: 300px;
   height: 100vh;
   background: #16213e;
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
   border-left: 1px solid rgba(255,255,255,0.08);
+}
+
+.player-bar {
+  width: calc(var(--board-size) + 36px);
+  min-height: 52px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.difficulty-selector-wrap {
+  width: 100%;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.difficulty-selector-wrap::-webkit-scrollbar {
+  height: 4px;
+}
+
+.difficulty-selector-wrap::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
 }
 
 .board-outer {

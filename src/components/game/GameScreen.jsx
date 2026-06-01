@@ -13,6 +13,7 @@ import { stockfishEngine } from '../../engine/StockfishService';
 import { useStockfish } from '../../hooks/useStockfish';
 import { AiStatusBar } from '../AiStatusBar';
 import { DifficultySelector } from '../DifficultySelector';
+import { DIFFICULTY_CONFIG } from '../../services/stockfishService';
 import { Play, RotateCcw, Flag, Sparkles, RefreshCw, Save, Share2, Settings } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
 import { useChessClock } from '../../hooks/useChessClock';
@@ -129,8 +130,27 @@ export default function GameScreen() {
     fen, status, isAIThinking, gameMode, playerColor,
     aiDifficulty, capturedPieces, history,
     timeControl, moveCount, boardFlipped, reviewFen,
-    soundEnabled, showCoords
+    soundEnabled, showCoords, whiteTime, blackTime,
   } = state;
+
+  const {
+    isSimpleMode: hookSimpleMode,
+    difficulty: hookDifficulty,
+    setDifficulty: setHookDifficulty,
+  } = useStockfish(aiDifficulty);
+
+  const isSimpleMode = contextSimpleMode ?? hookSimpleMode;
+  const displayDifficulty = Number(hookDifficulty ?? aiDifficulty) || 3;
+
+  const handleDifficultyChange = (level) => {
+    if (!isPremium && level >= 4) {
+      setShowUpgradeModal(true);
+      return;
+    }
+    setHookDifficulty(level);
+    dispatch({ type: 'SET_DIFFICULTY', payload: level });
+    localStorage.setItem('chess_difficulty', String(level));
+  };
 
   let baseSecs = 600;
   let incrementSecs = 0;
@@ -153,6 +173,12 @@ export default function GameScreen() {
       }
     }
   }
+
+  const safeBaseSecs =
+    Number.isFinite(baseSecs) && baseSecs > 0 ? baseSecs : 600;
+  const safeIncrementSecs =
+    Number.isFinite(incrementSecs) && incrementSecs >= 0 ? incrementSecs : 0;
+
   const { 
     whiteTime: clockWhiteTime, 
     blackTime: clockBlackTime, 
@@ -162,7 +188,15 @@ export default function GameScreen() {
     stop: stopClock, 
     reset: resetClock, 
     activeColor 
-  } = useChessClock(baseSecs, incrementSecs);
+  } = useChessClock(safeBaseSecs, safeIncrementSecs);
+
+  const formatClockDisplay = useCallback((seconds) => {
+    const s = Number(seconds);
+    if (!Number.isFinite(s) || s < 0) {
+      return formatTime(safeBaseSecs);
+    }
+    return formatTime(s);
+  }, [formatTime, safeBaseSecs]);
 
   const isGameOver = status.type !== 'playing' && status.type !== 'check';
 
@@ -530,7 +564,12 @@ export default function GameScreen() {
     5: { label: 'Master', elo: 2800, bots: '25 bots', avatar: '🧠', desc: 'Grandmaster strength Stockfish engine.' },
   };
 
-  const activeBot = BOT_LEVELS[aiDifficulty] || BOT_LEVELS[3];
+  const activeBot = {
+    ...(BOT_LEVELS[displayDifficulty] || BOT_LEVELS[3]),
+    label: DIFFICULTY_CONFIG[displayDifficulty]?.label ?? BOT_LEVELS[displayDifficulty]?.label,
+    elo: parseInt(DIFFICULTY_CONFIG[displayDifficulty]?.elo?.replace(/\D/g, '') || '1200', 10),
+    desc: DIFFICULTY_CONFIG[displayDifficulty]?.description ?? BOT_LEVELS[displayDifficulty]?.desc,
+  };
 
   const handleStartGame = () => {
     startNewGame({ mode: 'vsAI', playerColor, difficulty: aiDifficulty, timeControl });
@@ -562,12 +601,14 @@ export default function GameScreen() {
       <div className="bot-categories-label" style={{ marginTop: '12px' }}>
         Engine difficulty
       </div>
-      <DifficultySelector
-        value={displayDifficulty}
-        onChange={handleDifficultyChange}
-        isPremium={isPremium}
-        onUpgradeClick={() => setShowUpgradeModal(true)}
-      />
+      <div className="difficulty-selector-wrap">
+        <DifficultySelector
+          value={displayDifficulty}
+          onChange={handleDifficultyChange}
+          isPremium={isPremium}
+          onUpgradeClick={() => setShowUpgradeModal(true)}
+        />
+      </div>
 
       {/* OPTIONS ROW & COLOR SELECTOR */}
       <div className="play-bots-options-row" style={{ position: 'relative' }} ref={optionsRef}>
@@ -686,11 +727,21 @@ export default function GameScreen() {
         }}>∞</span>
       );
     }
-    const isPlayerActive = activeColor === player.color;
-    const playerSeconds = player.color === 'w' ? clockWhiteTime : clockBlackTime;
+    const chess = initGame(reviewFen || fen);
+    const isPlayerActive =
+      (activeColor === player.color || chess.turn() === player.color) &&
+      !isAIThinking &&
+      (status.type === 'playing' || status.type === 'check');
+    const contextSeconds = player.color === 'w' ? whiteTime : blackTime;
+    const hookSeconds = player.color === 'w' ? clockWhiteTime : clockBlackTime;
+    const playerSeconds = Number.isFinite(contextSeconds)
+      ? contextSeconds
+      : Number.isFinite(hookSeconds)
+        ? hookSeconds
+        : safeBaseSecs;
     return (
       <span style={clockStyle(playerSeconds, isPlayerActive)}>
-        {formatTime(playerSeconds)}
+        {formatClockDisplay(playerSeconds)}
       </span>
     );
   };
@@ -700,7 +751,7 @@ export default function GameScreen() {
       {/* CENTER BOARD ZONE */}
       <div className="game-center">
         {/* Black player bar */}
-        <div style={{width:'calc(var(--board-size) + 36px)',height:'44px',background:'rgba(255,255,255,0.05)',borderRadius:'8px',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 12px',flexShrink:0}}>
+        <div className="player-bar">
           {topPlayer.isAI ? (
             <AiStatusBar
               isThinking={isAIThinking}
@@ -746,7 +797,7 @@ export default function GameScreen() {
         </div>
 
         {/* White player bar */}
-        <div style={{width:'calc(var(--board-size) + 36px)',height:'44px',background:'rgba(255,255,255,0.05)',borderRadius:'8px',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 12px',flexShrink:0}}>
+        <div className="player-bar">
           {bottomPlayer.isAI ? (
             <AiStatusBar
               isThinking={isAIThinking}
