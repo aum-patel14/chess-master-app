@@ -9,43 +9,13 @@ export default function PlayAIModal({ show, onClose, onStart }) {
   });
   const [color, setColor] = useState('w');
 
-  const AI_LEVELS = [
-    { 
-      level: 1, 
-      label: "Beginner", 
-      elo: "~600 ELO", 
-      description: "Plays simple moves and makes basic blunders.",
-      icon: <Star size={24} className="level-icon-star" />
-    },
-    { 
-      level: 2, 
-      label: "Easy", 
-      elo: "~800 ELO", 
-      description: "Plays casually, avoids obvious tactical traps.",
-      icon: <Cpu size={24} className="level-icon-cpu" />
-    },
-    { 
-      level: 3, 
-      label: "Medium", 
-      elo: "~1200 ELO", 
-      description: "Acts as solid club player with basic strategies.",
-      icon: <Zap size={24} className="level-icon-zap" />
-    },
-    { 
-      level: 4, 
-      label: "Hard", 
-      elo: "~1600 ELO", 
-      description: "Plays aggressive, tactically sound combinations.",
-      icon: <Flame size={24} className="level-icon-flame" />
-    },
-    { 
-      level: 5, 
-      label: "Master", 
-      elo: "~2000 ELO", 
-      description: "Fierce grandmaster strength with depth 20+ analyses.",
-      icon: <Trophy size={24} className="level-icon-trophy" />
-    }
-  ];
+  const DIFFICULTY = {
+    1: { skill: 0,  depth: 1,  movetime: 100,  label: 'Beginner', elo: '~600' },
+    2: { skill: 5,  depth: 3,  movetime: 300,  label: 'Easy',     elo: '~800' },
+    3: { skill: 10, depth: 8,  movetime: 1000, label: 'Medium',   elo: '~1200' },
+    4: { skill: 15, depth: 15, movetime: 2000, label: 'Hard',     elo: '~1600' },
+    5: { skill: 20, depth: 20, movetime: 3000, label: 'Master',   elo: '~2000' },
+  };
 
   // Save selection on change
   useEffect(() => {
@@ -70,25 +40,20 @@ export default function PlayAIModal({ show, onClose, onStart }) {
         </div>
 
         {/* 5 Cards Row */}
-        <div className="ai-cards-grid">
-          {AI_LEVELS.map((ai) => {
-            const isSelected = difficulty === ai.level;
-            return (
-              <div 
-                key={ai.level}
-                className={`ai-difficulty-card ${isSelected ? 'selected' : ''}`}
-                onClick={() => setDifficulty(ai.level)}
-              >
-                <div className="ai-card-glow" />
-                <div className="ai-card-icon-container">
-                  {ai.icon}
-                </div>
-                <h3 className="ai-card-title">{ai.label}</h3>
-                <span className="ai-card-elo">{ai.elo}</span>
-                <p className="ai-card-desc">{ai.description}</p>
-              </div>
-            );
-          })}
+        <div style={{display:'flex',gap:'10px',flexWrap:'wrap',justifyContent:'center',padding:'20px'}}>
+          {Object.entries(DIFFICULTY).map(([lvl, cfg]) => (
+            <div key={lvl} onClick={()=>setDifficulty(Number(lvl))}
+              style={{
+                width:'120px', padding:'16px 12px', borderRadius:'12px', cursor:'pointer', textAlign:'center',
+                border: difficulty===Number(lvl) ? '2px solid #e2b04a' : '1px solid rgba(255,255,255,0.15)',
+                background: difficulty===Number(lvl) ? 'rgba(226,176,74,0.1)' : 'rgba(255,255,255,0.05)',
+                transition:'all .15s'
+              }}>
+              <div style={{fontSize:'24px',marginBottom:'8px'}}>{'⭐'.repeat(Number(lvl))}</div>
+              <div style={{fontSize:'14px',fontWeight:'600',color:'white'}}>{cfg.label}</div>
+              <div style={{fontSize:'11px',color:'rgba(255,255,255,0.5)',marginTop:'4px'}}>{cfg.elo} Elo</div>
+            </div>
+          ))}
         </div>
 
         {/* Color Choice Section */}

@@ -542,8 +542,18 @@ export default function GameScreen() {
         <div style={{width:'calc(var(--board-size) + 24px)',height:'44px',background:'rgba(255,255,255,0.05)',borderRadius:'8px',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 12px',flexShrink:0}}>
           <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
             <div style={{width:'32px',height:'32px',borderRadius:'50%',background:'#374151',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'14px',fontWeight:'600',color:'white'}}>{avatarLetterTop}</div>
-            <span style={{fontSize:'14px',fontWeight:'500',color:'white'}}>{topPlayer.name}</span>
-            <span style={{fontSize:'12px',padding:'2px 8px',background:'rgba(255,255,255,0.1)',borderRadius:'99px',color:'#aaa'}}>{topPlayer.rating}</span>
+            <div style={{display:'flex',flexDirection:'column'}}>
+              <div style={{display:'flex',alignItems:'center',gap:'6px'}}>
+                <span style={{fontSize:'14px',fontWeight:'500',color:'white'}}>{topPlayer.name}</span>
+                <span style={{fontSize:'12px',padding:'2px 8px',background:'rgba(255,255,255,0.1)',borderRadius:'99px',color:'#aaa'}}>{topPlayer.rating}</span>
+              </div>
+              {topPlayer.isAI && isAIThinking && (
+                <span style={{fontSize:'12px',color:'rgba(255,255,255,0.5)',textAlign:'left',lineHeight:'1'}}>
+                  thinking
+                  <span style={{animation:'dots 1.2s steps(4,end) infinite'}}>...</span>
+                </span>
+              )}
+            </div>
           </div>
           <span style={{fontSize:'16px',fontWeight:'600',color:'white',fontFamily:'monospace'}}>{formatClockTime(topPlayer.time)}</span>
         </div>
@@ -574,8 +584,18 @@ export default function GameScreen() {
         <div style={{width:'calc(var(--board-size) + 24px)',height:'44px',background:'rgba(255,255,255,0.05)',borderRadius:'8px',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 12px',flexShrink:0}}>
           <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
             <div style={{width:'32px',height:'32px',borderRadius:'50%',background:'#4B5563',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'14px',fontWeight:'600',color:'white'}}>{avatarLetterBottom}</div>
-            <span style={{fontSize:'14px',fontWeight:'500',color:'white'}}>{bottomPlayer.name}</span>
-            <span style={{fontSize:'12px',padding:'2px 8px',background:'rgba(255,255,255,0.1)',borderRadius:'99px',color:'#aaa'}}>{bottomPlayer.rating}</span>
+            <div style={{display:'flex',flexDirection:'column'}}>
+              <div style={{display:'flex',alignItems:'center',gap:'6px'}}>
+                <span style={{fontSize:'14px',fontWeight:'500',color:'white'}}>{bottomPlayer.name}</span>
+                <span style={{fontSize:'12px',padding:'2px 8px',background:'rgba(255,255,255,0.1)',borderRadius:'99px',color:'#aaa'}}>{bottomPlayer.rating}</span>
+              </div>
+              {bottomPlayer.isAI && isAIThinking && (
+                <span style={{fontSize:'12px',color:'rgba(255,255,255,0.5)',textAlign:'left',lineHeight:'1'}}>
+                  thinking
+                  <span style={{animation:'dots 1.2s steps(4,end) infinite'}}>...</span>
+                </span>
+              )}
+            </div>
           </div>
           <span style={{fontSize:'16px',fontWeight:'600',color:'white',fontFamily:'monospace'}}>{formatClockTime(bottomPlayer.time)}</span>
         </div>
