@@ -101,8 +101,15 @@
 }
 
 @keyframes fadeInText {
-  from { opacity: 0; transform: translateX(-4px); }
-  to { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 /* FOOTER / TOGGLE BUTTON */
@@ -182,11 +189,15 @@
 
 /* RESPONSIVE DESKTOP VS MOBILE CLASSES */
 @media (max-width: 900px) {
-  .desktop-only { display: none !important; }
+  .desktop-only {
+    display: none !important;
+  }
 }
 
 @media (min-width: 901px) {
-  .mobile-only { display: none !important; }
+  .mobile-only {
+    display: none !important;
+  }
 }
 
 /* COLLAPSED SIDEBAR CENTERING & FULL-WIDTH ALIGNMENT */
@@ -207,7 +218,6 @@
 .sidebar.collapsed .sidebar-nav-btn.active {
   border-left: 3px solid #e2b04a;
   padding-left: 0;
-  padding-right: 3px; /* Mathematically offsets the 3px left border for perfect centering */
+  padding-right: 3px;
+  /* Mathematically offsets the 3px left border for perfect centering */
 }
-
-

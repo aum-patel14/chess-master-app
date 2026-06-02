@@ -248,6 +248,23 @@ export function AuthProvider({ children }) {
         localStorage.setItem('chess_elo', '1200');
       }
       setLoading(false);
+    }).catch((err) => {
+      console.warn('Failed to get Supabase session. Falling back to Guest mode.', err);
+      setCurrentUser(null);
+      setUserData({
+        id: 'guest',
+        uid: 'guest',
+        username: 'Guest',
+        displayName: 'Guest',
+        rating: 1200,
+        wins: 0,
+        losses: 0,
+        draws: 0,
+        isGuest: true
+      });
+      localStorage.setItem('chess_display_name', 'Guest');
+      localStorage.setItem('chess_elo', '1200');
+      setLoading(false);
     });
 
     // 2. Subscribe to auth changes

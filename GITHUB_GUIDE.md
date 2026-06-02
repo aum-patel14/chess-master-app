@@ -31,7 +31,8 @@ git config --global user.email "your-email@example.com"
 ### Step 4: Link Your Local Folder to GitHub
 If you haven't linked your local repository to GitHub yet:
 ```bash
-git remote add origin https://github.com/aum-patel14/chess-master-app.git
+git remote add origin https://github.com/
+aum-patel14/chess-master-app.git
 ```
 *(If it already exists, you can verify it with `git remote -v`)*.
 
