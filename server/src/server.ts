@@ -10,15 +10,29 @@ import {
   ServerToClientEvents, 
   RoomState, 
   MatchmakePlayer,
-  ClientPlayer
+  ClientPlayer,
+  PuzzleBattleRoomState,
+  PuzzleBattlePlayer
 } from './types.js';
 import { calculateGlicko2Update } from './glicko2.js';
 
 dotenv.config();
 
+import stripeRouter from './stripe.js';
+
 const app = express();
 app.use(cors());
-app.use(express.json());
+
+// Configure express JSON parser to retain the raw request body buffer for Stripe signature verification
+app.use(express.json({
+  verify: (req: any, res, buf) => {
+    if (req.originalUrl && req.originalUrl.startsWith('/api/stripe/webhook')) {
+      req.rawBody = buf;
+    }
+  }
+}));
+
+app.use('/api/stripe', stripeRouter);
 
 const PORT = process.env.PORT || 3001;
 const httpServer = createServer(app);
@@ -49,6 +63,11 @@ const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
 const rooms = new Map<string, RoomState>(); // roomCode => RoomState
 const activePlayers = new Map<string, { roomCode: string; color: 'w' | 'b'; opponentSocketId: string | null }>(); // socketId => player
 const queue: MatchmakePlayer[] = []; // Matchmaking queue
+
+// Puzzle Battles States
+const puzzleRooms = new Map<string, PuzzleBattleRoomState>(); // roomCode => PuzzleBattleRoomState
+const activePuzzlePlayers = new Map<string, { roomCode: string; playerIndex: 0 | 1 }>(); // socketId => player
+const puzzleQueue: Array<{ socketId: string; userId: string; username: string; rating: number; joinedAt: number }> = [];
 
 // 4. PERIODIC MATCHMAKING TICK (Every 1 second)
 setInterval(() => {
@@ -102,6 +121,216 @@ setInterval(() => {
     queue.splice(idx, 1);
   }
 }, 1000);
+
+// Puzzle Matchmaking tick (Every 1 second)
+setInterval(async () => {
+  if (puzzleQueue.length < 2) return;
+
+  const now = Date.now();
+  const matchedIndices = new Set<number>();
+
+  for (let i = 0; i < puzzleQueue.length; i++) {
+    if (matchedIndices.has(i)) continue;
+    const playerA = puzzleQueue[i];
+
+    for (let j = i + 1; j < puzzleQueue.length; j++) {
+      if (matchedIndices.has(j)) continue;
+      const playerB = puzzleQueue[j];
+
+      // Calculate elapsed wait times
+      const waitA = (now - playerA.joinedAt) / 1000;
+      const waitB = (now - playerB.joinedAt) / 1000;
+
+      // Search range
+      const rangeA = waitA < 10 ? 150 : waitA < 30 ? 300 : 99999;
+      const rangeB = waitB < 10 ? 150 : waitB < 30 ? 300 : 99999;
+
+      const ratingDiff = Math.abs(playerA.rating - playerB.rating);
+
+      if (ratingDiff <= rangeA && ratingDiff <= rangeB) {
+        matchedIndices.add(i);
+        matchedIndices.add(j);
+
+        await createPuzzleBattleMatch(playerA, playerB);
+        break;
+      }
+    }
+  }
+
+  const sortedIndices = Array.from(matchedIndices).sort((a, b) => b - a);
+  for (const idx of sortedIndices) {
+    puzzleQueue.splice(idx, 1);
+  }
+}, 1000);
+
+// Helper: Create a Puzzle Battle Match
+async function createPuzzleBattleMatch(
+  playerA: { socketId: string; userId: string; username: string; rating: number },
+  playerB: { socketId: string; userId: string; username: string; rating: number }
+) {
+  const roomCode = 'P_' + generateRoomCode();
+  
+  // Fetch 15 puzzles from Supabase puzzles table
+  let dbPuzzles: any[] = [];
+  try {
+    const avgRating = Math.round((playerA.rating + playerB.rating) / 2);
+    const { data } = await supabase
+      .from('puzzles')
+      .select('*')
+      .gte('rating', avgRating - 300)
+      .lte('rating', avgRating + 400)
+      .limit(15);
+      
+    if (data && data.length >= 5) {
+      dbPuzzles = data;
+    }
+  } catch (err) {
+    console.error('[Puzzle Sockets] Failed to load puzzles from database:', err);
+  }
+
+  // Fallback to local curated puzzles if DB is empty or fails
+  if (dbPuzzles.length < 5) {
+    dbPuzzles = [
+      { id: "puz001", fen: "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4", moves: ["f3e5", "d8g5", "e5f7"], rating: 1200, themes: ["fork"] },
+      { id: "puz002", fen: "6k1/5ppp/8/8/8/8/8/4R1K1 w - - 0 1", moves: ["e1e8"], rating: 800, themes: ["mate"] },
+      { id: "puz003", fen: "r3k2r/pppq1ppp/2np1n2/2b1p1B1/2B1P3/2NP1N2/PPP1QPPP/R3K2R b KQkq - 0 1", moves: ["f6e4"], rating: 1000, themes: ["pin"] },
+      { id: "puz004", fen: "2k5/8/8/8/8/q7/2R5/2K5 w - - 0 1", moves: ["c2a2"], rating: 1100, themes: ["skewer"] },
+      { id: "extra002", fen: "3r2k1/pp3ppp/8/8/8/8/Pq3PPP/4Q1K1 w - - 0 1", moves: ["e1e8", "d8e8"], rating: 900, themes: ["mate"] },
+      { id: "extra004", fen: "6k1/5ppp/8/3p4/8/1q6/2R5/2K5 w - - 0 1", moves: ["c2c8"], rating: 800, themes: ["mate"] },
+      { id: "extra010", fen: "6k1/R4ppp/8/8/8/8/1r3PPP/5GK1 w - - 0 1", moves: ["a7a8", "b2b8", "a8b8"], rating: 900, themes: ["mate"] }
+    ];
+  }
+
+  // Shuffle & ensure we have exactly 15 puzzles by looping if necessary
+  const puzzlesList: any[] = [];
+  while (puzzlesList.length < 15) {
+    const remaining: number = 15 - puzzlesList.length;
+    const chunk: any[] = dbPuzzles.slice(0, remaining).map(p => ({
+      id: p.id,
+      fen: p.fen,
+      moves: Array.isArray(p.moves) ? p.moves : [p.moves],
+      rating: p.rating,
+      themes: Array.isArray(p.themes) ? p.themes : [p.themes]
+    }));
+    puzzlesList.push(...chunk);
+  }
+
+  const p1: PuzzleBattlePlayer = {
+    id: playerA.userId,
+    username: playerA.username,
+    rating: playerA.rating,
+    socketId: playerA.socketId,
+    score: 0,
+    puzzleIndex: 0,
+    wrongAttempts: 0
+  };
+
+  const p2: PuzzleBattlePlayer = {
+    id: playerB.userId,
+    username: playerB.username,
+    rating: playerB.rating,
+    socketId: playerB.socketId,
+    score: 0,
+    puzzleIndex: 0,
+    wrongAttempts: 0
+  };
+
+  const duration = 180000; // 3 minutes in ms
+
+  const roomState: PuzzleBattleRoomState = {
+    code: roomCode,
+    players: [p1, p2],
+    puzzles: puzzlesList,
+    startTime: Date.now(),
+    duration,
+    status: 'playing'
+  };
+
+  puzzleRooms.set(roomCode, roomState);
+  activePuzzlePlayers.set(playerA.socketId, { roomCode, playerIndex: 0 });
+  activePuzzlePlayers.set(playerB.socketId, { roomCode, playerIndex: 1 });
+
+  // Join sockets to room
+  const sA = io.sockets.sockets.get(playerA.socketId);
+  const sB = io.sockets.sockets.get(playerB.socketId);
+  if (sA) sA.join(roomCode);
+  if (sB) sB.join(roomCode);
+
+  // Notify clients
+  io.to(playerA.socketId).emit('puzzle-battle-start', {
+    roomCode,
+    opponentName: playerB.username,
+    opponentRating: playerB.rating,
+    puzzles: puzzlesList,
+    duration
+  });
+
+  io.to(playerB.socketId).emit('puzzle-battle-start', {
+    roomCode,
+    opponentName: playerA.username,
+    opponentRating: playerA.rating,
+    puzzles: puzzlesList,
+    duration
+  });
+
+  console.log(`[Puzzle Battle] Room ${roomCode} started: ${playerA.username} vs ${playerB.username}`);
+
+  // Setup 3-minute end timer
+  setTimeout(() => {
+    const room = puzzleRooms.get(roomCode);
+    if (room && room.status === 'playing') {
+      endPuzzleBattle(room, 'time-up');
+    }
+  }, duration);
+}
+
+function endPuzzleBattle(room: PuzzleBattleRoomState, reason: 'time-up' | 'all-solved' | 'opponent-left', leftSocketId?: string) {
+  room.status = 'ended';
+
+  const [p1, p2] = room.players;
+  let r1: 'win' | 'loss' | 'draw' = 'draw';
+  let r2: 'win' | 'loss' | 'draw' = 'draw';
+
+  if (reason === 'opponent-left' && leftSocketId) {
+    if (p1.socketId === leftSocketId) {
+      r1 = 'loss';
+      r2 = 'win';
+    } else {
+      r1 = 'win';
+      r2 = 'loss';
+    }
+  } else {
+    if (p1.score > p2.score) {
+      r1 = 'win';
+      r2 = 'loss';
+    } else if (p2.score > p1.score) {
+      r1 = 'loss';
+      r2 = 'win';
+    }
+  }
+
+  // Emit outcomes to both players
+  io.to(p1.socketId).emit('puzzle-battle-over', {
+    result: r1,
+    reason,
+    finalScore: p1.score,
+    opponentScore: p2.score
+  });
+
+  io.to(p2.socketId).emit('puzzle-battle-over', {
+    result: r2,
+    reason,
+    finalScore: p2.score,
+    opponentScore: p1.score
+  });
+
+  // Cleanup
+  activePuzzlePlayers.delete(p1.socketId);
+  activePuzzlePlayers.delete(p2.socketId);
+  puzzleRooms.delete(room.code);
+
+  console.log(`[Puzzle Battle] Room ${room.code} ended. Reason: ${reason}. Final scores: ${p1.username} ${p1.score} - ${p2.username} ${p2.score}`);
+}
 
 // Helper: Create a room and spawn matchmaking game
 function createMultiplayerMatch(playerA: MatchmakePlayer, playerB: MatchmakePlayer) {
@@ -533,13 +762,110 @@ io.on('connection', (socket: Socket) => {
     io.to(roomCode).emit('chat-message-received', message);
   });
 
+  // --- PUZZLE BATTLES EVENT HANDLERS ---
+  socket.on('join-puzzle-queue', ({ userId, username, rating }) => {
+    removePlayerFromPuzzleQueue(socket.id);
+    handlePuzzlePlayerDisconnect(socket.id);
+
+    puzzleQueue.push({
+      socketId: socket.id,
+      userId,
+      username,
+      rating,
+      joinedAt: Date.now()
+    });
+    console.log(`[Puzzle Sockets] Enqueued puzzle player ${username} (${rating} ELO)`);
+    socket.emit('puzzle-queue-joined');
+  });
+
+  socket.on('leave-puzzle-queue', () => {
+    removePlayerFromPuzzleQueue(socket.id);
+    socket.emit('puzzle-queue-left');
+  });
+
+  socket.on('puzzle-solved', ({ roomCode, score, puzzleIndex }) => {
+    const active = activePuzzlePlayers.get(socket.id);
+    if (!active || active.roomCode !== roomCode) return;
+
+    const room = puzzleRooms.get(roomCode);
+    if (!room || room.status !== 'playing') return;
+
+    const player = room.players[active.playerIndex];
+    player.score = score;
+    player.puzzleIndex = puzzleIndex;
+
+    // Relay opponent progress
+    const opponent = room.players[active.playerIndex === 0 ? 1 : 0];
+    io.to(opponent.socketId).emit('puzzle-opponent-progress', {
+      score,
+      puzzleIndex,
+      wrongAttempts: player.wrongAttempts
+    });
+
+    // Check if player solved all 15 puzzles!
+    if (score >= 15) {
+      endPuzzleBattle(room, 'all-solved');
+    }
+  });
+
+  socket.on('puzzle-failed', ({ roomCode, puzzleIndex }) => {
+    const active = activePuzzlePlayers.get(socket.id);
+    if (!active || active.roomCode !== roomCode) return;
+
+    const room = puzzleRooms.get(roomCode);
+    if (!room || room.status !== 'playing') return;
+
+    const player = room.players[active.playerIndex];
+    player.wrongAttempts += 1;
+    player.puzzleIndex = puzzleIndex;
+
+    // Relay opponent progress
+    const opponent = room.players[active.playerIndex === 0 ? 1 : 0];
+    io.to(opponent.socketId).emit('puzzle-opponent-progress', {
+      score: player.score,
+      puzzleIndex,
+      wrongAttempts: player.wrongAttempts
+    });
+  });
+
+  socket.on('leave-puzzle-battle', ({ roomCode }) => {
+    const room = puzzleRooms.get(roomCode);
+    if (room && room.status === 'playing') {
+      endPuzzleBattle(room, 'opponent-left', socket.id);
+    }
+  });
+
   // Client disconnects
   socket.on('disconnect', () => {
     console.log(`[Socket] Client disconnected: ${socket.id}`);
     removeFromQueue(socket.id);
     handleSocketCleanup(socket.id);
+    
+    // Puzzle Battle Cleanups
+    removePlayerFromPuzzleQueue(socket.id);
+    handlePuzzlePlayerDisconnect(socket.id);
   });
 });
+
+// Helper: Remove player from puzzle queue
+function removePlayerFromPuzzleQueue(socketId: string) {
+  const index = puzzleQueue.findIndex(p => p.socketId === socketId);
+  if (index !== -1) {
+    puzzleQueue.splice(index, 1);
+    console.log(`[Puzzle Sockets] Removed socket from puzzle queue: ${socketId}`);
+  }
+}
+
+// Helper: Handle puzzle battle player disconnection
+function handlePuzzlePlayerDisconnect(socketId: string) {
+  const active = activePuzzlePlayers.get(socketId);
+  if (!active) return;
+
+  const room = puzzleRooms.get(active.roomCode);
+  if (room && room.status === 'playing') {
+    endPuzzleBattle(room, 'opponent-left', socketId);
+  }
+}
 
 // Helper: Remove player from queue
 function removeFromQueue(socketId: string) {

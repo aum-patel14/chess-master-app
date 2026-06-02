@@ -50,6 +50,31 @@ export interface MatchmakePlayer {
   joinedAt: number; // Epoch timestamp
 }
 
+export interface PuzzleBattlePlayer {
+  id: string; // user ID
+  username: string;
+  rating: number;
+  socketId: string;
+  score: number; // number of solved puzzles
+  puzzleIndex: number; // index of active puzzle they are on
+  wrongAttempts: number; // number of mistakes
+}
+
+export interface PuzzleBattleRoomState {
+  code: string;
+  players: [PuzzleBattlePlayer, PuzzleBattlePlayer];
+  puzzles: Array<{
+    id: string;
+    fen: string;
+    moves: string[];
+    rating: number;
+    themes: string[];
+  }>;
+  startTime: number;
+  duration: number; // in milliseconds (e.g. 180000)
+  status: 'playing' | 'ended';
+}
+
 // Sockets Event Signatures
 export interface ClientToServerEvents {
   'join-queue': (payload: {
@@ -73,6 +98,26 @@ export interface ClientToServerEvents {
   'request-rematch': (payload: { roomCode: string }) => void;
   'accept-rematch': (payload: { roomCode: string }) => void;
   'chat-message': (payload: { roomCode: string; text: string; senderName: string }) => void;
+  
+  // Puzzle Battles Events
+  'join-puzzle-queue': (payload: {
+    userId: string;
+    username: string;
+    rating: number;
+  }) => void;
+  'leave-puzzle-queue': () => void;
+  'puzzle-solved': (payload: {
+    roomCode: string;
+    score: number;
+    puzzleIndex: number;
+  }) => void;
+  'puzzle-failed': (payload: {
+    roomCode: string;
+    puzzleIndex: number;
+  }) => void;
+  'leave-puzzle-battle': (payload: {
+    roomCode: string;
+  }) => void;
 }
 
 export interface ServerToClientEvents {
@@ -107,4 +152,33 @@ export interface ServerToClientEvents {
   'chat-message-received': (payload: { id: number; text: string; senderName: string; senderSocket: string }) => void;
   'rematch-requested': () => void;
   'error-msg': (message: string) => void;
+
+  // Puzzle Battles Events
+  'puzzle-queue-joined': () => void;
+  'puzzle-queue-left': () => void;
+  'puzzle-battle-start': (payload: {
+    roomCode: string;
+    opponentName: string;
+    opponentRating: number;
+    puzzles: Array<{
+      id: string;
+      fen: string;
+      moves: string[];
+      rating: number;
+      themes: string[];
+    }>;
+    duration: number;
+  }) => void;
+  'puzzle-opponent-progress': (payload: {
+    score: number;
+    puzzleIndex: number;
+    wrongAttempts: number;
+  }) => void;
+  'puzzle-battle-over': (payload: {
+    result: 'win' | 'loss' | 'draw';
+    reason: 'time-up' | 'all-solved' | 'opponent-left';
+    finalScore: number;
+    opponentScore: number;
+  }) => void;
 }
+
