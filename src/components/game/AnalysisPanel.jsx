@@ -1,16 +1,41 @@
 import './AnalysisPanel.css';
 import { useEffect, useState, useRef } from 'react';
 import { stockfishEngine } from '../../engine/StockfishService';
-import { Award, Zap, AlertCircle, HelpCircle, Check, X, ShieldAlert, Sparkles } from 'lucide-react';
+import { Award, Zap, AlertCircle, HelpCircle, Check, X, ShieldAlert, Sparkles, User, MessageCircle } from 'lucide-react';
 
-export default function AnalysisPanel({ history, onJumpToMove, onSelectArrow, onCloseAnalysis }) {
+function getCoachCommentary(accuracies, counts, historyLength) {
+  if (historyLength === 0) return "Play some moves to see coach analysis commentary!";
+  
+  const playerAcc = accuracies.w;
+  const oppAcc = accuracies.b;
+  const blunders = counts.w.blunder;
+
+  if (blunders >= 3) {
+    return `Oh no! A highly chaotic game. You had promising positions, but committing ${blunders} major blunders let Black seize control. Take your time and verify your safety checks!`;
+  }
+  if (counts.w.brilliant > 0) {
+    return `Spectacular performance! Playing that brilliant sacrifice (!!) was absolutely masterclass. You maintained a high ${playerAcc}% accuracy and completely shut down your opponent!`;
+  }
+  if (playerAcc >= 90) {
+    return `Magnificent play! You played with a near-flawless ${playerAcc}% accuracy. Your positional control and tactical vision were absolute textbook perfection!`;
+  }
+  if (playerAcc >= 75) {
+    return `A very solid and respectable game! You achieved ${playerAcc}% accuracy, keeping blunders to a minimum while maintaining consistent pressure. Nice job!`;
+  }
+  if (playerAcc >= 60) {
+    return `Good effort! You played at a ${playerAcc}% accuracy level, but missed some critical tactical transitions in the middlegame. Slow down and check for hanging pieces!`;
+  }
+  return `A tough battle, but a great learning opportunity! Focus on practicing board vision and checkmate patterns to avoid early blunders.`;
+}
+
+export default function AnalysisPanel({ history, onJumpToMove, onSelectArrow, onCloseAnalysis, onAnalysisComplete }) {
   const [analyzingIdx, setAnalyzingIdx] = useState(0);
   const [isDone, setIsDone] = useState(false);
   const [analysisResults, setAnalysisResults] = useState([]);
   const [accuracies, setAccuracies] = useState({ w: 0, b: 0 });
   const [counts, setCounts] = useState({
-    w: { brilliant: 0, good: 0, neutral: 0, inaccuracy: 0, mistake: 0, blunder: 0 },
-    b: { brilliant: 0, good: 0, neutral: 0, inaccuracy: 0, mistake: 0, blunder: 0 }
+    w: { brilliant: 0, best: 0, excellent: 0, good: 0, neutral: 0, inaccuracy: 0, mistake: 0, blunder: 0 },
+    b: { brilliant: 0, best: 0, excellent: 0, good: 0, neutral: 0, inaccuracy: 0, mistake: 0, blunder: 0 }
   });
 
   const abortRef = useRef(false);
@@ -20,7 +45,6 @@ export default function AnalysisPanel({ history, onJumpToMove, onSelectArrow, on
     abortRef.current = false;
     async function runAnalysis() {
       const results = [];
-      let previousScore = 0.0; // Assume starting position is balanced (0.0)
 
       for (let i = 0; i < history.length; i++) {
         if (abortRef.current) return;
@@ -49,28 +73,36 @@ export default function AnalysisPanel({ history, onJumpToMove, onSelectArrow, on
           loss = scoreAfter - scoreBefore; // positive drops are bad
         }
 
-        // Move Classifications
+        // Move Classifications - Aligned with Chess.com parameters
         let classification = 'Neutral';
-        let badge = '?.';
+        let badge = ' ';
         let badgeClass = 'neutral-badge';
 
         if (loss <= -0.5) {
           classification = 'Brilliant';
           badge = '!!';
           badgeClass = 'brilliant-badge';
+        } else if (loss <= 0.01) {
+          classification = 'Best';
+          badge = '✓';
+          badgeClass = 'best-badge';
         } else if (loss <= 0.08) {
+          classification = 'Excellent';
+          badge = '✓';
+          badgeClass = 'excellent-badge';
+        } else if (loss <= 0.18) {
           classification = 'Good';
           badge = '!';
           badgeClass = 'good-badge';
-        } else if (loss <= 0.25) {
+        } else if (loss <= 0.35) {
           classification = 'Neutral';
           badge = ' ';
           badgeClass = 'neutral-badge';
-        } else if (loss <= 0.5) {
+        } else if (loss <= 0.6) {
           classification = 'Inaccuracy';
           badge = '?!';
           badgeClass = 'inaccuracy-badge';
-        } else if (loss <= 1.5) {
+        } else if (loss <= 1.3) {
           classification = 'Mistake';
           badge = '?';
           badgeClass = 'mistake-badge';
@@ -85,6 +117,8 @@ export default function AnalysisPanel({ history, onJumpToMove, onSelectArrow, on
           num: Math.floor(i / 2) + 1,
           san: move.san,
           color: move.color,
+          from: move.from,
+          to: move.to,
           fen: move.fen,
           score: scoreAfter,
           bestMove: evalBefore.bestMove,
@@ -101,6 +135,11 @@ export default function AnalysisPanel({ history, onJumpToMove, onSelectArrow, on
       calculateSummaries(results);
       setAnalysisResults(results);
       setIsDone(true);
+
+      // Bubble up the results to GameScreen so they can be rendered on the board!
+      if (onAnalysisComplete) {
+        onAnalysisComplete(results);
+      }
     }
 
     if (history.length > 0) {
@@ -115,8 +154,8 @@ export default function AnalysisPanel({ history, onJumpToMove, onSelectArrow, on
   }, [history]);
 
   const calculateSummaries = (results) => {
-    const wCounts = { brilliant: 0, good: 0, neutral: 0, inaccuracy: 0, mistake: 0, blunder: 0 };
-    const bCounts = { brilliant: 0, good: 0, neutral: 0, inaccuracy: 0, mistake: 0, blunder: 0 };
+    const wCounts = { brilliant: 0, best: 0, excellent: 0, good: 0, neutral: 0, inaccuracy: 0, mistake: 0, blunder: 0 };
+    const bCounts = { brilliant: 0, best: 0, excellent: 0, good: 0, neutral: 0, inaccuracy: 0, mistake: 0, blunder: 0 };
     
     let wTotalScore = 0;
     let bTotalScore = 0;
@@ -139,6 +178,8 @@ export default function AnalysisPanel({ history, onJumpToMove, onSelectArrow, on
 
       switch (res.classification) {
         case 'Brilliant': c.brilliant++; break;
+        case 'Best': c.best++; break;
+        case 'Excellent': c.excellent++; break;
         case 'Good': c.good++; break;
         case 'Neutral': c.neutral++; break;
         case 'Inaccuracy': c.inaccuracy++; break;
@@ -195,22 +236,38 @@ export default function AnalysisPanel({ history, onJumpToMove, onSelectArrow, on
     );
   }
 
+  const coachComment = getCoachCommentary(accuracies, counts, history.length);
+
   return (
     <div className="analysis-panel-container">
       {/* HEADER SECTION */}
       <div className="analysis-panel-header font-cinzel">
-        GAME ANALYSIS
+        GAME REVIEW
+      </div>
+
+      {/* COACH SUMMARY BLOCK */}
+      <div className="coach-review-card">
+        <div className="coach-avatar-container">
+          <div className="coach-avatar">
+            <span style={{ fontSize: '24px' }}>🤖</span>
+            <div className="coach-avatar-badge" />
+          </div>
+          <span className="coach-name font-cinzel">Coach Danny</span>
+        </div>
+        <div className="coach-bubble">
+          <p className="coach-text">{coachComment}</p>
+        </div>
       </div>
 
       {/* ACCURACIES SUMMARY */}
       <div className="analysis-accuracy-card">
         <div className="accuracies-row">
           <div className="accuracy-badge white">
-            <span className="accuracy-label">WHITE</span>
+            <span className="accuracy-label">WHITE ACCURACY</span>
             <span className="accuracy-percent">{accuracies.w}%</span>
           </div>
           <div className="accuracy-badge black">
-            <span className="accuracy-label">BLACK</span>
+            <span className="accuracy-label">BLACK ACCURACY</span>
             <span className="accuracy-percent">{accuracies.b}%</span>
           </div>
         </div>
@@ -219,6 +276,8 @@ export default function AnalysisPanel({ history, onJumpToMove, onSelectArrow, on
         <div className="quality-lists-container">
           <div className="quality-player-column">
             <div className="quality-summary-item"><span className="quality-badge brilliant-badge">!!</span> <span>{counts.w.brilliant} Brilliant</span></div>
+            <div className="quality-summary-item"><span className="quality-badge best-badge">✓</span> <span>{counts.w.best} Best Move</span></div>
+            <div className="quality-summary-item"><span className="quality-badge excellent-badge">✓</span> <span>{counts.w.excellent} Excellent</span></div>
             <div className="quality-summary-item"><span className="quality-badge good-badge">!</span> <span>{counts.w.good} Good</span></div>
             <div className="quality-summary-item"><span className="quality-badge inaccuracy-badge">?!</span> <span>{counts.w.inaccuracy} Inaccuracy</span></div>
             <div className="quality-summary-item"><span className="quality-badge mistake-badge">?</span> <span>{counts.w.mistake} Mistake</span></div>
@@ -226,6 +285,8 @@ export default function AnalysisPanel({ history, onJumpToMove, onSelectArrow, on
           </div>
           <div className="quality-player-column">
             <div className="quality-summary-item"><span className="quality-badge brilliant-badge">!!</span> <span>{counts.b.brilliant} Brilliant</span></div>
+            <div className="quality-summary-item"><span className="quality-badge best-badge">✓</span> <span>{counts.b.best} Best Move</span></div>
+            <div className="quality-summary-item"><span className="quality-badge excellent-badge">✓</span> <span>{counts.b.excellent} Excellent</span></div>
             <div className="quality-summary-item"><span className="quality-badge good-badge">!</span> <span>{counts.b.good} Good</span></div>
             <div className="quality-summary-item"><span className="quality-badge inaccuracy-badge">?!</span> <span>{counts.b.inaccuracy} Inaccuracy</span></div>
             <div className="quality-summary-item"><span className="quality-badge mistake-badge">?</span> <span>{counts.b.mistake} Mistake</span></div>
@@ -250,7 +311,9 @@ export default function AnalysisPanel({ history, onJumpToMove, onSelectArrow, on
                   onClick={() => handleRowClick(pair.white, pair.whiteIndex)}
                 >
                   <span className="san-text">{pair.white.san}</span>
-                  <span className={`analysis-move-badge ${pair.white.badgeClass}`}>{pair.white.badge}</span>
+                  {pair.white.badge !== ' ' && (
+                    <span className={`analysis-move-badge ${pair.white.badgeClass}`}>{pair.white.badge}</span>
+                  )}
                 </div>
 
                 {/* Black Move cell */}
@@ -260,7 +323,9 @@ export default function AnalysisPanel({ history, onJumpToMove, onSelectArrow, on
                     onClick={() => handleRowClick(pair.black, pair.blackIndex)}
                   >
                     <span className="san-text">{pair.black.san}</span>
-                    <span className={`analysis-move-badge ${pair.black.badgeClass}`}>{pair.black.badge}</span>
+                    {pair.black.badge !== ' ' && (
+                      <span className={`analysis-move-badge ${pair.black.badgeClass}`}>{pair.black.badge}</span>
+                    )}
                   </div>
                 ) : (
                   <div className="analysis-col-san black empty" />
@@ -273,7 +338,7 @@ export default function AnalysisPanel({ history, onJumpToMove, onSelectArrow, on
 
       {/* CLOSE BUTTON */}
       <button className="analysis-close-btn font-cinzel" onClick={onCloseAnalysis}>
-        Exit Analysis
+        Exit Game Review
       </button>
     </div>
   );

@@ -331,3 +331,84 @@
 .analysis-close-btn:active {
   transform: translateY(1px);
 }
+
+/* Redesigned Move Badges & Coach Review Styles */
+.best-badge {
+  background: #2b7023; /* Chess.com dark green best move */
+  box-shadow: 0 0 6px rgba(43, 112, 35, 0.4);
+}
+
+.excellent-badge {
+  background: #789c20;
+}
+
+.book-badge {
+  background: #a07a50;
+}
+
+/* Virtual Coach Styles */
+.coach-review-card {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.coach-avatar-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  width: 70px;
+}
+
+.coach-avatar {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.1);
+}
+
+.coach-avatar-badge {
+  position: absolute;
+  bottom: 1px;
+  right: 1px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981; /* Green online dot */
+  border: 1px solid #000;
+}
+
+.coach-name {
+  font-size: 9px;
+  color: var(--gold);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-align: center;
+}
+
+.coach-bubble {
+  flex: 1;
+  position: relative;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.coach-text {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text-secondary);
+}

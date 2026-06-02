@@ -20,7 +20,7 @@ const initGame = (fen) => {
 const FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 const RANKS = ['8', '7', '6', '5', '4', '3', '2', '1'];
 
-export default function ChessBoard({ bestMoveArrow }) {
+export default function ChessBoard({ bestMoveArrow, analysisResults, currentReviewIndex }) {
   const { state, handleSquareClick, currentTheme, dispatch } = useGame();
   const {
     fen, selectedSquare, validMoves, lastMove,
@@ -37,6 +37,13 @@ export default function ChessBoard({ bestMoveArrow }) {
   const flippedView = (playerColor === 'b') !== !!boardFlipped;
   const ranks = flippedView ? [...RANKS].reverse() : RANKS;
   const files = flippedView ? [...FILES].reverse() : FILES;
+
+  // Compute currently active reviewed move to display floaty badges on target squares
+  const activeMove = analysisResults && analysisResults.length > 0
+    ? (currentReviewIndex !== null 
+        ? (currentReviewIndex >= 0 ? analysisResults[currentReviewIndex] : null) 
+        : analysisResults[analysisResults.length - 1])
+    : null;
 
   // Show move indicators for non-hard AI modes
   const showMoveIndicators = gameMode !== 'local' && !(gameMode === 'vsAI' && aiDifficulty > 3);
@@ -339,6 +346,11 @@ export default function ChessBoard({ bestMoveArrow }) {
               )}
               {isValidTarget && cell && (
                 <div style={{position:'absolute',inset:0,borderRadius:'2px',border:'4px solid rgba(0,0,0,0.2)',pointerEvents:'none'}}/>
+              )}
+              {activeMove && activeMove.to === squareName && activeMove.badge !== ' ' && (
+                <div className={`board-eval-badge ${activeMove.badgeClass}`}>
+                  {activeMove.badge}
+                </div>
               )}
             </div>
           );

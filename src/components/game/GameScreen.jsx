@@ -253,6 +253,7 @@ export default function GameScreen() {
   // Analysis States
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisArrow, setAnalysisArrow] = useState(null);
+  const [analysisResults, setAnalysisResults] = useState([]);
   const [showGameOver, setShowGameOver] = useState(false);
 
   // New Setup Phase state for Chess.com Play Bots Setup screen
@@ -312,6 +313,7 @@ export default function GameScreen() {
     if (history.length === 0) {
       setIsAnalyzing(false);
       setAnalysisArrow(null);
+      setAnalysisResults([]);
     }
   }, [history.length]);
 
@@ -785,7 +787,7 @@ export default function GameScreen() {
           {/* Board + file labels */}
           <div style={{display:'flex',flexDirection:'column',gap:'4px'}}>
             <div className="board-outer">
-              <ChessBoard bestMoveArrow={analysisArrow} />
+              <ChessBoard bestMoveArrow={analysisArrow} analysisResults={analysisResults} currentReviewIndex={reviewIndex} />
             </div>
             {/* File labels BOTTOM */}
             <div style={{display:'flex',flexDirection:'row',width:'var(--board-size)',flexShrink:0}}>
@@ -827,6 +829,7 @@ export default function GameScreen() {
             history={history}
             onJumpToMove={handleJumpToMove}
             onSelectArrow={setAnalysisArrow}
+            onAnalysisComplete={setAnalysisResults}
             onCloseAnalysis={() => {
               setIsAnalyzing(false);
               setAnalysisArrow(null);

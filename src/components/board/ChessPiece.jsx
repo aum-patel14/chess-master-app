@@ -11,7 +11,8 @@ export default function ChessPiece({ piece, square, isSelected, animationsEnable
   
   const prevSquareRef = useRef(square);
   const key = `${piece.color}${piece.type.toUpperCase()}`;
-  const src = `${import.meta.env.BASE_URL}pieces/cburnett/${key}.svg`;
+  const pieceTheme = typeof localStorage !== 'undefined' ? (localStorage.getItem('chess_pieces') || 'cburnett') : 'cburnett';
+  const src = `${import.meta.env.BASE_URL}pieces/${pieceTheme}/${key}.svg`;
 
   useEffect(() => {
     const prevSquare = prevSquareRef.current;

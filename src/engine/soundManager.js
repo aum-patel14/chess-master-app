@@ -35,11 +35,31 @@ class SoundManager {
     return g;
   }
 
+  _getTheme() {
+    return typeof localStorage !== 'undefined' ? (localStorage.getItem('chess_sound_theme') || 'wood') : 'wood';
+  }
+
   playMove() {
     if (!this.enabled) return;
+    const theme = this._getTheme();
+    if (theme === 'silent') return;
     this.init(); this.resume();
     
     const t = this.ctx.currentTime;
+    
+    if (theme === 'digital') {
+      const osc = this.ctx.createOscillator();
+      const gain = this._gain(0.2);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(600, t);
+      osc.frequency.exponentialRampToValueAtTime(300, t + 0.05);
+      gain.gain.setValueAtTime(0.2 * this.volume, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+      osc.connect(gain);
+      osc.start(t);
+      osc.stop(t + 0.05);
+      return;
+    }
     
     // Thud component (low frequency)
     const osc = this.ctx.createOscillator();
@@ -85,9 +105,36 @@ class SoundManager {
 
   playCapture() {
     if (!this.enabled) return;
+    const theme = this._getTheme();
+    if (theme === 'silent') return;
     this.init(); this.resume();
     
     const t = this.ctx.currentTime;
+    
+    if (theme === 'digital') {
+      const osc1 = this.ctx.createOscillator();
+      const gain1 = this._gain(0.2);
+      osc1.type = 'triangle';
+      osc1.frequency.setValueAtTime(800, t);
+      osc1.frequency.exponentialRampToValueAtTime(400, t + 0.08);
+      gain1.gain.setValueAtTime(0.2 * this.volume, t);
+      gain1.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+      osc1.connect(gain1);
+      osc1.start(t);
+      osc1.stop(t + 0.08);
+      
+      const osc2 = this.ctx.createOscillator();
+      const gain2 = this._gain(0.15);
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(1000, t + 0.02);
+      osc2.frequency.exponentialRampToValueAtTime(500, t + 0.09);
+      gain2.gain.setValueAtTime(0.15 * this.volume, t + 0.02);
+      gain2.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
+      osc2.connect(gain2);
+      osc2.start(t + 0.02);
+      osc2.stop(t + 0.09);
+      return;
+    }
     
     // Aggressive thud
     const osc = this.ctx.createOscillator();
@@ -138,7 +185,26 @@ class SoundManager {
 
   playCheck() {
     if (!this.enabled) return;
+    const theme = this._getTheme();
+    if (theme === 'silent') return;
     this.init(); this.resume();
+    
+    if (theme === 'digital') {
+      [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {
+        const osc = this.ctx.createOscillator();
+        const gain = this._gain(0.12);
+        osc.type = 'sine';
+        const t = this.ctx.currentTime + i * 0.04;
+        osc.frequency.setValueAtTime(freq, t);
+        gain.gain.setValueAtTime(0.12 * this.volume, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+        osc.connect(gain);
+        osc.start(t);
+        osc.stop(t + 0.18);
+      });
+      return;
+    }
+    
     [440, 520, 660].forEach((freq, i) => {
       const osc = this.ctx.createOscillator();
       const gain = this._gain(0.12);
@@ -155,6 +221,8 @@ class SoundManager {
 
   playWin() {
     if (!this.enabled) return;
+    const theme = this._getTheme();
+    if (theme === 'silent') return;
     this.init(); this.resume();
     const melody = [523, 659, 784, 1047];
     melody.forEach((freq, i) => {
@@ -173,6 +241,8 @@ class SoundManager {
 
   playDraw() {
     if (!this.enabled) return;
+    const theme = this._getTheme();
+    if (theme === 'silent') return;
     this.init(); this.resume();
     [392, 370].forEach((freq, i) => {
       const osc = this.ctx.createOscillator();
@@ -189,6 +259,8 @@ class SoundManager {
 
   playSelect() {
     if (!this.enabled) return;
+    const theme = this._getTheme();
+    if (theme === 'silent') return;
     this.init(); this.resume();
     const osc = this.ctx.createOscillator();
     const gain = this._gain(0.08);

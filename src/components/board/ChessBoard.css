@@ -306,5 +306,75 @@
   50%       { opacity: 1;   transform: scale(1); }
 }
 
+/* ── Chess.com Style Board Evaluation Badges ── */
+.board-eval-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  color: white;
+  font-size: 10px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 15;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+  animation: floatIn 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28) both;
+}
+
+@keyframes floatIn {
+  0% {
+    transform: scale(0) translateY(10px);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Assessment badge colors */
+.board-eval-badge.brilliant-badge {
+  background: #1baca6;
+  border: 1.5px solid #ffffff;
+  box-shadow: 0 0 8px rgba(27, 172, 166, 0.6);
+}
+
+.board-eval-badge.best-badge {
+  background: #2b7023;
+  border: 1.5px solid #ffffff;
+  box-shadow: 0 0 6px rgba(43, 112, 35, 0.4);
+}
+
+.board-eval-badge.excellent-badge {
+  background: #789c20;
+  border: 1.5px solid #ffffff;
+}
+
+.board-eval-badge.good-badge {
+  background: #8ca28a;
+  border: 1.5px solid #ffffff;
+}
+
+.board-eval-badge.inaccuracy-badge {
+  background: #f4c430;
+  border: 1.5px solid #ffffff;
+}
+
+.board-eval-badge.mistake-badge {
+  background: #e58f2a;
+  border: 1.5px solid #ffffff;
+}
+
+.board-eval-badge.blunder-badge {
+  background: #b3312c;
+  border: 1.5px solid #ffffff;
+  box-shadow: 0 0 8px rgba(179, 49, 44, 0.6);
+}
+
 /* Legacy overrides removed to prevent layout conflicts */
 

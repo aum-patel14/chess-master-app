@@ -19,7 +19,7 @@ export default function SettingsPage() {
   const { dispatch } = useGame()
 
   const [theme, setTheme] = useLocalStorage('chess_theme', 'classic')
-  const [, setPieces] = useLocalStorage('chess_pieces', 'standard')
+  const [pieces, setPieces] = useLocalStorage('chess_pieces', 'cburnett')
   const [soundTheme, setSoundTheme] = useLocalStorage('chess_sound_theme', 'wood')
   const [animationSpeed, setAnimationSpeed] = useLocalStorage('chess_animation_speed', 'normal')
   const [highlightStyle, setHighlightStyle] = useLocalStorage('chess_highlight_style', 'glow')
@@ -203,7 +203,6 @@ export default function SettingsPage() {
                   type="button"
                   onClick={() => {
                     setTheme(t.id)
-                    setPieces('standard')
                     showToast('Theme changed ✓', 'success')
                   }}
                   style={{
@@ -230,6 +229,28 @@ export default function SettingsPage() {
               ))}
             </div>
             <Switch on={showCoords} onToggle={() => setShowCoords(!showCoords)} label="Coordinates" help="Show rank & file labels" />
+            <div style={{ marginTop: '16px' }}>
+              <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 8 }}>Piece Set Style</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                {[
+                  { id: 'cburnett', label: 'Neo' },
+                  { id: 'merida', label: 'Classic' },
+                  { id: 'alpha', label: 'Modern' }
+                ].map(p => (
+                  <button 
+                    key={p.id} 
+                    type="button" 
+                    style={pill(pieces === p.id)} 
+                    onClick={() => {
+                      setPieces(p.id);
+                      showToast(`${p.label} piece set selected`, 'success');
+                    }}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div style={{ marginTop: '16px' }}>
               <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 8 }}>Animation Speed</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
