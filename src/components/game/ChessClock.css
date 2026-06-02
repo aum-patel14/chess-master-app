@@ -1,0 +1,78 @@
+/* Premium ChessClock Styles */
+
+.chess-clock-container {
+  display: flex;
+  gap: 16px;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 12px 0;
+  flex-shrink: 0;
+}
+
+.clock-box {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
+  box-sizing: border-box;
+}
+
+.clock-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.45);
+  margin-bottom: 4px;
+}
+
+.clock-time {
+  font-size: 26px;
+  font-weight: 900;
+  font-family: monospace, sans-serif;
+  color: #fff;
+  letter-spacing: 0.5px;
+}
+
+/* Active Turn Clock Highlight */
+.clock-box.active {
+  background: rgba(212, 175, 55, 0.06);
+  border-color: #d4af37; /* Gold accent */
+  box-shadow: 0 0 15px rgba(212, 175, 55, 0.25);
+  transform: translateY(-2px);
+}
+
+.clock-box.active .clock-label {
+  color: #d4af37;
+}
+
+/* Low Time Danger Highlight */
+.clock-box.low-time {
+  background: rgba(239, 68, 68, 0.06) !important;
+  border-color: #ef4444 !important; /* Red warning */
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.3) !important;
+  animation: clockLowPulse 1s ease-in-out infinite;
+}
+
+.clock-box.low-time .clock-time {
+  color: #ef4444 !important;
+}
+
+.clock-box.low-time .clock-label {
+  color: #f87171 !important;
+}
+
+@keyframes clockLowPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02) translateY(-2px);
+  }
+}

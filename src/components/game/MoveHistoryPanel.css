@@ -1,7 +1,15 @@
-.move-history-scroll-container {
+/* Premium MoveHistoryPanel Overrides */
+
+.move-history-outer-wrap {
   display: flex;
   flex-direction: column;
   height: 100%;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.move-history-scroll-container {
+  flex: 1;
   width: 100%;
   overflow-y: auto;
   box-sizing: border-box;
@@ -11,8 +19,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 100%;
-  color: rgba(255, 255, 255, 0.35);
+  height: 100px;
+  color: rgba(255, 255, 255, 0.3);
   font-size: 13px;
   font-style: italic;
   padding: 24px;
@@ -32,7 +40,7 @@
   height: 32px;
   min-height: 32px;
   width: 100%;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 13px;
   font-weight: 500;
   box-sizing: border-box;
@@ -62,8 +70,10 @@
 
 .move-san-col {
   flex: 1;
-  padding-left: 8px;
-  color: rgba(255, 255, 255, 0.85);
+  padding: 4px 8px;
+  margin: 2px 4px;
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.8);
   cursor: pointer;
   transition: all 0.15s ease;
 }
@@ -78,5 +88,120 @@
   background: rgba(226, 176, 74, 0.2) !important;
   color: #e2b04a !important;
   font-weight: 700;
-  border-radius: 4px;
+}
+
+/* Playback Control Drawer */
+.history-playback-controls {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(0, 0, 0, 0.1);
+  box-sizing: border-box;
+}
+
+.history-playback-controls button {
+  flex: 1;
+  height: 36px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.history-playback-controls button:hover:not(:disabled) {
+  background: rgba(212, 175, 55, 0.08);
+  border-color: #d4af37;
+  color: #d4af37;
+}
+
+.history-playback-controls button:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+/* Copyable FEN Pill */
+.history-fen-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 16px;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.history-fen-display:hover {
+  border-color: rgba(212, 175, 55, 0.3);
+  background: rgba(212, 175, 55, 0.03);
+}
+
+.fen-label {
+  font-size: 10px;
+  font-weight: 800;
+  color: #d4af37;
+}
+
+.fen-text {
+  flex: 1;
+  font-size: 11px;
+  font-family: monospace;
+  color: rgba(255, 255, 255, 0.6);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fen-copy-icon {
+  color: rgba(255, 255, 255, 0.35);
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+
+.history-fen-display:hover .fen-copy-icon {
+  color: #d4af37;
+}
+
+/* Export PGN Button */
+.history-export-row {
+  padding: 0 16px 16px 16px;
+  box-sizing: border-box;
+}
+
+.export-pgn-btn {
+  width: 100%;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.export-pgn-btn:hover:not(:disabled) {
+  background: rgba(212, 175, 55, 0.08);
+  border-color: #d4af37;
+  color: #d4af37;
+}
+
+.export-pgn-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
 }

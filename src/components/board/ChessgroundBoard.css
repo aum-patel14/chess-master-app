@@ -1,0 +1,143 @@
+/* Chessground Premium Midnight Gold Theme Override */
+
+.chessground-board {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 4px solid #8B6914;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+  background-color: #2e4057; /* Fallback */
+}
+
+/* Light / Dark Square Overrides (Midnight Theme) */
+.cg-wrap {
+  background-size: cover;
+}
+
+.cg-wrap .cg-board {
+  background: radial-gradient(circle, #2a2a2a 0%, #1e1e1e 100%);
+}
+
+/* Custom Coordinate Letters & Numbers */
+.cg-wrap coord {
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  color: #d4af37 !important; /* Gold coordinates */
+  text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+  opacity: 0.85;
+}
+
+.cg-wrap coord.black {
+  color: #d4af37 !important;
+}
+
+/* Check highlight glow */
+.cg-wrap square.check {
+  background: radial-gradient(circle, rgba(239, 68, 68, 0.65) 0%, rgba(239, 68, 68, 0) 70%) !important;
+  box-shadow: inset 0 0 15px rgba(239, 68, 68, 0.5);
+}
+
+/* Last move square yellow overlays */
+.cg-wrap square.last-move {
+  background-color: rgba(212, 175, 55, 0.25) !important;
+}
+
+/* Selected square */
+.cg-wrap square.selected {
+  background-color: rgba(16, 185, 129, 0.3) !important;
+}
+
+/* Legal destination circles */
+.cg-wrap square.move-dest {
+  background: radial-gradient(rgba(16, 185, 129, 0.6) 18%, rgba(0,0,0,0) 24%) !important;
+}
+
+.cg-wrap square.occluded.move-dest {
+  background: none !important;
+  border: 4px solid rgba(16, 185, 129, 0.65) !important;
+  border-radius: 50%;
+}
+
+/* Neon Glow Theme */
+.cg-neon {
+  border-color: #8866ff !important;
+  box-shadow: 0 0 25px rgba(136, 102, 255, 0.45) !important;
+}
+
+.cg-neon .cg-wrap square.last-move {
+  background-color: rgba(136, 102, 255, 0.25) !important;
+}
+
+/* ── Pawn Promotion Dialog Styles ── */
+.cg-promotion-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 10, 20, 0.85);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  border-radius: 8px;
+}
+
+.cg-promotion-dialog {
+  background: rgba(26, 26, 46, 0.95);
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  border-radius: 16px;
+  padding: 24px;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+  max-width: 320px;
+  width: 90%;
+  animation: scaleIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.cg-promotion-dialog h3 {
+  color: #d4af37;
+  font-size: 18px;
+  margin: 0 0 18px 0;
+  letter-spacing: 0.05em;
+  text-shadow: 0 0 10px rgba(212, 175, 55, 0.2);
+}
+
+.cg-promotion-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cg-promo-btn {
+  height: 44px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.cg-promo-btn:hover {
+  background: rgba(212, 175, 55, 0.12);
+  border-color: #d4af37;
+  color: #d4af37;
+  box-shadow: 0 4px 12px rgba(212, 175, 55, 0.15);
+  transform: translateY(-1px);
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
