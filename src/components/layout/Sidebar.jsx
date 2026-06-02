@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Home, Trophy, BarChart2, Settings, BookOpen, Puzzle, ChevronLeft, ChevronRight, Menu } from 'lucide-react';
+import { Home, Trophy, BarChart2, Settings, BookOpen, Puzzle, ChevronLeft, ChevronRight, Menu, MoreHorizontal } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import './Sidebar.css';
 
@@ -19,7 +19,8 @@ export default function Sidebar({ isExpanded, onToggle, mobileOpen, setMobileOpe
     { label: 'Learn', icon: <BookOpen size={20} />, path: '/learn' },
     { label: 'Leaderboard', icon: <Trophy size={20} />, path: '/leaderboard' },
     { label: 'Stats', icon: <BarChart2 size={20} />, path: '/stats' },
-    { label: 'Settings', icon: <Settings size={20} />, path: '/settings' }
+    { label: 'Settings', icon: <Settings size={20} />, path: '/settings' },
+    { label: 'Other', icon: <MoreHorizontal size={20} />, path: '/other' }
   ];
 
   const SidebarContent = (

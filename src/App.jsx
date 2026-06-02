@@ -30,6 +30,7 @@ const GameHistoryPage = lazy(() => import('./pages/GameHistoryPage'));
 const TournamentsPage = lazy(() => import('./pages/TournamentsPage'));
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
 const DemoPage = lazy(() => import('./pages/DemoPage'));
+const OtherPage = lazy(() => import('./pages/OtherPage'));
 
 const suspenseFallback = (
   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#0a0a14', color: '#d4af37', fontSize: '2rem' }}>♛</div>
@@ -89,6 +90,7 @@ function RouteSwitch() {
             <Route path="/tournaments" element={<ErrorBoundary><TournamentsPage /></ErrorBoundary>} />
             <Route path="/privacy" element={<ErrorBoundary><PrivacyPolicy /></ErrorBoundary>} />
             <Route path="/watch" element={<ErrorBoundary><DemoPage /></ErrorBoundary>} />
+            <Route path="/other" element={<ErrorBoundary><OtherPage /></ErrorBoundary>} />
             <Route path="/train/*" element={<ErrorBoundary><DemoPage /></ErrorBoundary>} />
             <Route path="/community/*" element={<ErrorBoundary><DemoPage /></ErrorBoundary>} />
             <Route path="*" element={<Navigate to="/" replace />} />
