@@ -494,7 +494,7 @@
 }
 
 .player-bar {
-  width: calc(var(--board-size) + 36px);
+  width: var(--board-size);
   min-height: 52px;
   background: rgba(255, 255, 255, 0.05);
   border-radius: 8px;

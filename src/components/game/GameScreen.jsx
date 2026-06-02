@@ -750,31 +750,8 @@ export default function GameScreen() {
     <div className="game-page">
       {/* CENTER BOARD ZONE */}
       <div className="game-center">
-        {/* Black player bar */}
-        <div className="player-bar">
-          {topPlayer.isAI ? (
-            <AiStatusBar
-              isThinking={isAIThinking}
-              isSimpleMode={isSimpleMode}
-              difficulty={selectedDifficulty}
-              label={DIFFICULTY_CONFIG[selectedDifficulty]?.label ?? topPlayer.name}
-            />
-          ) : (
-            <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
-              <div style={{width:'32px',height:'32px',borderRadius:'50%',background:'#374151',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'14px',fontWeight:'600',color:'white'}}>{avatarLetterTop}</div>
-              <div style={{display:'flex',flexDirection:'column'}}>
-                <div style={{display:'flex',alignItems:'center',gap:'6px'}}>
-                  <span style={{fontSize:'14px',fontWeight:'500',color:'white'}}>{topPlayer.name}</span>
-                  <span style={{fontSize:'12px',padding:'2px 8px',background:'rgba(255,255,255,0.1)',borderRadius:'99px',color:'#aaa'}}>{topPlayer.rating}</span>
-                </div>
-              </div>
-            </div>
-          )}
-          {renderClock(topPlayer)}
-        </div>
-
         {/* Board row */}
-        <div style={{display:'flex',flexDirection:'row',alignItems:'flex-start',gap:'6px',flexShrink:0}}>
+        <div style={{display:'flex',flexDirection:'row',alignItems:'center',gap:'6px',flexShrink:0}}>
           {gameMode === 'vsAI' && !isSetupPhase && history.length > 0 && (
             <EvalBar score={evalScore} isMate={isMate} mateIn={mateIn} flipped={flippedView} />
           )}
@@ -784,11 +761,59 @@ export default function GameScreen() {
               <div key={r} style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'12px',fontWeight:'600',color:'rgba(255,255,255,0.6)'}}>{r}</div>
             ))}
           </div>
-          {/* Board + file labels */}
-          <div style={{display:'flex',flexDirection:'column',gap:'4px'}}>
+          {/* Board + player bars + file labels */}
+          <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
+            {/* Black player bar (Top) */}
+            <div className="player-bar" style={{ width: 'var(--board-size)' }}>
+              {topPlayer.isAI ? (
+                <AiStatusBar
+                  isThinking={isAIThinking}
+                  isSimpleMode={isSimpleMode}
+                  difficulty={selectedDifficulty}
+                  label={DIFFICULTY_CONFIG[selectedDifficulty]?.label ?? topPlayer.name}
+                />
+              ) : (
+                <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
+                  <div style={{width:'32px',height:'32px',borderRadius:'50%',background:'#374151',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'14px',fontWeight:'600',color:'white'}}>{avatarLetterTop}</div>
+                  <div style={{display:'flex',flexDirection:'column'}}>
+                    <div style={{display:'flex',alignItems:'center',gap:'6px'}}>
+                      <span style={{fontSize:'14px',fontWeight:'500',color:'white'}}>{topPlayer.name}</span>
+                      <span style={{fontSize:'12px',padding:'2px 8px',background:'rgba(255,255,255,0.1)',borderRadius:'99px',color:'#aaa'}}>{topPlayer.rating}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {renderClock(topPlayer)}
+            </div>
+
+            {/* Chessboard outer frame */}
             <div className="board-outer">
               <ChessBoard bestMoveArrow={analysisArrow} analysisResults={analysisResults} currentReviewIndex={reviewIndex} />
             </div>
+
+            {/* White player bar (Bottom) */}
+            <div className="player-bar" style={{ width: 'var(--board-size)' }}>
+              {bottomPlayer.isAI ? (
+                <AiStatusBar
+                  isThinking={isAIThinking}
+                  isSimpleMode={isSimpleMode}
+                  difficulty={selectedDifficulty}
+                  label={DIFFICULTY_CONFIG[selectedDifficulty]?.label ?? bottomPlayer.name}
+                />
+              ) : (
+                <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
+                  <div style={{width:'32px',height:'32px',borderRadius:'50%',background:'#4B5563',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'14px',fontWeight:'600',color:'white'}}>{avatarLetterBottom}</div>
+                  <div style={{display:'flex',flexDirection:'column'}}>
+                    <div style={{display:'flex',alignItems:'center',gap:'6px'}}>
+                      <span style={{fontSize:'14px',fontWeight:'500',color:'white'}}>{bottomPlayer.name}</span>
+                      <span style={{fontSize:'12px',padding:'2px 8px',background:'rgba(255,255,255,0.1)',borderRadius:'99px',color:'#aaa'}}>{bottomPlayer.rating}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {renderClock(bottomPlayer)}
+            </div>
+
             {/* File labels BOTTOM */}
             <div style={{display:'flex',flexDirection:'row',width:'var(--board-size)',flexShrink:0}}>
               {(flippedView?['h','g','f','e','d','c','b','a']:['a','b','c','d','e','f','g','h']).map(f=>(
@@ -796,29 +821,6 @@ export default function GameScreen() {
               ))}
             </div>
           </div>
-        </div>
-
-        {/* White player bar */}
-        <div className="player-bar">
-          {bottomPlayer.isAI ? (
-            <AiStatusBar
-              isThinking={isAIThinking}
-              isSimpleMode={isSimpleMode}
-              difficulty={selectedDifficulty}
-              label={DIFFICULTY_CONFIG[selectedDifficulty]?.label ?? bottomPlayer.name}
-            />
-          ) : (
-            <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
-              <div style={{width:'32px',height:'32px',borderRadius:'50%',background:'#4B5563',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'14px',fontWeight:'600',color:'white'}}>{avatarLetterBottom}</div>
-              <div style={{display:'flex',flexDirection:'column'}}>
-                <div style={{display:'flex',alignItems:'center',gap:'6px'}}>
-                  <span style={{fontSize:'14px',fontWeight:'500',color:'white'}}>{bottomPlayer.name}</span>
-                  <span style={{fontSize:'12px',padding:'2px 8px',background:'rgba(255,255,255,0.1)',borderRadius:'99px',color:'#aaa'}}>{bottomPlayer.rating}</span>
-                </div>
-              </div>
-            </div>
-          )}
-          {renderClock(bottomPlayer)}
         </div>
       </div>
 
