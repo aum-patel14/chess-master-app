@@ -146,9 +146,9 @@ export default function App() {
     <div className="app-root">
       <MotionConfig reducedMotion="user">
         {showOnboarding && !showSplash && <Onboarding onFinish={() => setShowOnboarding(false)} />}
-        <AuthProvider>
-          <GameProvider>
-            <ToastProvider>
+        <ToastProvider>
+          <AuthProvider>
+            <GameProvider>
               <HashRouter>
                 {showSplash ? (
                   <SplashScreen />
@@ -158,9 +158,9 @@ export default function App() {
                   </AppShell>
                 )}
               </HashRouter>
-            </ToastProvider>
-          </GameProvider>
-        </AuthProvider>
+            </GameProvider>
+          </AuthProvider>
+        </ToastProvider>
       </MotionConfig>
     </div>
   );
