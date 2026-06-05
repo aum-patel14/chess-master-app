@@ -6,6 +6,33 @@ import ConfirmModal from '../components/ConfirmModal'
 import { useToast } from '../hooks/useToast'
 import { useState } from 'react'
 
+function getOpeningFromMoves(moves) {
+  if (!moves || moves.length === 0) return 'King\'s Pawn Game';
+  const m1 = moves[0];
+  const m2 = moves[1];
+  
+  if (m1 === 'e4') {
+    if (m2 === 'c5') return 'Sicilian Defence';
+    if (m2 === 'e5') return 'King\'s Pawn Game';
+    if (m2 === 'e6') return 'French Defence';
+    if (m2 === 'c6') return 'Caro-Kann Defence';
+    if (m2 === 'd6') return 'Pirc Defence';
+    if (m2 === 'Nf6') return 'Alekhine\'s Defence';
+  } else if (m1 === 'd4') {
+    if (m2 === 'd5') return 'Queen\'s Gambit';
+    if (m2 === 'Nf6') return 'Indian Defence';
+    if (m2 === 'f5') return 'Dutch Defence';
+    if (m2 === 'e6') return 'Queen\'s Pawn Game';
+  } else if (m1 === 'Nf3') {
+    return 'Réti Opening';
+  } else if (m1 === 'c4') {
+    return 'English Opening';
+  } else if (m1 === 'f4') {
+    return 'Bird\'s Opening';
+  }
+  return 'King\'s Pawn Game';
+}
+
 export default function StatsPage() {
   const navigate = useNavigate()
   const { showToast } = useToast()
@@ -14,12 +41,15 @@ export default function StatsPage() {
   const stats = useMemo(() => readStats(), [])
   const elo = useMemo(() => readElo(), [])
 
-  let history = []
-  try {
-    history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]').slice(0, 5)
-  } catch {
-    history = []
-  }
+  const allHistory = useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]')
+    } catch {
+      return []
+    }
+  }, [])
+
+  const history = useMemo(() => allHistory.slice(0, 5), [allHistory])
 
   const total = stats.wins + stats.losses + stats.draws || 1
   const wPct = Math.round((stats.wins / total) * 100)
@@ -28,6 +58,73 @@ export default function StatsPage() {
 
   const circumference = 2 * Math.PI * 52
   const seg = (pct) => (pct / 100) * circumference
+
+  const currentStreakLabel = useMemo(() => {
+    if (stats.winStreak > 0) return `🔥 ${stats.winStreak} Win${stats.winStreak > 1 ? 's' : ''}`;
+    if (stats.lossStreak > 0) return `💀 ${stats.lossStreak} Loss${stats.lossStreak > 1 ? 'es' : ''}`;
+    if (stats.drawStreak > 0) return `🤝 ${stats.drawStreak} Draw${stats.drawStreak > 1 ? 's' : ''}`;
+    return '0';
+  }, [stats]);
+
+  const longestGame = useMemo(() => {
+    return allHistory.reduce((max, g) => Math.max(max, g.moveCount || 0), 0);
+  }, [allHistory]);
+
+  const favOpening = useMemo(() => {
+    const gamesWithMoves = allHistory.filter(g => g.moves && g.moves.length > 0);
+    if (gamesWithMoves.length === 0) return 'King\'s Pawn Game';
+    
+    const openingCounts = {};
+    gamesWithMoves.forEach(g => {
+      const op = getOpeningFromMoves(g.moves);
+      openingCounts[op] = (openingCounts[op] || 0) + 1;
+    });
+    
+    let bestOp = 'King\'s Pawn Game';
+    let maxCount = 0;
+    for (const [op, count] of Object.entries(openingCounts)) {
+      if (count > maxCount) {
+        maxCount = count;
+        bestOp = op;
+      }
+    }
+    return bestOp;
+  }, [allHistory]);
+
+  const eloHistory = useMemo(() => {
+    const list = [...allHistory].reverse()
+    const ratings = list.map(g => g.ratingAfter).filter(r => typeof r === 'number')
+    
+    if (ratings.length === 0) {
+      ratings.push(elo)
+    }
+    if (ratings.length === 1) {
+      ratings.unshift(ratings[0] > 800 ? 800 : ratings[0] - 50)
+    }
+    return ratings.slice(-30)
+  }, [allHistory, elo])
+
+  const { polylinePoints, polygonPoints, minElo, maxElo } = useMemo(() => {
+    const min = Math.min(...eloHistory)
+    const max = Math.max(...eloHistory)
+    const range = max - min
+    const pad = range === 0 ? 100 : range * 0.15
+    const minElo = Math.max(100, Math.round(min - pad))
+    const maxElo = Math.round(max + pad)
+    const eloRange = maxElo - minElo || 100
+    const N = eloHistory.length
+
+    const points = eloHistory.map((val, idx) => {
+      const x = N > 1 ? (idx / (N - 1)) * 100 : 50
+      const y = 100 - ((val - minElo) / eloRange) * 80 - 10
+      return { x, y }
+    })
+
+    const polylinePoints = points.map(p => `${p.x},${p.y}`).join(' ')
+    const polygonPoints = `0,100 ${polylinePoints} 100,100`
+
+    return { polylinePoints, polygonPoints, minElo, maxElo }
+  }, [eloHistory])
 
   const onReset = () => {
     localStorage.removeItem(STATS_KEY)
@@ -149,26 +246,26 @@ export default function StatsPage() {
           </div>
         </section>
 
-        {/* Rating History Chart (Mock SVG) */}
+        {/* Rating History Chart (Real SVG) */}
         <section style={{ background: '#1a1a2e', borderRadius: 16, padding: 24, marginBottom: 20, border: '1px solid rgba(212,175,55,0.15)' }}>
           <h2 style={{ fontFamily: 'Cinzel, serif', color: '#d4af37', marginBottom: 16, fontSize: '1.1rem' }}>Rating History (Last 30 Games)</h2>
           <div style={{ width: '100%', height: '200px', position: 'relative', borderBottom: '1px solid #333', borderLeft: '1px solid #333' }}>
             <svg width="100%" height="100%" preserveAspectRatio="none" viewBox="0 0 100 100">
               <defs>
                 <linearGradient id="chartGradient" x1="0" x2="0" y1="0" y2="1">
-                  <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.3" />
-                  <stop offset="100%" stopColor="var(--accent)" stopOpacity="0" />
+                  <stop offset="0%" stopColor="#81b64c" stopOpacity="0.3" />
+                  <stop offset="100%" stopColor="#81b64c" stopOpacity="0" />
                 </linearGradient>
               </defs>
-              <polygon points="0,100 0,60 10,55 20,65 30,50 40,45 50,30 60,40 70,25 80,15 90,20 100,10 100,100" fill="url(#chartGradient)" />
-              <polyline points="0,60 10,55 20,65 30,50 40,45 50,30 60,40 70,25 80,15 90,20 100,10" fill="none" stroke="var(--accent)" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+              <polygon points={polygonPoints} fill="url(#chartGradient)" />
+              <polyline points={polylinePoints} fill="none" stroke="#81b64c" strokeWidth="2" vectorEffect="non-scaling-stroke" />
             </svg>
-            <div style={{ position: 'absolute', top: 0, left: '-30px', fontSize: '10px', color: '#666' }}>Max</div>
-            <div style={{ position: 'absolute', bottom: 0, left: '-30px', fontSize: '10px', color: '#666' }}>Min</div>
+            <div style={{ position: 'absolute', top: 5, left: 10, fontSize: '10px', color: '#888', fontWeight: 600 }}>{maxElo}</div>
+            <div style={{ position: 'absolute', bottom: 5, left: 10, fontSize: '10px', color: '#888', fontWeight: 600 }}>{minElo}</div>
           </div>
         </section>
 
-        {/* 2x3 Stats Grid */}
+        {/* 2x4 Stats Grid */}
         <div
           style={{
             display: 'grid',
@@ -180,10 +277,12 @@ export default function StatsPage() {
           {[
             ['🏆', 'Total Games', stats.gamesPlayed || 0],
             ['📈', 'Win Rate %', `${wPct || 0}%`],
-            ['🎯', 'Average Accuracy', '82.4%'],
+            ['🎯', 'Average Accuracy', stats.avgAccuracy ? `${stats.avgAccuracy}%` : '—'],
+            ['⚡', 'Current Streak', currentStreakLabel],
             ['🔥', 'Best Win Streak', stats.bestStreak || 0],
-            ['⏱️', 'Longest Game', '68 moves'],
-            ['♟️', 'Favourite Opening', 'Sicilian Defence'],
+            ['🧩', 'Puzzles Solved', stats.puzzlesSolved || 0],
+            ['⏱️', 'Longest Game', longestGame > 0 ? `${longestGame} moves` : '—'],
+            ['♟️', 'Favourite Opening', favOpening],
           ].map(([icon, label, val]) => (
             <div
               key={label}

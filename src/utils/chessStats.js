@@ -42,15 +42,29 @@ const ELO_DELTA = { easy: { win: 8, loss: -8, draw: 4 }, medium: { win: 15, loss
 export function updateStats(result) {
   const stats = readStats()
   stats.gamesPlayed = (stats.gamesPlayed || 0) + 1
+  
+  if (!stats.winStreak) stats.winStreak = 0;
+  if (!stats.lossStreak) stats.lossStreak = 0;
+  if (!stats.drawStreak) stats.drawStreak = 0;
+
   if (result === 'win') {
     stats.wins = (stats.wins || 0) + 1
-    stats.streak = (stats.streak || 0) + 1
-    stats.bestStreak = Math.max(stats.streak, stats.bestStreak || 0)
+    stats.winStreak = (stats.winStreak || 0) + 1
+    stats.lossStreak = 0
+    stats.drawStreak = 0
+    stats.streak = stats.winStreak
+    stats.bestStreak = Math.max(stats.winStreak, stats.bestStreak || 0)
   } else if (result === 'loss') {
     stats.losses = (stats.losses || 0) + 1
-    stats.streak = 0
+    stats.winStreak = 0
+    stats.lossStreak = (stats.lossStreak || 0) + 1
+    stats.drawStreak = 0
+    stats.streak = -stats.lossStreak
   } else if (result === 'draw') {
     stats.draws = (stats.draws || 0) + 1
+    stats.winStreak = 0
+    stats.lossStreak = 0
+    stats.drawStreak = (stats.drawStreak || 0) + 1
     stats.streak = 0
   }
   writeStats(stats)
@@ -67,6 +81,13 @@ export function updateEloForResult(result, aiDifficulty) {
   elo = Math.max(100, elo)
   writeElo(elo)
   return elo
+}
+
+export function incrementPuzzlesSolved() {
+  const stats = readStats()
+  stats.puzzlesSolved = (stats.puzzlesSolved || 0) + 1
+  writeStats(stats)
+  return stats
 }
 
 export function appendGameHistory(entry) {

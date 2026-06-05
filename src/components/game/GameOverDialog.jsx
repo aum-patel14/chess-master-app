@@ -14,7 +14,7 @@ const STATUS_CONFIG = {
 };
 
 export default function GameOverDialog({ status, onNewGame, onRematch, onMenu, moveCount, onAnalyze }) {
-  const { state } = useGame();
+  const { state, playerElo, eloChange } = useGame();
   const config = STATUS_CONFIG[status.type] || STATUS_CONFIG.draw;
 
   // Generate simulated accuracy scores once on mount
@@ -95,11 +95,24 @@ export default function GameOverDialog({ status, onNewGame, onRematch, onMenu, m
         {/* STATS SUMMARY */}
         <div className="result-stats">
           <div className="result-stat">
-            <span className="rs-label">Total Moves</span>
+            <span className="rs-label">Moves</span>
             <span className="rs-value">{moveCount}</span>
           </div>
+          {state.gameMode === 'vsAI' && (
+            <div className="result-stat">
+              <span className="rs-label">ELO</span>
+              <span className="rs-value" style={{ color: '#d4af37', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {playerElo}
+                {eloChange !== 0 && (
+                  <span style={{ fontSize: '11px', color: eloChange > 0 ? '#22c55e' : '#ef4444', marginLeft: '3px' }}>
+                    ({eloChange > 0 ? '+' : ''}{eloChange})
+                  </span>
+                )}
+              </span>
+            </div>
+          )}
           <div className="result-stat">
-            <span className="rs-label">Result Code</span>
+            <span className="rs-label">Result</span>
             <span className="rs-value" style={{ color: config.color }}>
               {status.winner ? (status.winner === 'White' ? '1-0' : '0-1') : '½-½'}
             </span>

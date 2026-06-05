@@ -7,8 +7,10 @@ import PageShell from '../components/PageShell';
 import ChessBoard from '../components/ChessBoard';
 import GameOverDialog from '../components/game/GameOverDialog';
 import MultiplayerLobby from '../components/game/MultiplayerLobby';
-import { readElo } from '../utils/chessStats';
-import { ArrowLeft, ArrowRight, ChevronsLeft, ChevronsRight, Flag, RefreshCw, Undo2, HelpCircle } from 'lucide-react';
+import { readElo, readStats, writeStats } from '../utils/chessStats';
+import { ArrowLeft, ArrowRight, ChevronsLeft, ChevronsRight, Flag, RefreshCw, Undo2, HelpCircle, Download, Share2 } from 'lucide-react';
+import AnalysisPanel from '../components/game/AnalysisPanel';
+import { downloadPgn, generatePgnString } from '../utils/pgnExporter';
 
 interface Bot {
   id: string;
@@ -87,6 +89,38 @@ export default function GamePage() {
   const [historyExpanded, setHistoryExpanded] = useState(false);
   const [reviewIndex, setReviewIndex] = useState<number | null>(null);
   const [isDesktop, setIsDesktop] = useState(typeof window !== 'undefined' && window.innerWidth > 900);
+
+  const [showAnalysis, setShowAnalysis] = useState(false);
+  const [analysisResults, setAnalysisResults] = useState<any[] | null>(null);
+  const [bestMoveArrow, setBestMoveArrow] = useState<{ from: string; to: string } | null>(null);
+
+  const handleAnalysisComplete = (results: any[]) => {
+    setAnalysisResults(results);
+    
+    let wTotalScore = 0;
+    let wMoves = 0;
+    results.forEach(res => {
+      const moveAccuracy = Math.max(0, Math.min(100, Math.round(100 * Math.exp(-2.0 * Math.max(0, res.loss)))));
+      if (res.color === 'w') {
+        wTotalScore += moveAccuracy;
+        wMoves++;
+      }
+    });
+    const playerAcc = wMoves > 0 ? Math.round(wTotalScore / wMoves) : 100;
+    
+    try {
+      const stats = readStats();
+      const currentAvg = stats.avgAccuracy || 80.0;
+      const gamesWithAcc = stats.gamesWithAccuracy || 0;
+      const newAvg = ((currentAvg * gamesWithAcc) + playerAcc) / (gamesWithAcc + 1);
+      
+      stats.avgAccuracy = Math.round(newAvg * 10) / 10;
+      stats.gamesWithAccuracy = gamesWithAcc + 1;
+      writeStats(stats);
+    } catch (e) {
+      console.warn("Failed to update average accuracy:", e);
+    }
+  };
 
   useEffect(() => {
     const handleResize = () => {
@@ -533,7 +567,11 @@ export default function GamePage() {
 
               {/* 2. CHESS BOARD */}
               <div style={{ width: '100%', position: 'relative' }}>
-                <ChessBoard currentReviewIndex={reviewIndex} />
+                <ChessBoard
+                  currentReviewIndex={reviewIndex}
+                  analysisResults={analysisResults}
+                  bestMoveArrow={bestMoveArrow}
+                />
               </div>
 
               {/* 3. PLAYER INFO BAR */}
@@ -619,7 +657,7 @@ export default function GamePage() {
                   flex: '1 1 40%',
                   background: '#1a1a1a',
                   borderRadius: '12px',
-                  padding: '24px',
+                  padding: showAnalysis ? '0px' : '24px',
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
@@ -627,317 +665,106 @@ export default function GamePage() {
                   boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
                   minWidth: '340px',
                   maxHeight: '620px',
+                  overflow: 'hidden',
                 }}
               >
-                {/* Game / Opponent Header */}
-                <div style={{ borderBottom: '1px solid #333', paddingBottom: '14px', marginBottom: '16px', textAlign: 'left' }}>
-                  <h3 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: '#fff' }}>
-                    {state.gameMode === 'vsAI' ? `🤖 vs ${activeBot.name}` : state.gameMode === 'online' ? `⚔️ vs ${state.opponentName || 'Online'}` : '👥 Local Game'}
-                  </h3>
-                  <p style={{ fontSize: '12px', color: '#aaaaaa', marginTop: '4px', margin: '4px 0 0 0', lineHeight: '1.4' }}>
-                    {state.gameMode === 'vsAI' ? activeBot.bio : 'Analyze positions, review mistakes and play in real time.'}
-                  </p>
-                </div>
-
-                {/* Move List Section */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: '220px' }}>
-                  <h4 style={{ fontSize: '13px', fontWeight: 800, color: '#888', margin: '0 0 8px 0', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'left' }}>
-                    Moves
-                  </h4>
-                  <div style={{ flex: 1, background: '#111111', borderRadius: '6px', border: '1px solid #2d2d2d', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '50px 1fr 1fr', padding: '8px 12px', background: '#202020', fontSize: '11px', color: '#888', fontWeight: 700, borderBottom: '1px solid #2d2d2d', textAlign: 'left' }}>
-                      <div>#</div>
-                      <div>White</div>
-                      <div>Black</div>
+                {showAnalysis ? (
+                  <AnalysisPanel
+                    history={state.history}
+                    onJumpToMove={handleMoveClick}
+                    onSelectArrow={(arrow) => setBestMoveArrow(arrow)}
+                    onCloseAnalysis={() => {
+                      setShowAnalysis(false);
+                      setBestMoveArrow(null);
+                      setReviewIndex(null);
+                      dispatch({ type: 'SET_REVIEW_FEN', payload: null });
+                    }}
+                    onAnalysisComplete={handleAnalysisComplete}
+                  />
+                ) : (
+                  <>
+                    {/* Game / Opponent Header */}
+                    <div style={{ borderBottom: '1px solid #333', paddingBottom: '14px', marginBottom: '16px', textAlign: 'left' }}>
+                      <h3 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: '#fff' }}>
+                        {state.gameMode === 'vsAI' ? `🤖 vs ${activeBot.name}` : state.gameMode === 'online' ? `⚔️ vs ${state.opponentName || 'Online'}` : '👥 Local Game'}
+                      </h3>
+                      <p style={{ fontSize: '12px', color: '#aaaaaa', marginTop: '4px', margin: '4px 0 0 0', lineHeight: '1.4' }}>
+                        {state.gameMode === 'vsAI' ? activeBot.bio : 'Analyze positions, review mistakes and play in real time.'}
+                      </p>
                     </div>
-                    <div style={{ flex: 1, overflowY: 'auto', maxHeight: '240px' }}>
-                      {state.history.length === 0 ? (
-                        <div style={{ padding: '24px 12px', color: '#555', textAlign: 'center', fontSize: '13px' }}>
-                          No moves played yet.
+
+                    {/* Move List Section */}
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: '220px' }}>
+                      <h4 style={{ fontSize: '13px', fontWeight: 800, color: '#888', margin: '0 0 8px 0', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'left' }}>
+                        Moves
+                      </h4>
+                      <div style={{ flex: 1, background: '#111111', borderRadius: '6px', border: '1px solid #2d2d2d', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '50px 1fr 1fr', padding: '8px 12px', background: '#202020', fontSize: '11px', color: '#888', fontWeight: 700, borderBottom: '1px solid #2d2d2d', textAlign: 'left' }}>
+                          <div>#</div>
+                          <div>White</div>
+                          <div>Black</div>
                         </div>
-                      ) : (
-                        (() => {
-                          const rows = [];
-                          for (let i = 0; i < state.history.length; i += 2) {
-                            const turnNum = Math.floor(i / 2) + 1;
-                            rows.push({
-                              turnNum,
-                              white: state.history[i],
-                              whiteIdx: i,
-                              black: state.history[i + 1],
-                              blackIdx: i + 1,
-                            });
-                          }
-                          return rows.map((row) => (
-                            <div
-                              key={row.turnNum}
-                              style={{
-                                display: 'grid',
-                                gridTemplateColumns: '50px 1fr 1fr',
-                                padding: '8px 12px',
-                                borderBottom: '1px solid #222',
-                                fontSize: '13px',
-                                fontFamily: 'monospace',
-                                textAlign: 'left',
-                              }}
-                            >
-                              <div style={{ color: '#555' }}>{row.turnNum}</div>
-                              <div
-                                onClick={() => handleMoveClick(row.whiteIdx)}
-                                style={{
-                                  color: reviewIndex === row.whiteIdx ? '#6bbd44' : '#ffffff',
-                                  cursor: 'pointer',
-                                  fontWeight: reviewIndex === row.whiteIdx ? 700 : 400,
-                                }}
-                              >
-                                {row.white.san}
-                              </div>
-                              <div
-                                onClick={() => row.black && handleMoveClick(row.blackIdx)}
-                                style={{
-                                  color: row.black && reviewIndex === row.blackIdx ? '#6bbd44' : '#ffffff',
-                                  cursor: 'pointer',
-                                  fontWeight: row.black && reviewIndex === row.blackIdx ? 700 : 400,
-                                }}
-                              >
-                                {row.black ? row.black.san : ''}
-                              </div>
+                        <div style={{ flex: 1, overflowY: 'auto', maxHeight: '240px' }}>
+                          {state.history.length === 0 ? (
+                            <div style={{ padding: '24px 12px', color: '#555', textAlign: 'center', fontSize: '13px' }}>
+                              No moves played yet.
                             </div>
-                          ));
-                        })()
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Navigation Arrows under list */}
-                  <div style={{ display: 'flex', justifyContent: 'center', gap: '14px', alignItems: 'center', marginTop: '12px' }}>
-                    <button onClick={handleFirstMove} style={navArrowStyle}>
-                      <ChevronsLeft size={16} />
-                    </button>
-                    <button onClick={handlePrevMove} style={navArrowStyle}>
-                      <ArrowLeft size={16} />
-                    </button>
-                    <button onClick={handleNextMove} style={navArrowStyle}>
-                      <ArrowRight size={16} />
-                    </button>
-                    <button onClick={handleLastMove} style={navArrowStyle}>
-                      <ChevronsRight size={16} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Primary Game Action Row */}
-                <div style={{ display: 'flex', gap: '8px', margin: '20px 0 12px 0' }}>
-                  <button onClick={undoMove} style={historySubBtnStyle}>
-                    <Undo2 size={13} style={{ marginRight: '4px' }} /> Undo
-                  </button>
-                  <button onClick={handleHint} style={historySubBtnStyle}>
-                    💡 Hint
-                  </button>
-                  <button onClick={handleFlip} style={historySubBtnStyle}>
-                    <RefreshCw size={13} style={{ marginRight: '4px' }} /> Flip
-                  </button>
-                </div>
-
-                {/* Secondary actions + Resign */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button onClick={() => showToast('Game saved to history local storage', 'success')} style={historySubBtnStyle}>
-                      Save
-                    </button>
-                    <button onClick={() => showToast('FEN string copied to clipboard', 'info')} style={historySubBtnStyle}>
-                      Copy FEN
-                    </button>
-                    <button
-                      onClick={() => {
-                        setIsPlaying(false);
-                        setGameState('selection');
-                        navigate('/game', { state: { mode: 'ai' } });
-                      }}
-                      style={{ ...historySubBtnStyle, background: '#6bbd44', color: '#fff', borderColor: '#6bbd44' }}
-                    >
-                      New Game
-                    </button>
-                  </div>
-
-                  <button
-                    onClick={resign}
-                    style={{
-                      height: '44px',
-                      borderRadius: '6px',
-                      background: '#8b1a1a',
-                      border: 'none',
-                      color: '#ffffff',
-                      fontSize: '14px',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px',
-                      marginTop: '8px',
-                      transition: 'background 0.2s',
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = '#a62424')}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = '#8b1a1a')}
-                  >
-                    <Flag size={14} fill="#ffffff" /> Resign
-                  </button>
-                </div>
-              </div>
-            ) : (
-              // Mobile Bottom controls
-              <>
-                {/* 4. ACTION BUTTONS */}
-                <div
-                  style={{
-                    background: '#222222',
-                    padding: '10px 16px',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    gap: '8px',
-                    borderBottom: '1px solid #333',
-                  }}
-                >
-                  <button
-                    onClick={undoMove}
-                    style={{
-                      flex: 1,
-                      height: '42px',
-                      borderRadius: '20px',
-                      background: '#3a3a3a',
-                      border: 'none',
-                      color: '#ffffff',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px',
-                      fontSize: '13px',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <Undo2 size={16} /> Undo
-                  </button>
-                  <button
-                    onClick={handleHint}
-                    style={{
-                      flex: 1,
-                      height: '42px',
-                      borderRadius: '20px',
-                      background: '#3a3a3a',
-                      border: 'none',
-                      color: '#ffffff',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px',
-                      fontSize: '13px',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    💡 Hint
-                  </button>
-                  <button
-                    onClick={handleFlip}
-                    style={{
-                      flex: 1,
-                      height: '42px',
-                      borderRadius: '20px',
-                      background: '#3a3a3a',
-                      border: 'none',
-                      color: '#ffffff',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px',
-                      fontSize: '13px',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <RefreshCw size={16} /> Flip
-                  </button>
-                  <button
-                    onClick={() => setHistoryExpanded(prev => !prev)}
-                    style={{
-                      flex: 1,
-                      height: '42px',
-                      borderRadius: '20px',
-                      background: '#3a3a3a',
-                      border: 'none',
-                      color: '#ffffff',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px',
-                      fontSize: '13px',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    ☰ Options
-                  </button>
-                </div>
-
-                {/* 5. MOVE HISTORY (collapsible panel) */}
-                <div style={{ background: '#1c1c1c', borderBottom: '1px solid #333' }}>
-                  <button
-                    onClick={() => setHistoryExpanded(p => !p)}
-                    style={{
-                      width: '100%',
-                      height: '36px',
-                      background: 'transparent',
-                      border: 'none',
-                      color: '#aaaaaa',
-                      fontSize: '13px',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '4px',
-                    }}
-                  >
-                    Move History {historyExpanded ? '▲' : '▼'}
-                  </button>
-
-                  {historyExpanded && (
-                    <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      {/* Move string notation container */}
-                      <div
-                        style={{
-                          maxHeight: '100px',
-                          overflowY: 'auto',
-                          background: '#111',
-                          borderRadius: '6px',
-                          padding: '8px 12px',
-                          fontSize: '13px',
-                          fontFamily: 'monospace',
-                          color: '#4ade80',
-                          lineHeight: 1.5,
-                          textAlign: 'left',
-                        }}
-                      >
-                        {state.history.length === 0 ? (
-                          <span style={{ color: '#555' }}>No moves made yet.</span>
-                        ) : (
-                          state.history.map((m, idx) => {
-                            const isWhiteMove = idx % 2 === 0;
-                            const turnNum = Math.floor(idx / 2) + 1;
-                            return (
-                              <span key={idx} style={{ marginRight: '8px', color: reviewIndex === idx ? '#ffcc00' : '#ffffff' }}>
-                                {isWhiteMove && `${turnNum}. `}
-                                {m.san}
-                              </span>
-                            );
-                          })
-                        )}
+                          ) : (
+                            (() => {
+                              const rows = [];
+                              for (let i = 0; i < state.history.length; i += 2) {
+                                const turnNum = Math.floor(i / 2) + 1;
+                                rows.push({
+                                  turnNum,
+                                  white: state.history[i],
+                                  whiteIdx: i,
+                                  black: state.history[i + 1],
+                                  blackIdx: i + 1,
+                                });
+                              }
+                              return rows.map((row) => (
+                                <div
+                                  key={row.turnNum}
+                                  style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: '50px 1fr 1fr',
+                                    padding: '8px 12px',
+                                    borderBottom: '1px solid #222',
+                                    fontSize: '13px',
+                                    fontFamily: 'monospace',
+                                    textAlign: 'left',
+                                  }}
+                                >
+                                  <div style={{ color: '#555' }}>{row.turnNum}</div>
+                                  <div
+                                    onClick={() => handleMoveClick(row.whiteIdx)}
+                                    style={{
+                                      color: reviewIndex === row.whiteIdx ? '#6bbd44' : '#ffffff',
+                                      cursor: 'pointer',
+                                      fontWeight: reviewIndex === row.whiteIdx ? 700 : 400,
+                                    }}
+                                  >
+                                    {row.white.san}
+                                  </div>
+                                  <div
+                                    onClick={() => row.black && handleMoveClick(row.blackIdx)}
+                                    style={{
+                                      color: row.black && reviewIndex === row.blackIdx ? '#6bbd44' : '#ffffff',
+                                      cursor: 'pointer',
+                                      fontWeight: row.black && reviewIndex === row.blackIdx ? 700 : 400,
+                                    }}
+                                  >
+                                    {row.black ? row.black.san : ''}
+                                  </div>
+                                </div>
+                              ));
+                            })()
+                          )}
+                        </div>
                       </div>
 
-                      {/* Navigation arrows */}
-                      <div style={{ display: 'flex', justifyContent: 'center', gap: '14px', alignItems: 'center' }}>
+                      {/* Navigation Arrows under list */}
+                      <div style={{ display: 'flex', justifyContent: 'center', gap: '14px', alignItems: 'center', marginTop: '12px' }}>
                         <button onClick={handleFirstMove} style={navArrowStyle}>
                           <ChevronsLeft size={16} />
                         </button>
@@ -951,20 +778,49 @@ export default function GamePage() {
                           <ChevronsRight size={16} />
                         </button>
                       </div>
+                    </div>
 
-                      {/* Save / Share / New buttons row */}
+                    {/* Primary Game Action Row */}
+                    <div style={{ display: 'flex', gap: '8px', margin: '20px 0 12px 0' }}>
+                      <button onClick={undoMove} style={historySubBtnStyle}>
+                        <Undo2 size={13} style={{ marginRight: '4px' }} /> Undo
+                      </button>
+                      <button onClick={handleHint} style={historySubBtnStyle}>
+                        💡 Hint
+                      </button>
+                      <button onClick={handleFlip} style={historySubBtnStyle}>
+                        <RefreshCw size={13} style={{ marginRight: '4px' }} /> Flip
+                      </button>
+                    </div>
+
+                    {/* Secondary actions + Resign */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <button
-                          onClick={() => showToast('Game saved to history local storage', 'success')}
+                          onClick={() => {
+                            if (state.history.length > 0) {
+                              downloadPgn(state.history, state.playerColor, state.gameMode, state.opponentName || (state.gameMode === 'vsAI' ? activeBot.name : 'Local'), state.status);
+                              showToast('PGN Downloaded', 'success');
+                            } else {
+                              showToast('No moves to export', 'warning');
+                            }
+                          }}
                           style={historySubBtnStyle}
                         >
-                          Save
+                          <Download size={12} style={{ marginRight: '3px' }} /> PGN
                         </button>
                         <button
-                          onClick={() => showToast('FEN string copied to clipboard', 'info')}
+                          onClick={() => {
+                            if (state.history.length > 0) {
+                              navigator.clipboard.writeText(generatePgnString(state.history, state.playerColor, state.gameMode, state.opponentName || (state.gameMode === 'vsAI' ? activeBot.name : 'Local'), state.status));
+                              showToast('PGN copied to clipboard', 'success');
+                            } else {
+                              showToast('No moves to copy', 'warning');
+                            }
+                          }}
                           style={historySubBtnStyle}
                         >
-                          Share
+                          <Share2 size={12} style={{ marginRight: '3px' }} /> Copy PGN
                         </button>
                         <button
                           onClick={() => {
@@ -972,40 +828,291 @@ export default function GamePage() {
                             setGameState('selection');
                             navigate('/game', { state: { mode: 'ai' } });
                           }}
-                          style={historySubBtnStyle}
+                          style={{ ...historySubBtnStyle, background: '#6bbd44', color: '#fff', borderColor: '#6bbd44' }}
                         >
-                          + New
+                          New Game
                         </button>
                       </div>
-                    </div>
-                  )}
-                </div>
 
-                {/* 6. RESIGNATION BUTTON */}
-                <button
-                  onClick={resign}
-                  style={{
-                    width: '100%',
-                    height: '48px',
-                    background: '#8b1a1a', // Chess.com dark resign red
-                    color: '#ffffff',
-                    border: 'none',
-                    fontSize: '15px',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
-                    transition: 'background 0.2s',
-                    marginTop: 'auto',
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = '#a62424')}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = '#8b1a1a')}
-                >
-                  <Flag size={16} fill="#ffffff" /> Resign
-                </button>
-              </>
+                      <button
+                        onClick={resign}
+                        style={{
+                          height: '44px',
+                          borderRadius: '6px',
+                          background: '#8b1a1a',
+                          border: 'none',
+                          color: '#ffffff',
+                          fontSize: '14px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                          marginTop: '8px',
+                          transition: 'background 0.2s',
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = '#a62424')}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = '#8b1a1a')}
+                      >
+                        <Flag size={14} fill="#ffffff" /> Resign
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : (
+              // Mobile Bottom controls
+              showAnalysis ? (
+                <div style={{ background: '#1a1a1a', padding: '16px', borderTop: '1px solid #333', overflowY: 'auto', maxHeight: '420px', width: '100%', display: 'flex', flexDirection: 'column' }}>
+                  <AnalysisPanel
+                    history={state.history}
+                    onJumpToMove={handleMoveClick}
+                    onSelectArrow={(arrow) => setBestMoveArrow(arrow)}
+                    onCloseAnalysis={() => {
+                      setShowAnalysis(false);
+                      setBestMoveArrow(null);
+                      setReviewIndex(null);
+                      dispatch({ type: 'SET_REVIEW_FEN', payload: null });
+                    }}
+                    onAnalysisComplete={handleAnalysisComplete}
+                  />
+                </div>
+              ) : (
+                <>
+                  {/* 4. ACTION BUTTONS */}
+                  <div
+                    style={{
+                      background: '#222222',
+                      padding: '10px 16px',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      gap: '8px',
+                      borderBottom: '1px solid #333',
+                    }}
+                  >
+                    <button
+                      onClick={undoMove}
+                      style={{
+                        flex: 1,
+                        height: '42px',
+                        borderRadius: '20px',
+                        background: '#3a3a3a',
+                        border: 'none',
+                        color: '#ffffff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <Undo2 size={16} /> Undo
+                    </button>
+                    <button
+                      onClick={handleHint}
+                      style={{
+                        flex: 1,
+                        height: '42px',
+                        borderRadius: '20px',
+                        background: '#3a3a3a',
+                        border: 'none',
+                        color: '#ffffff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      💡 Hint
+                    </button>
+                    <button
+                      onClick={handleFlip}
+                      style={{
+                        flex: 1,
+                        height: '42px',
+                        borderRadius: '20px',
+                        background: '#3a3a3a',
+                        border: 'none',
+                        color: '#ffffff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <RefreshCw size={16} /> Flip
+                    </button>
+                    <button
+                      onClick={() => setHistoryExpanded(prev => !prev)}
+                      style={{
+                        flex: 1,
+                        height: '42px',
+                        borderRadius: '20px',
+                        background: '#3a3a3a',
+                        border: 'none',
+                        color: '#ffffff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      ☰ Options
+                    </button>
+                  </div>
+
+                  {/* 5. MOVE HISTORY (collapsible panel) */}
+                  <div style={{ background: '#1c1c1c', borderBottom: '1px solid #333' }}>
+                    <button
+                      onClick={() => setHistoryExpanded(p => !p)}
+                      style={{
+                        width: '100%',
+                        height: '36px',
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#aaaaaa',
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '4px',
+                      }}
+                    >
+                      Move History {historyExpanded ? '▲' : '▼'}
+                    </button>
+
+                    {historyExpanded && (
+                      <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {/* Move string notation container */}
+                        <div
+                          style={{
+                            maxHeight: '100px',
+                            overflowY: 'auto',
+                            background: '#111',
+                            borderRadius: '6px',
+                            padding: '8px 12px',
+                            fontSize: '13px',
+                            fontFamily: 'monospace',
+                            color: '#4ade80',
+                            lineHeight: 1.5,
+                            textAlign: 'left',
+                          }}
+                        >
+                          {state.history.length === 0 ? (
+                            <span style={{ color: '#555' }}>No moves made yet.</span>
+                          ) : (
+                            state.history.map((m, idx) => {
+                              const isWhiteMove = idx % 2 === 0;
+                              const turnNum = Math.floor(idx / 2) + 1;
+                              return (
+                                <span key={idx} style={{ marginRight: '8px', color: reviewIndex === idx ? '#ffcc00' : '#ffffff' }}>
+                                  {isWhiteMove && `${turnNum}. `}
+                                  {m.san}
+                                </span>
+                              );
+                            })
+                          )}
+                        </div>
+
+                        {/* Navigation arrows */}
+                        <div style={{ display: 'flex', justifyContent: 'center', gap: '14px', alignItems: 'center' }}>
+                          <button onClick={handleFirstMove} style={navArrowStyle}>
+                            <ChevronsLeft size={16} />
+                          </button>
+                          <button onClick={handlePrevMove} style={navArrowStyle}>
+                            <ArrowLeft size={16} />
+                          </button>
+                          <button onClick={handleNextMove} style={navArrowStyle}>
+                            <ArrowRight size={16} />
+                          </button>
+                          <button onClick={handleLastMove} style={navArrowStyle}>
+                            <ChevronsRight size={16} />
+                          </button>
+                        </div>
+
+                        {/* Save / Share / New buttons row */}
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button
+                            onClick={() => {
+                              if (state.history.length > 0) {
+                                downloadPgn(state.history, state.playerColor, state.gameMode, state.opponentName || (state.gameMode === 'vsAI' ? activeBot.name : 'Local'), state.status);
+                                showToast('PGN Downloaded', 'success');
+                              } else {
+                                showToast('No moves to export', 'warning');
+                              }
+                            }}
+                            style={historySubBtnStyle}
+                          >
+                            <Download size={12} style={{ marginRight: '3px' }} /> PGN
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (state.history.length > 0) {
+                                navigator.clipboard.writeText(generatePgnString(state.history, state.playerColor, state.gameMode, state.opponentName || (state.gameMode === 'vsAI' ? activeBot.name : 'Local'), state.status));
+                                showToast('PGN copied to clipboard', 'success');
+                              } else {
+                                showToast('No moves to copy', 'warning');
+                              }
+                            }}
+                            style={historySubBtnStyle}
+                          >
+                            <Share2 size={12} style={{ marginRight: '3px' }} /> Copy PGN
+                          </button>
+                          <button
+                            onClick={() => {
+                              setIsPlaying(false);
+                              setGameState('selection');
+                              navigate('/game', { state: { mode: 'ai' } });
+                            }}
+                            style={historySubBtnStyle}
+                          >
+                            + New
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 6. RESIGNATION BUTTON */}
+                  <button
+                    onClick={resign}
+                    style={{
+                      width: '100%',
+                      height: '48px',
+                      background: '#8b1a1a', // Chess.com dark resign red
+                      color: '#ffffff',
+                      border: 'none',
+                      fontSize: '15px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      transition: 'background 0.2s',
+                      marginTop: 'auto',
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = '#a62424')}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = '#8b1a1a')}
+                  >
+                    <Flag size={16} fill="#ffffff" /> Resign
+                  </button>
+                </>
+              )
             )}
           </div>
         )}

@@ -331,6 +331,41 @@ export default function ChessBoard({ bestMoveArrow, analysisResults, currentRevi
                 }}
               />
             )}
+
+            {/* Analysis move quality badge overlay */}
+            {(() => {
+              const activeAnalysis = (currentReviewIndex !== null && currentReviewIndex !== undefined && currentReviewIndex >= 0 && analysisResults && analysisResults[currentReviewIndex])
+                ? analysisResults[currentReviewIndex]
+                : null;
+              const isAnalysisMoveTo = activeAnalysis && activeAnalysis.to === squareName;
+              if (isAnalysisMoveTo && activeAnalysis.badge !== ' ') {
+                return (
+                  <span 
+                    className={`analysis-move-badge ${activeAnalysis.badgeClass}`}
+                    style={{
+                      position: 'absolute',
+                      top: '4px',
+                      right: '4px',
+                      zIndex: 25,
+                      fontSize: '8px',
+                      width: '18px',
+                      height: '18px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: '50%',
+                      fontWeight: 900,
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                      pointerEvents: 'none',
+                      color: '#ffffff',
+                    }}
+                  >
+                    {activeAnalysis.badge}
+                  </span>
+                );
+              }
+              return null;
+            })()}
           </div>
         );
       })}
@@ -373,6 +408,56 @@ export default function ChessBoard({ bestMoveArrow, analysisResults, currentRevi
           </div>
         );
       })}
+
+      {/* Best Move Arrow SVG Overlay */}
+      {bestMoveArrow && (() => {
+        const fromOffset = getSquareOffset(bestMoveArrow.from);
+        const toOffset = getSquareOffset(bestMoveArrow.to);
+        if (!fromOffset || !toOffset) return null;
+        
+        const getPct = (str: string) => parseFloat(str);
+        const x1 = getPct(fromOffset.left) + 6.25;
+        const y1 = getPct(fromOffset.top) + 6.25;
+        const x2 = getPct(toOffset.left) + 6.25;
+        const y2 = getPct(toOffset.top) + 6.25;
+
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const len = Math.hypot(dx, dy);
+        if (len === 0) return null;
+        
+        const shorten = 3.5;
+        const x2Short = x1 + (dx / len) * (len - shorten);
+        const y2Short = y1 + (dy / len) * (len - shorten);
+
+        return (
+          <svg style={{ position: 'absolute', inset: 0, zIndex: 15, pointerEvents: 'none', width: '100%', height: '100%' }}>
+            <defs>
+              <marker
+                id="arrowhead-best"
+                markerWidth="6"
+                markerHeight="6"
+                refX="3"
+                refY="3"
+                orient="auto"
+              >
+                <path d="M0,0 L6,3 L0,6 Z" fill="#6bbd44" />
+              </marker>
+            </defs>
+            <line
+              x1={`${x1}%`}
+              y1={`${y1}%`}
+              x2={`${x2Short}%`}
+              y2={`${y2Short}%`}
+              stroke="#6bbd44"
+              strokeWidth="5"
+              strokeLinecap="round"
+              opacity="0.8"
+              markerEnd="url(#arrowhead-best)"
+            />
+          </svg>
+        );
+      })()}
 
       {/* Particle overlay effects */}
       <ParticleCanvas boardRef={boardRef} />

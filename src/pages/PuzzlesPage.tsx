@@ -7,6 +7,7 @@ import { useToast } from '../hooks/useToast';
 import puzzlesData from '../data/puzzles.json';
 import { Calendar, Zap, Star, Swords, Target, RefreshCw, Eye, Award, HelpCircle } from 'lucide-react';
 import { soundManager } from '../engine/soundManager';
+import { incrementPuzzlesSolved } from '../utils/chessStats';
 
 interface Puzzle {
   id: string;
@@ -29,6 +30,7 @@ export default function PuzzlesPage() {
   // Screen state: 'menu' | 'solving' | 'rush'
   const [screen, setScreen] = useState<'menu' | 'solving' | 'rush'>('menu');
   const [currentMode, setCurrentMode] = useState<'daily' | 'rated' | 'custom'>('daily');
+  const [loadingPuzzle, setLoadingPuzzle] = useState(false);
 
   // Solving states
   const [currentPuzzle, setCurrentPuzzle] = useState<Puzzle>(puzzlesData[0]);
@@ -70,6 +72,56 @@ export default function PuzzlesPage() {
       setBoardFlipped(false);
     }
   };
+
+  // Load daily puzzle from Lichess API
+  useEffect(() => {
+    if (currentMode === 'daily') {
+      setLoadingPuzzle(true);
+      fetch('https://lichess.org/api/puzzle/daily')
+        .then((res) => {
+          if (!res.ok) throw new Error('Failed to fetch from Lichess');
+          return res.json();
+        })
+        .then((data) => {
+          if (data && data.puzzle && data.puzzle.fen) {
+            const mappedPuzzle: Puzzle = {
+              id: data.puzzle.id,
+              fen: data.puzzle.fen,
+              moves: data.puzzle.solution,
+              rating: data.puzzle.rating,
+              themes: data.puzzle.themes || [],
+              title: data.game?.perf?.name 
+                ? `${data.game.perf.name.charAt(0).toUpperCase() + data.game.perf.name.slice(1)} Tactical Puzzle` 
+                : 'Lichess Daily Puzzle'
+            };
+            setCurrentPuzzle(mappedPuzzle);
+            setFen(mappedPuzzle.fen);
+            setSelectedSquare(null);
+            setMoveIndex(0);
+            setIsSolved(false);
+            setFlashClass('none');
+            setHintsUsed(0);
+            setShowHintDetail(false);
+            autoFlipBoard(mappedPuzzle);
+          }
+          setLoadingPuzzle(false);
+        })
+        .catch((err) => {
+          console.warn('Lichess daily puzzle API error (CORS or offline), falling back to offline db:', err);
+          const fallback = puzzlesData[0];
+          setCurrentPuzzle(fallback);
+          setFen(fallback.fen);
+          setSelectedSquare(null);
+          setMoveIndex(0);
+          setIsSolved(false);
+          setFlashClass('none');
+          setHintsUsed(0);
+          setShowHintDetail(false);
+          autoFlipBoard(fallback);
+          setLoadingPuzzle(false);
+        });
+    }
+  }, [currentMode]);
 
   // Timer loop for Puzzle Rush
   useEffect(() => {
@@ -130,7 +182,15 @@ export default function PuzzlesPage() {
       // Attempt move validation
       try {
         const testChess = new Chess(fen);
-        const move = testChess.move({ from: selectedSquare, to: square, promotion: 'q' });
+        
+        // Underpromotion and standard promotion validation
+        const expectedUci = currentPuzzle.moves[moveIndex].toLowerCase();
+        let promotionPiece = 'q';
+        if (expectedUci.length === 5 && expectedUci.substring(0, 4) === `${selectedSquare}${square}`) {
+          promotionPiece = expectedUci[4];
+        }
+
+        const move = testChess.move({ from: selectedSquare, to: square, promotion: promotionPiece });
         
         if (move) {
           // Construct UCI representation (e.g. "e2e4" or "e7e8q")
@@ -138,7 +198,6 @@ export default function PuzzlesPage() {
           if (move.promotion) {
             moveUci += move.promotion.toLowerCase();
           }
-          const expectedUci = currentPuzzle.moves[moveIndex].toLowerCase();
 
           if (moveUci === expectedUci) {
             // Correct player move
@@ -155,6 +214,15 @@ export default function PuzzlesPage() {
               soundManager.playWin();
               confetti();
               showToast('Best Move!', 'success');
+              
+              if (currentMode === 'daily' || currentMode === 'rated') {
+                try {
+                  incrementPuzzlesSolved();
+                } catch (e) {
+                  console.warn("Failed to increment puzzles solved:", e);
+                }
+              }
+
               if (screen === 'rush') {
                 setRushScore((s) => s + 1);
                 // Load next puzzle immediately in Rush
@@ -380,6 +448,11 @@ export default function PuzzlesPage() {
             40%, 80% { transform: translateX(6px); }
           }
 
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+
           /* Grid for Puzzle modes */
           .puzzle-modes-grid {
             display: grid;
@@ -441,38 +514,45 @@ export default function PuzzlesPage() {
                   </div>
 
                   {/* Thumbnail Board Representation */}
-                  <div style={{ width: '100%', aspectRatio: '1', background: '#769656', borderRadius: '8px', overflow: 'hidden', pointerEvents: 'none', display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gridTemplateRows: 'repeat(8, 1fr)', boxShadow: 'inset 0 0 10px rgba(0,0,0,0.5)' }}>
-                    {board.map((row, rIdx) =>
-                      row.map((cell, cIdx) => {
-                        const isLight = (rIdx + cIdx) % 2 === 0;
-                        return (
-                          <div
-                            key={`${rIdx}-${cIdx}`}
-                            style={{
-                              background: isLight ? '#eeeed2' : '#769656',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              position: 'relative'
-                            }}
-                          >
-                            {cell && (
-                              <img
-                                src={getPieceImage(cell.color, cell.type)}
-                                alt=""
-                                style={{ width: '85%', height: '85%', objectFit: 'contain' }}
-                              />
-                            )}
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
+                  {loadingPuzzle ? (
+                    <div style={{ width: '100%', aspectRatio: '1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#1c1c1c', borderRadius: '8px', gap: '12px', boxShadow: 'inset 0 0 10px rgba(0,0,0,0.5)' }}>
+                      <div style={{ border: '3px solid rgba(255,255,255,0.1)', borderTop: '3px solid #6bbd44', borderRadius: '50%', width: '32px', height: '32px', animation: 'spin 1s linear infinite' }} />
+                      <span style={{ fontSize: '12px', color: '#888' }}>Fetching from Lichess...</span>
+                    </div>
+                  ) : (
+                    <div style={{ width: '100%', aspectRatio: '1', background: '#769656', borderRadius: '8px', overflow: 'hidden', pointerEvents: 'none', display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gridTemplateRows: 'repeat(8, 1fr)', boxShadow: 'inset 0 0 10px rgba(0,0,0,0.5)' }}>
+                      {board.map((row, rIdx) =>
+                        row.map((cell, cIdx) => {
+                          const isLight = (rIdx + cIdx) % 2 === 0;
+                          return (
+                            <div
+                              key={`${rIdx}-${cIdx}`}
+                              style={{
+                                background: isLight ? '#eeeed2' : '#769656',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                position: 'relative'
+                              }}
+                            >
+                              {cell && (
+                                <img
+                                  src={getPieceImage(cell.color, cell.type)}
+                                  alt=""
+                                  style={{ width: '85%', height: '85%', objectFit: 'contain' }}
+                                />
+                              )}
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  )}
 
                   <button
                     onClick={() => {
                       setCurrentMode('daily');
-                      loadPuzzle(puzzlesData[0]);
+                      loadPuzzle(currentPuzzle);
                       setScreen('solving');
                     }}
                     className="btn-chess-green"

@@ -705,6 +705,8 @@ async function saveGameToCloud(state, finalStatus, history, fen) {
         result: localResult,
         opponent: state.gameMode === 'vsAI' ? `AI Lvl ${state.aiDifficulty}` : 'Local',
         moveCount: state.moveCount + 1,
+        ratingAfter: readElo(),
+        moves: chess.history().slice(0, 4),
       });
 
       let lostQueen = false;
