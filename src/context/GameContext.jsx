@@ -16,6 +16,7 @@ import { checkAndUnlockAchievements } from '../utils/achievements';
 import AchievementToast from '../components/AchievementToast';
 import UpgradeModal from '../components/modals/UpgradeModal';
 import { getSocket } from '../hooks/useSocket';
+import { useAuth } from './AuthContext';
 
 const initGame = (fen) => {
   try {
@@ -393,6 +394,7 @@ function computeCaptured(history) {
 export function GameProvider({ children }) {
   const [state, dispatch] = useReducer(gameReducer, initialState);
   const [playerElo, setPlayerElo] = useState(readElo());
+  const { updateEloInCloud } = useAuth();
   const [eloChange, setEloChange] = useState(0);
   const [unlockedAchievements, setUnlockedAchievements] = useState([]);
   const [aiStatus, setAiStatus] = useState('loading'); // 'loading', 'ready', 'fallback'
@@ -682,14 +684,8 @@ async function saveGameToCloud(state, finalStatus, history, fen) {
         setPlayerElo(newElo);
         writeElo(newElo);
 
-        // Sync ELO update to Cloud Firestore
-        if (auth?.currentUser && db) {
-          const userRef = doc(db, 'users', auth.currentUser.uid);
-          updateDoc(userRef, {
-            rating: newElo,
-            'ratings.blitz': newElo
-          }).catch(err => console.error("Failed to sync ELO to Firestore:", err));
-        }
+        // Sync ELO update to cloud
+        updateEloInCloud(newElo);
       } else {
         const s = readStats();
         s.gamesPlayed = (s.gamesPlayed || 0) + 1;

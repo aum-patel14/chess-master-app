@@ -36,7 +36,7 @@ export function SignUpModal({ show, onClose, onSwitchToLogin }) {
     setLoading(true);
     try {
       await signup(email.trim(), password.trim(), username.trim());
-      showToast('Registration successful! Please check your email.', 'success');
+      showToast('Registration successful! Welcome to ChessMaster Pro.', 'success');
       onClose();
     } catch (err) {
       setError(err.message || 'Failed to create account.');
