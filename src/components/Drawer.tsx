@@ -103,6 +103,8 @@ export default function Drawer({ isOpen, onClose, onOpenSignUp, onOpenLogin }: D
           </div>
           <button
             onClick={onClose}
+            aria-label="Close menu"
+            title="Close"
             style={{
               background: 'transparent',
               border: 'none',

@@ -765,16 +765,16 @@ export default function GamePage() {
 
                       {/* Navigation Arrows under list */}
                       <div style={{ display: 'flex', justifyContent: 'center', gap: '14px', alignItems: 'center', marginTop: '12px' }}>
-                        <button onClick={handleFirstMove} style={navArrowStyle}>
+                        <button onClick={handleFirstMove} style={navArrowStyle} title="First Move" aria-label="First Move">
                           <ChevronsLeft size={16} />
                         </button>
-                        <button onClick={handlePrevMove} style={navArrowStyle}>
+                        <button onClick={handlePrevMove} style={navArrowStyle} title="Previous Move" aria-label="Previous Move">
                           <ArrowLeft size={16} />
                         </button>
-                        <button onClick={handleNextMove} style={navArrowStyle}>
+                        <button onClick={handleNextMove} style={navArrowStyle} title="Next Move" aria-label="Next Move">
                           <ArrowRight size={16} />
                         </button>
-                        <button onClick={handleLastMove} style={navArrowStyle}>
+                        <button onClick={handleLastMove} style={navArrowStyle} title="Last Move" aria-label="Last Move">
                           <ChevronsRight size={16} />
                         </button>
                       </div>
@@ -1030,16 +1030,16 @@ export default function GamePage() {
 
                         {/* Navigation arrows */}
                         <div style={{ display: 'flex', justifyContent: 'center', gap: '14px', alignItems: 'center' }}>
-                          <button onClick={handleFirstMove} style={navArrowStyle}>
+                          <button onClick={handleFirstMove} style={navArrowStyle} title="First Move" aria-label="First Move">
                             <ChevronsLeft size={16} />
                           </button>
-                          <button onClick={handlePrevMove} style={navArrowStyle}>
+                          <button onClick={handlePrevMove} style={navArrowStyle} title="Previous Move" aria-label="Previous Move">
                             <ArrowLeft size={16} />
                           </button>
-                          <button onClick={handleNextMove} style={navArrowStyle}>
+                          <button onClick={handleNextMove} style={navArrowStyle} title="Next Move" aria-label="Next Move">
                             <ArrowRight size={16} />
                           </button>
-                          <button onClick={handleLastMove} style={navArrowStyle}>
+                          <button onClick={handleLastMove} style={navArrowStyle} title="Last Move" aria-label="Last Move">
                             <ChevronsRight size={16} />
                           </button>
                         </div>
