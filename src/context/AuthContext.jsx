@@ -1,5 +1,24 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { supabase } from '../services/supabase';
+import { auth, db } from '../services/firebase';
+import { 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword, 
+  signInWithPopup, 
+  GoogleAuthProvider, 
+  GithubAuthProvider, 
+  signOut, 
+  onAuthStateChanged 
+} from 'firebase/auth';
+import { 
+  doc, 
+  getDoc, 
+  setDoc, 
+  updateDoc, 
+  query, 
+  collection, 
+  where, 
+  getDocs 
+} from 'firebase/firestore';
 
 const AuthContext = createContext();
 
@@ -9,40 +28,38 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [showUsernamePicker, setShowUsernamePicker] = useState(false);
 
-  // Helper to fetch profile and Glicko-2 ratings
+  // Helper to fetch profile and Glicko-2 ratings from Firestore
   const fetchUserProfile = useCallback(async (userId) => {
+    if (!db) return null;
     try {
-      // 1. Fetch user profile
-      const { data: profile, error: profileError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single();
+      const userRef = doc(db, 'users', userId);
+      const userSnap = await getDoc(userRef);
 
-      if (profileError || !profile) {
-        console.warn('Profile not found in database:', profileError);
+      if (!userSnap.exists()) {
+        console.warn('Profile not found in Firestore for user:', userId);
         return null;
       }
 
-      // 2. Fetch blitz rating as default (or general ratings)
-      const { data: ratingData, error: ratingError } = await supabase
-        .from('ratings')
-        .select('rating')
-        .eq('user_id', userId)
-        .eq('time_control', 'blitz')
-        .single();
-
-      const blitzRating = ratingData?.rating ?? 1200;
+      const profile = userSnap.data();
+      const blitzRating = profile.ratings?.blitz ?? profile.rating ?? 1200;
 
       return {
-        id: profile.id,
-        uid: profile.id, // compatibility fallback
+        id: userId,
+        uid: userId, // compatibility fallback
         username: profile.username,
         displayName: profile.username, // compatibility fallback
-        avatar_url: profile.avatar_url,
-        country: profile.country,
+        avatar_url: profile.avatar_url || '',
+        country: profile.country || 'US',
         rating: blitzRating,
-        createdAt: profile.created_at,
+        ratings: profile.ratings || {
+          bullet: 1200,
+          blitz: 1200,
+          rapid: 1200,
+          classical: 1200,
+          puzzle: 1200
+        },
+        purchased_items: profile.purchased_items || [],
+        createdAt: profile.created_at || new Date().toISOString(),
         isGuest: false
       };
     } catch (e) {
@@ -53,70 +70,138 @@ export function AuthProvider({ children }) {
 
   // Email/Password Signup
   async function signup(email, password, username, country = 'US') {
+    if (!auth || !db) throw new Error('Firebase is not configured yet.');
+
     // 1. Validate username format
     const cleanedUsername = username.trim();
     if (!/^[a-zA-Z0-9_]{3,20}$/.test(cleanedUsername)) {
       throw new Error('Username must be 3-20 characters long and contain only letters, numbers, and underscores.');
     }
 
-    // 2. Check username uniqueness
-    const { data: existingUser } = await supabase
-      .from('users')
-      .select('id')
-      .eq('username', cleanedUsername)
-      .maybeSingle();
-
-    if (existingUser) {
+    // 2. Check username uniqueness in Firestore
+    const usernameQuery = query(collection(db, 'users'), where('username', '==', cleanedUsername));
+    const usernameSnap = await getDocs(usernameQuery);
+    if (!usernameSnap.empty) {
       throw new Error('Username is already taken.');
     }
 
-    // 3. Supabase Auth signup (trigger handles public.users & ratings creation automatically)
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          username: cleanedUsername,
-          country
-        }
-      }
+    // 3. Firebase Auth signup
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+
+    // 4. Create Firestore profile document
+    const defaultProfile = {
+      username: cleanedUsername,
+      email: email.trim(),
+      country,
+      avatar_url: '',
+      rating: 1200,
+      ratings: {
+        bullet: 1200,
+        blitz: 1200,
+        rapid: 1200,
+        classical: 1200,
+        puzzle: 1200
+      },
+      purchased_items: [],
+      created_at: new Date().toISOString()
+    };
+
+    await setDoc(doc(db, 'users', user.uid), defaultProfile);
+
+    // Set immediate user state to speed up rendering
+    setCurrentUser(user);
+    setUserData({
+      id: user.uid,
+      uid: user.uid,
+      ...defaultProfile,
+      displayName: cleanedUsername,
+      isGuest: false
     });
 
-    if (error) throw error;
-    return data;
+    return user;
   }
 
   // Email/Password Login
   async function login(email, password) {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-    if (error) throw error;
-    return data;
+    if (!auth) throw new Error('Firebase is not configured yet.');
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    return userCredential.user;
   }
 
   // Google OAuth Login
   async function loginWithGoogle() {
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: window.location.origin
-      }
-    });
-    if (error) throw error;
-    return data;
+    if (!auth || !db) throw new Error('Firebase is not configured yet.');
+    const provider = new GoogleAuthProvider();
+    const result = await signInWithPopup(auth, provider);
+    const user = result.user;
+
+    const userRef = doc(db, 'users', user.uid);
+    const userSnap = await getDoc(userRef);
+
+    if (!userSnap.exists()) {
+      const defaultUsername = 'player_' + Math.random().toString(36).substring(2, 10);
+      await setDoc(userRef, {
+        username: defaultUsername,
+        email: user.email || '',
+        country: 'US',
+        avatar_url: user.photoURL || '',
+        rating: 1200,
+        ratings: {
+          bullet: 1200,
+          blitz: 1200,
+          rapid: 1200,
+          classical: 1200,
+          puzzle: 1200
+        },
+        purchased_items: [],
+        created_at: new Date().toISOString()
+      });
+    }
+    return user;
+  }
+
+  // GitHub OAuth Login
+  async function loginWithGithub() {
+    if (!auth || !db) throw new Error('Firebase is not configured yet.');
+    const provider = new GithubAuthProvider();
+    const result = await signInWithPopup(auth, provider);
+    const user = result.user;
+
+    const userRef = doc(db, 'users', user.uid);
+    const userSnap = await getDoc(userRef);
+
+    if (!userSnap.exists()) {
+      const defaultUsername = 'player_' + Math.random().toString(36).substring(2, 10);
+      await setDoc(userRef, {
+        username: defaultUsername,
+        email: user.email || '',
+        country: 'US',
+        avatar_url: user.photoURL || '',
+        rating: 1200,
+        ratings: {
+          bullet: 1200,
+          blitz: 1200,
+          rapid: 1200,
+          classical: 1200,
+          puzzle: 1200
+        },
+        purchased_items: [],
+        created_at: new Date().toISOString()
+      });
+    }
+    return user;
   }
 
   // Log out
   async function logout() {
-    const { error } = await supabase.auth.signOut();
-    if (error) console.error('Signout failed:', error);
+    if (!auth) return;
+    await signOut(auth);
   }
 
   // Update Username (for username picker overlay on first OAuth login)
   const updateUsername = useCallback(async (newUsername) => {
-    if (!currentUser) throw new Error('You must be logged in.');
+    if (!currentUser || !db) throw new Error('You must be logged in.');
     
     const cleaned = newUsername.trim();
     if (!/^[a-zA-Z0-9_]{3,20}$/.test(cleaned)) {
@@ -124,32 +209,23 @@ export function AuthProvider({ children }) {
     }
 
     // Uniqueness check
-    const { data: existingUser } = await supabase
-      .from('users')
-      .select('id')
-      .eq('username', cleaned)
-      .maybeSingle();
+    const usernameQuery = query(collection(db, 'users'), where('username', '==', cleaned));
+    const usernameSnap = await getDocs(usernameQuery);
+    const conflictingDoc = usernameSnap.docs.find(d => d.id !== currentUser.uid);
 
-    if (existingUser && existingUser.id !== currentUser.id) {
+    if (conflictingDoc) {
       return { success: false, error: 'Username is already taken.' };
     }
 
     // Perform update
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({ username: cleaned })
-      .eq('id', currentUser.id);
-
-    if (updateError) {
-      return { success: false, error: updateError.message };
-    }
+    const userRef = doc(db, 'users', currentUser.uid);
+    await updateDoc(userRef, { username: cleaned });
 
     // Refresh state
-    const refreshed = await fetchUserProfile(currentUser.id);
+    const refreshed = await fetchUserProfile(currentUser.uid);
     setUserData(refreshed);
     setShowUsernamePicker(false);
     
-    // Save to localStorage for sidebar displays
     localStorage.setItem('chess_display_name', cleaned);
     
     return { success: true };
@@ -157,9 +233,9 @@ export function AuthProvider({ children }) {
 
   // Handle avatar upload with canvas scaling (auto-resize to 128x128)
   const uploadAvatar = useCallback(async (file) => {
-    if (!currentUser) throw new Error('User not logged in.');
+    if (!currentUser || !db) throw new Error('User not logged in.');
 
-    // 1. Convert to Image and resize via HTML5 Canvas
+    // Convert to Image and resize via HTML5 Canvas
     const resizeImage = (imgFile) => new Promise((resolve) => {
       const reader = new FileReader();
       reader.onload = (event) => {
@@ -170,86 +246,31 @@ export function AuthProvider({ children }) {
           canvas.height = 128;
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, 128, 128);
-          canvas.toBlob((blob) => {
-            resolve(blob);
-          }, 'image/jpeg', 0.85);
+          // Get as base64 Data URL directly
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          resolve(dataUrl);
         };
         img.src = event.target.result;
       };
       reader.readAsDataURL(imgFile);
     });
 
-    const scaledBlob = await resizeImage(file);
+    const base64DataUrl = await resizeImage(file);
 
-    // 2. Upload to Supabase avatars bucket
-    const fileExt = 'jpg';
-    const filePath = `${currentUser.id}/avatar-${Date.now()}.${fileExt}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('avatars')
-      .upload(filePath, scaledBlob, { upsert: true });
-
-    if (uploadError) {
-      throw new Error(`Upload failed: ${uploadError.message}`);
-    }
-
-    // 3. Get Public URL
-    const { data: { publicUrl } } = supabase.storage
-      .from('avatars')
-      .getPublicUrl(filePath);
-
-    // 4. Update profiles table
-    const { error: dbError } = await supabase
-      .from('users')
-      .update({ avatar_url: publicUrl })
-      .eq('id', currentUser.id);
-
-    if (dbError) {
-      throw new Error(`Profile update failed: ${dbError.message}`);
-    }
+    // Save base64 image data in Firestore
+    const userRef = doc(db, 'users', currentUser.uid);
+    await updateDoc(userRef, { avatar_url: base64DataUrl });
 
     // Refresh user state
-    const refreshed = await fetchUserProfile(currentUser.id);
+    const refreshed = await fetchUserProfile(currentUser.uid);
     setUserData(refreshed);
-    return publicUrl;
+    return base64DataUrl;
   }, [currentUser, fetchUserProfile]);
 
   // Auth State Listener
   useEffect(() => {
-    // 1. Fetch initial session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session?.user) {
-        setCurrentUser(session.user);
-        const profile = await fetchUserProfile(session.user.id);
-        if (profile) {
-          setUserData(profile);
-          // Check if default username template is active
-          if (profile.username.startsWith('player_')) {
-            setShowUsernamePicker(true);
-          }
-          localStorage.setItem('chess_display_name', profile.username);
-          localStorage.setItem('chess_elo', String(profile.rating));
-        }
-      } else {
-        // Guest mode fallback
-        setCurrentUser(null);
-        setUserData({
-          id: 'guest',
-          uid: 'guest',
-          username: 'Guest',
-          displayName: 'Guest',
-          rating: 1200,
-          wins: 0,
-          losses: 0,
-          draws: 0,
-          isGuest: true
-        });
-        localStorage.setItem('chess_display_name', 'Guest');
-        localStorage.setItem('chess_elo', '1200');
-      }
-      setLoading(false);
-    }).catch((err) => {
-      console.warn('Failed to get Supabase session. Falling back to Guest mode.', err);
+    if (!auth) {
+      // Guest mode fallback if firebase not configured
       setCurrentUser(null);
       setUserData({
         id: 'guest',
@@ -265,46 +286,53 @@ export function AuthProvider({ children }) {
       localStorage.setItem('chess_display_name', 'Guest');
       localStorage.setItem('chess_elo', '1200');
       setLoading(false);
+      return;
+    }
+
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        setCurrentUser(user);
+        const profile = await fetchUserProfile(user.uid);
+        if (profile) {
+          setUserData(profile);
+          // Check if default username template is active
+          if (profile.username.startsWith('player_')) {
+            setShowUsernamePicker(true);
+          }
+          localStorage.setItem('chess_display_name', profile.username);
+          localStorage.setItem('chess_elo', String(profile.rating));
+        } else {
+          // Fallback if database entry doesn't exist yet or is slow
+          setUserData({
+            id: user.uid,
+            uid: user.uid,
+            username: 'player_' + user.uid.substring(0, 6),
+            displayName: 'player_' + user.uid.substring(0, 6),
+            rating: 1200,
+            isGuest: false
+          });
+        }
+      } else {
+        setCurrentUser(null);
+        setUserData({
+          id: 'guest',
+          uid: 'guest',
+          username: 'Guest',
+          displayName: 'Guest',
+          rating: 1200,
+          wins: 0,
+          losses: 0,
+          draws: 0,
+          isGuest: true
+        });
+        setShowUsernamePicker(false);
+        localStorage.setItem('chess_display_name', 'Guest');
+        localStorage.setItem('chess_elo', '1200');
+      }
+      setLoading(false);
     });
 
-    // 2. Subscribe to auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (session?.user) {
-          setCurrentUser(session.user);
-          const profile = await fetchUserProfile(session.user.id);
-          if (profile) {
-            setUserData(profile);
-            if (profile.username.startsWith('player_')) {
-              setShowUsernamePicker(true);
-            }
-            localStorage.setItem('chess_display_name', profile.username);
-            localStorage.setItem('chess_elo', String(profile.rating));
-          }
-        } else {
-          setCurrentUser(null);
-          setUserData({
-            id: 'guest',
-            uid: 'guest',
-            username: 'Guest',
-            displayName: 'Guest',
-            rating: 1200,
-            wins: 0,
-            losses: 0,
-            draws: 0,
-            isGuest: true
-          });
-          setShowUsernamePicker(false);
-          localStorage.setItem('chess_display_name', 'Guest');
-          localStorage.setItem('chess_elo', '1200');
-        }
-        setLoading(false);
-      }
-    );
-
-    return () => {
-      subscription.unsubscribe();
-    };
+    return unsubscribe;
   }, [fetchUserProfile]);
 
   const value = {
@@ -313,6 +341,7 @@ export function AuthProvider({ children }) {
     signup,
     login,
     loginWithGoogle,
+    loginWithGithub,
     logout,
     updateUsername,
     uploadAvatar,

@@ -1,0 +1,12 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0 }
+html { font-size: 16px; -webkit-text-size-adjust: 100% }
+body {
+  background-color: #2b2b2b;
+  color: #ffffff;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+a { color: #6bbd44; text-decoration: none }
+button { cursor: pointer; font-family: inherit }
+input, textarea { font-family: inherit }

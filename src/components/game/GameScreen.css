@@ -961,3 +961,106 @@
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.04); }
 }
+
+/* ── SIDEBAR INLINE BOT SELECTOR ── */
+.sidebar-bot-selector {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 12px;
+  overflow-y: auto;
+}
+
+.sidebar-spotlight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+.sidebar-bots-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 250px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.sidebar-bot-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.sidebar-bot-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--theme-gradient);
+  opacity: 0.6;
+}
+
+.sidebar-bot-card:hover {
+  background: rgba(255, 255, 255, 0.06);
+  transform: translateX(3px);
+}
+
+.sidebar-bot-card.selected {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(226, 176, 74, 0.4);
+}
+
+.sidebar-bot-card.selected::before {
+  opacity: 1;
+}
+
+.sidebar-bot-emoji {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.sidebar-bot-card-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  flex-grow: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-bot-card-elo {
+  font-size: 10px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 1px 5px;
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.7);
+  flex-shrink: 0;
+}
+
+.sidebar-bot-card.selected .sidebar-bot-card-elo {
+  background: rgba(226, 176, 74, 0.2);
+  color: #e2b04a;
+}
+
+.sidebar-bot-lock {
+  font-size: 10px;
+  margin-left: 4px;
+}
+

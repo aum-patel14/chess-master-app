@@ -19,7 +19,7 @@ let db;
 
 try {
   // Simple check to prevent initialization if placeholder keys are still present
-  if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
+  if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "YOUR_API_KEY") {
     app = initializeApp(firebaseConfig);
     auth = getAuth(app);
     db = getFirestore(app);

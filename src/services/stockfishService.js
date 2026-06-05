@@ -1,11 +1,19 @@
+import { BOTS } from '../data/bots';
+
 const BASE_URL = import.meta.env.BASE_URL ?? '/chess-master-app/';
 
 export const DIFFICULTY_CONFIG = {
-  1: { label: 'Beginner', elo: '~600', skill: 0, depth: 1, movetime: 100, description: 'Makes random blunders' },
-  2: { label: 'Easy', elo: '~800', skill: 5, depth: 3, movetime: 300, description: 'Occasional mistakes' },
-  3: { label: 'Medium', elo: '~1200', skill: 10, depth: 8, movetime: 1000, description: 'Solid club player' },
-  4: { label: 'Hard', elo: '~1600', skill: 15, depth: 15, movetime: 2000, description: 'Strong tournament play' },
-  5: { label: 'Master', elo: '~2000', skill: 20, depth: 20, movetime: 3000, description: 'Near-perfect play' },
+  1: { label: 'Level 1', elo: '~400', skill: 0, depth: 1, movetime: 150, description: 'Rookie strength' },
+  2: { label: 'Level 2', elo: '~600', skill: 2, depth: 2, movetime: 300, description: 'Beginner strength' },
+  3: { label: 'Level 3', elo: '~800', skill: 4, depth: 3, movetime: 450, description: 'Casual strength' },
+  4: { label: 'Level 4', elo: '~1000', skill: 6, depth: 4, movetime: 600, description: 'Novice strength' },
+  5: { label: 'Level 5', elo: '~1200', skill: 8, depth: 5, movetime: 800, description: 'Club Player strength' },
+  6: { label: 'Level 6', elo: '~1400', skill: 10, depth: 7, movetime: 1000, description: 'Solid club strength' },
+  7: { label: 'Level 7', elo: '~1600', skill: 12, depth: 9, movetime: 1200, description: 'Strong intermediate strength' },
+  8: { label: 'Level 8', elo: '~1800', skill: 15, depth: 11, movetime: 1500, description: 'Advanced strength' },
+  9: { label: 'Level 9', elo: '~2100', skill: 18, depth: 13, movetime: 1800, description: 'Expert strength' },
+  10: { label: 'Level 10', elo: '~2400+', skill: 20, depth: 15, movetime: 2000, description: 'Master strength' },
+  12: { label: 'Level 12', elo: '~2000', skill: 18, depth: 12, movetime: 1800, description: 'Hard strength' },
 };
 
 const STOCKFISH_PATHS = [
@@ -104,14 +112,39 @@ export const initStockfish = () => {
 export const getStockfishReady = () => workerReady;
 export const getStockfishWorker = () => workerInstance;
 
-export const getBestMove = (fen, level) => {
+export const getBestMove = (fen, levelOrConfig) => {
   return new Promise((resolve, reject) => {
     if (!workerInstance || !workerReady) {
       reject('not_ready');
       return;
     }
 
-    const cfg = DIFFICULTY_CONFIG[level] || DIFFICULTY_CONFIG[3];
+    let cfg;
+    if (typeof levelOrConfig === 'object' && levelOrConfig !== null) {
+      cfg = {
+        skill: levelOrConfig.skill ?? 10,
+        depth: levelOrConfig.depth ?? 5,
+        movetime: levelOrConfig.movetime ?? (levelOrConfig.depth ? levelOrConfig.depth * 150 + 200 : 1000),
+      };
+    } else {
+      let bot = null;
+      if (typeof levelOrConfig === 'number' && levelOrConfig >= 1 && levelOrConfig <= 8) {
+        bot = BOTS[levelOrConfig - 1];
+      } else {
+        bot = BOTS.find(b => b.id === levelOrConfig || b.name === levelOrConfig);
+      }
+
+      if (bot) {
+        cfg = {
+          skill: bot.skill,
+          depth: bot.depth,
+          movetime: bot.depth * 150 + 200,
+        };
+      } else {
+        cfg = DIFFICULTY_CONFIG[levelOrConfig] || DIFFICULTY_CONFIG[3];
+      }
+    }
+
     pendingResolve = resolve;
     pendingReject = reject;
 

@@ -52,6 +52,15 @@ const initialTime = (() => {
   }
 })();
 
+const savedOnlineGame = (() => {
+  try {
+    const saved = localStorage.getItem('active_online_game');
+    return saved ? JSON.parse(saved) : null;
+  } catch (e) {
+    return null;
+  }
+})();
+
 const initialState = {
   fen: initGame().fen(),
   history: [],
@@ -60,18 +69,19 @@ const initialState = {
   lastMove: null,
   errorSquare: null,          // Square that triggered an illegal move (for shake animation)
   status: { type: 'playing', message: '', winner: null },
-  gameMode: 'menu',          // 'menu' | 'vsAI' | 'local' | 'puzzle' | 'online'
-  playerColor: 'w',          // player is white by default
+  gameMode: savedOnlineGame ? 'online' : 'menu',          // 'menu' | 'vsAI' | 'local' | 'puzzle' | 'online'
+  playerColor: savedOnlineGame ? savedOnlineGame.color : 'w',          // player is white by default
   aiDifficulty: initialDifficulty,
+  aiBotId: localStorage.getItem('chess_bot_id') || 'beginner',
   isAIThinking: false,
   capturedPieces: { w: [], b: [] },
   theme: initialTheme,
   showCoords: initialCoords,
   soundEnabled: initialSound,
   animationsEnabled: initialAnimations,
-  timeControl: initialTime,          // { base: number, increment: number }
-  whiteTime: initialTime ? initialTime.base * 60 : 600,
-  blackTime: initialTime ? initialTime.base * 60 : 600,
+  timeControl: savedOnlineGame ? savedOnlineGame.timeControl : initialTime,          // { base: number, increment: number }
+  whiteTime: savedOnlineGame ? (savedOnlineGame.timeControl ? savedOnlineGame.timeControl.base * 60 : 600) : (initialTime ? initialTime.base * 60 : 600),
+  blackTime: savedOnlineGame ? (savedOnlineGame.timeControl ? savedOnlineGame.timeControl.base * 60 : 600) : (initialTime ? initialTime.base * 60 : 600),
   timerRunning: false,
   promotionPending: null,     // { from, to } when pawn reaches last rank
   checkSquare: null,
@@ -81,17 +91,24 @@ const initialState = {
   reviewFen: null,
   moveCount: 0,
   gameStartTime: null,
-  roomCode: null,
-  opponentName: null,
-  opponentRating: null,
+  roomCode: savedOnlineGame ? savedOnlineGame.roomCode : null,
+  opponentName: savedOnlineGame ? savedOnlineGame.opponentName : null,
+  opponentRating: savedOnlineGame ? savedOnlineGame.opponentRating : null,
   opponentDisconnected: false,
   opponentDisconnectedSeconds: null,
+  drawOfferedByOpponent: false,
 };
 
 function gameReducer(state, action) {
   switch (action.type) {
     case 'SET_ONLINE_GAME': {
-      const tc = action.payload.timeControl || { base: 10, increment: 0 };
+      const payloadTc = action.payload.timeControl;
+      let tc = payloadTc;
+      if (typeof payloadTc === 'number') {
+        tc = { base: payloadTc / 60, increment: 0 };
+      } else if (!payloadTc) {
+        tc = { base: 10, increment: 0 };
+      }
       return {
         ...state,
         gameMode: 'online',
@@ -115,9 +132,67 @@ function gameReducer(state, action) {
         reviewFen: null,
         hintSquares: null,
         moveCount: 0,
-        gameStartTime: Date.now()
+        gameStartTime: Date.now(),
+        drawOfferedByOpponent: false,
       };
     }
+    case 'RESTORE_ONLINE_GAME': {
+      const tc = action.payload.timeControl;
+      let parsedTc = tc;
+      if (typeof tc === 'number') {
+        parsedTc = { base: tc / 60, increment: 0 };
+      } else if (!tc) {
+        parsedTc = { base: 10, increment: 0 };
+      }
+
+      const chess = new Chess();
+      const reconstructedHistory = [];
+      for (const m of action.payload.history) {
+        const moveRes = chess.move({ from: m.from, to: m.to, promotion: m.promotion });
+        if (moveRes) {
+          reconstructedHistory.push({
+            from: m.from,
+            to: m.to,
+            promotion: m.promotion,
+            san: m.san || moveRes.san,
+            fen: chess.fen()
+          });
+        }
+      }
+
+      const status = getGameStatus(chess);
+      const capturedPieces = computeCaptured(chess.history({ verbose: true }));
+
+      return {
+        ...state,
+        gameMode: 'online',
+        roomCode: action.payload.roomCode,
+        playerColor: action.payload.color,
+        opponentName: action.payload.opponentName,
+        opponentRating: action.payload.opponentRating,
+        timeControl: parsedTc,
+        fen: chess.fen(),
+        history: reconstructedHistory,
+        selectedSquare: null,
+        validMoves: [],
+        lastMove: reconstructedHistory.length ? { from: reconstructedHistory[reconstructedHistory.length - 1].from, to: reconstructedHistory[reconstructedHistory.length - 1].to } : null,
+        status,
+        timerRunning: status.type === 'playing' || status.type === 'check',
+        opponentDisconnected: false,
+        capturedPieces,
+        checkSquare: null,
+        reviewFen: null,
+        hintSquares: null,
+        moveCount: reconstructedHistory.length,
+        gameStartTime: state.gameStartTime || Date.now(),
+        drawOfferedByOpponent: false,
+      };
+    }
+    case 'SET_DRAW_OFFERED':
+      return {
+        ...state,
+        drawOfferedByOpponent: action.payload
+      };
     case 'SET_OPPONENT_DISCONNECTED':
       return {
         ...state,
@@ -141,6 +216,10 @@ function gameReducer(state, action) {
     case 'SET_THEME': return { ...state, theme: action.payload };
     case 'SET_DIFFICULTY': return { ...state, aiDifficulty: action.payload };
     case 'SET_PLAYER_COLOR': return { ...state, playerColor: action.payload };
+    case 'SET_BOT_ID': {
+      localStorage.setItem('chess_bot_id', action.payload);
+      return { ...state, aiBotId: action.payload };
+    }
     case 'TOGGLE_SOUND': return { ...state, soundEnabled: !state.soundEnabled };
     case 'TOGGLE_ANIMATIONS': return { ...state, animationsEnabled: !state.animationsEnabled };
     case 'TOGGLE_COORDS': return { ...state, showCoords: !state.showCoords };
@@ -208,6 +287,7 @@ function gameReducer(state, action) {
         gameStartTime: state.gameStartTime || Date.now(),
         whiteTime,
         blackTime,
+        drawOfferedByOpponent: false,
       };
     }
     case 'NEW_GAME': {
@@ -222,6 +302,7 @@ function gameReducer(state, action) {
         gameMode: action.mode || 'vsAI',
         playerColor: pColor,
         aiDifficulty: action.difficulty ?? state.aiDifficulty,
+        aiBotId: action.botId || state.aiBotId,
         theme: state.theme,
         soundEnabled: state.soundEnabled,
         animationsEnabled: state.animationsEnabled,
@@ -233,6 +314,31 @@ function gameReducer(state, action) {
         fen: action.fen || new Chess().fen(),
         boardFlipped: false,
         reviewFen: null,
+        drawOfferedByOpponent: false,
+      };
+    }
+    case 'REMATCH': {
+      const nextColor = state.playerColor === 'w' ? 'b' : state.playerColor === 'b' ? 'w' : (Math.random() < 0.5 ? 'w' : 'b');
+      const tc = state.timeControl;
+      const baseSecs = tc ? tc.base * 60 : 600;
+      return {
+        ...initialState,
+        gameMode: state.gameMode,
+        playerColor: nextColor,
+        aiDifficulty: state.aiDifficulty,
+        aiBotId: state.aiBotId,
+        theme: state.theme,
+        soundEnabled: state.soundEnabled,
+        animationsEnabled: state.animationsEnabled,
+        showCoords: state.showCoords,
+        timeControl: tc,
+        whiteTime: baseSecs,
+        blackTime: baseSecs,
+        gameStartTime: Date.now(),
+        fen: new Chess().fen(),
+        boardFlipped: false,
+        reviewFen: null,
+        drawOfferedByOpponent: false,
       };
     }
     case 'UNDO_TO': {
@@ -319,6 +425,24 @@ export function GameProvider({ children }) {
     const socket = getSocket();
     if (!socket) return;
 
+    const handleConnect = () => {
+      const saved = localStorage.getItem('active_online_game');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed && parsed.roomCode) {
+            console.log(`Socket connected, sending reconnect-game for room: ${parsed.roomCode}`);
+            socket.emit('reconnect-game', {
+              roomCode: parsed.roomCode,
+              color: parsed.color,
+              name: localStorage.getItem('chess_display_name') || 'Guest Player',
+              rating: parseInt(localStorage.getItem('chess_elo')) || 1200
+            });
+          }
+        } catch(e) {}
+      }
+    };
+
     const handleMoveMade = ({ from, to, promotion }) => {
       if (gameModeRef.current !== 'online') return;
       const chess = new Chess(fenRef.current);
@@ -347,8 +471,12 @@ export function GameProvider({ children }) {
         msg = 'Opponent disconnected (reconnection timeout)';
       } else if (reason === 'resignation') {
         msg = `${winnerColor === 'w' ? 'White' : 'Black'} won by resignation`;
-      } else if (reason === 'agreement') {
+      } else if (reason === 'agreement' || reason === 'draw-agreement') {
         msg = 'Draw by agreement';
+      } else if (reason === 'checkmate') {
+        msg = `${winnerColor === 'w' ? 'White' : 'Black'} won by checkmate`;
+      } else if (reason === 'stalemate') {
+        msg = 'Game drawn by stalemate';
       }
 
       dispatch({
@@ -361,16 +489,51 @@ export function GameProvider({ children }) {
       });
     };
 
+    const handleGameRestored = (gameData) => {
+      dispatch({
+        type: 'RESTORE_ONLINE_GAME',
+        payload: {
+          roomCode: gameData.roomCode,
+          color: gameData.color,
+          opponentName: gameData.opponentName,
+          opponentRating: gameData.opponentRating,
+          fen: gameData.fen,
+          history: gameData.history,
+          timeControl: gameData.timeControl
+        }
+      });
+    };
+
+    const handleDrawOffered = () => {
+      dispatch({ type: 'SET_DRAW_OFFERED', payload: true });
+    };
+
+    const handleDrawDeclined = () => {
+      dispatch({ type: 'SET_DRAW_OFFERED', payload: false });
+    };
+
+    socket.on('connect', handleConnect);
     socket.on('move-made', handleMoveMade);
     socket.on('opponent-disconnected', handleOpponentDisconnected);
     socket.on('opponent-reconnected', handleOpponentReconnected);
     socket.on('game-over', handleGameOver);
+    socket.on('game-restored', handleGameRestored);
+    socket.on('draw-offered', handleDrawOffered);
+    socket.on('draw-declined', handleDrawDeclined);
+
+    if (socket.connected) {
+      handleConnect();
+    }
 
     return () => {
+      socket.off('connect', handleConnect);
       socket.off('move-made', handleMoveMade);
       socket.off('opponent-disconnected', handleOpponentDisconnected);
       socket.off('opponent-reconnected', handleOpponentReconnected);
       socket.off('game-over', handleGameOver);
+      socket.off('game-restored', handleGameRestored);
+      socket.off('draw-offered', handleDrawOffered);
+      socket.off('draw-declined', handleDrawDeclined);
     };
   }, []);
 
@@ -405,20 +568,35 @@ export function GameProvider({ children }) {
     }
   }, [state.aiDifficulty, state.theme, state.soundEnabled, state.animationsEnabled, state.showCoords, state.timeControl]);
 
+  // Sync active online game to localStorage for page-reload persistence
+  useEffect(() => {
+    if (state.gameMode === 'online' && state.roomCode && (state.status.type === 'playing' || state.status.type === 'check')) {
+      localStorage.setItem('active_online_game', JSON.stringify({
+        roomCode: state.roomCode,
+        color: state.playerColor,
+        opponentName: state.opponentName,
+        opponentRating: state.opponentRating,
+        timeControl: state.timeControl
+      }));
+    } else {
+      localStorage.removeItem('active_online_game');
+    }
+  }, [state.gameMode, state.roomCode, state.playerColor, state.opponentName, state.opponentRating, state.timeControl, state.status.type]);
+
   // Update sound manager when settings change
   useEffect(() => {
     soundManager.enabled = state.soundEnabled;
   }, [state.soundEnabled]);
 
-  // Game timer - explicitly paused if AI is thinking
+  // Game timer - tick active player's clock
   useEffect(() => {
-    if (state.timerRunning && state.timeControl && !state.isAIThinking && (state.status.type === 'playing' || state.status.type === 'check')) {
+    if (state.timerRunning && state.timeControl && (state.status.type === 'playing' || state.status.type === 'check')) {
       timerIntervalRef.current = setInterval(() => {
         dispatch({ type: 'TICK_TIMER' });
       }, 100);
     }
     return () => clearInterval(timerIntervalRef.current);
-  }, [state.timerRunning, state.timeControl, state.isAIThinking, state.status.type, state.fen]);
+  }, [state.timerRunning, state.timeControl, state.status.type, state.fen]);
 
   // Check for timeout
   useEffect(() => {
@@ -430,31 +608,34 @@ export function GameProvider({ children }) {
 async function saveGameToCloud(state, finalStatus, history, fen) {
   if (!auth?.currentUser || !db) return;
   
-  let result = 'draw';
-  if (finalStatus.winner) {
-    if (state.gameMode === 'vsAI') {
-      result = finalStatus.winner === (state.playerColor === 'w' ? 'White' : 'Black') ? 'win' : 'loss';
-    } else {
-      result = finalStatus.winner === 'White' ? 'win_white' : 'win_black';
-    }
+  let result = '1/2-1/2';
+  if (finalStatus.winner === 'White') {
+    result = '1-0';
+  } else if (finalStatus.winner === 'Black') {
+    result = '0-1';
   }
+
+  const whiteId = state.playerColor === 'w' ? auth.currentUser.uid : 'ai';
+  const blackId = state.playerColor === 'b' ? auth.currentUser.uid : 'ai';
+  const whiteName = state.playerColor === 'w' ? 'You' : (state.opponentName || 'AI');
+  const blackName = state.playerColor === 'b' ? 'You' : (state.opponentName || 'AI');
+  const timeControlStr = state.timeControl ? `${state.timeControl.base}+${state.timeControl.increment}` : '10+0';
 
   try {
     await addDoc(collection(db, 'games'), {
       userId: auth.currentUser.uid,
-      opponent: state.gameMode === 'vsAI' ? `AI Level ${state.aiDifficulty}` : 'Local',
+      opponent: state.opponentName || (state.gameMode === 'vsAI' ? `AI Level ${state.aiDifficulty}` : 'Local'),
       result,
       movesCount: history.length,
       fen,
+      white_id: whiteId,
+      black_id: blackId,
+      white: { username: whiteName },
+      black: { username: blackName },
+      time_control: timeControlStr,
+      created_at: new Date().toISOString(),
       timestamp: new Date().toISOString()
     });
-
-    // Update Elo rating if playing against AI
-    if (state.gameMode === 'vsAI') {
-      const userRef = doc(db, 'users', auth.currentUser.uid);
-      if (result === 'win') await updateDoc(userRef, { rating: increment(15) });
-      else if (result === 'loss') await updateDoc(userRef, { rating: increment(-10) });
-    }
   } catch(e) {
     console.error("Failed to save game to cloud:", e);
   }
@@ -500,6 +681,15 @@ async function saveGameToCloud(state, finalStatus, history, fen) {
         setEloChange(change);
         setPlayerElo(newElo);
         writeElo(newElo);
+
+        // Sync ELO update to Cloud Firestore
+        if (auth?.currentUser && db) {
+          const userRef = doc(db, 'users', auth.currentUser.uid);
+          updateDoc(userRef, {
+            rating: newElo,
+            'ratings.blitz': newElo
+          }).catch(err => console.error("Failed to sync ELO to Firestore:", err));
+        }
       } else {
         const s = readStats();
         s.gamesPlayed = (s.gamesPlayed || 0) + 1;
@@ -547,7 +737,7 @@ async function saveGameToCloud(state, finalStatus, history, fen) {
     applyMoveRef.current = applyMove;
   }, [applyMove]);
 
-  const requestAIMoveStockfish = useCallback(async (fen, difficulty) => {
+  const requestAIMoveStockfish = useCallback(async (fen, difficulty, botId) => {
     try {
       const activeChess = initGame(fen);
       if (activeChess.isGameOver()) return;
@@ -556,10 +746,41 @@ async function saveGameToCloud(state, finalStatus, history, fen) {
       dispatch({ type: 'SET_AI_THINKING', payload: true });
 
       let bestMoveObj = null;
-      const numDifficulty = Number(difficulty);
 
-      try {
-        if (aiStatus === 'ready') {
+      if (botId) {
+        if (botId === 'rookie') {
+          // Rookie plays random legal moves
+          await new Promise(r => setTimeout(r, 600)); // simulate thinking
+          const uci = getRandomLegalMove(activeChess);
+          if (uci) {
+            bestMoveObj = {
+              from: uci.slice(0, 2),
+              to: uci.slice(2, 4),
+              promotion: uci[4] || undefined,
+            };
+          }
+        } else if (aiStatus === 'ready') {
+          const uciMove = await stockfishGetBestMove(fen, botId);
+          if (uciMove && uciMove !== '(none)') {
+            bestMoveObj = {
+              from: uciMove.substring(0, 2),
+              to: uciMove.substring(2, 4),
+              promotion: uciMove.length > 4 ? uciMove[4] : undefined,
+            };
+          }
+        }
+      } else {
+        const numDifficulty = Number(difficulty);
+        if (numDifficulty === 1) {
+          const uci = getRandomLegalMove(activeChess);
+          if (uci) {
+            bestMoveObj = {
+              from: uci.slice(0, 2),
+              to: uci.slice(2, 4),
+              promotion: uci[4] || undefined,
+            };
+          }
+        } else if (aiStatus === 'ready') {
           const uciMove = await stockfishGetBestMove(fen, numDifficulty);
           if (uciMove && uciMove !== '(none)') {
             bestMoveObj = {
@@ -569,14 +790,12 @@ async function saveGameToCloud(state, finalStatus, history, fen) {
             };
           }
         }
-      } catch (err) {
-        console.warn('Stockfish getBestMove failed, using fallback:', err);
       }
 
       if (!bestMoveObj) {
         try {
           const aiChess = initGame(fen);
-          bestMoveObj = getFallbackBestMove(aiChess, numDifficulty);
+          bestMoveObj = getFallbackBestMove(aiChess, Number(difficulty) || 3);
         } catch (fallbackErr) {
           console.warn('chessEngine fallback failed:', fallbackErr);
         }
@@ -616,7 +835,7 @@ async function saveGameToCloud(state, finalStatus, history, fen) {
       if (chess.turn() === state.playerColor) return;
 
       const timer = setTimeout(() => {
-        requestAIMoveStockfish(state.fen, state.aiDifficulty);
+        requestAIMoveStockfish(state.fen, state.aiDifficulty, state.aiBotId);
       }, 300);
 
       return () => clearTimeout(timer);
@@ -630,6 +849,7 @@ async function saveGameToCloud(state, finalStatus, history, fen) {
     state.fen,
     state.playerColor,
     state.aiDifficulty,
+    state.aiBotId,
     requestAIMoveStockfish,
   ]);
 
@@ -678,6 +898,7 @@ async function saveGameToCloud(state, finalStatus, history, fen) {
             const socket = getSocket();
             if (socket) {
               socket.emit('make-move', {
+                roomCode: state.roomCode,
                 from: state.selectedSquare,
                 to: square,
                 promotion: targetMove.promotion,
@@ -713,6 +934,7 @@ async function saveGameToCloud(state, finalStatus, history, fen) {
         const socket = getSocket();
         if (socket) {
           socket.emit('make-move', {
+            roomCode: state.roomCode,
             from: state.promotionPending.from,
             to: state.promotionPending.to,
             promotion: piece,
@@ -734,6 +956,9 @@ async function saveGameToCloud(state, finalStatus, history, fen) {
       stockfishEngine.isThinking = false;
     }
     
+    if (config.botId) {
+      localStorage.setItem('chess_bot_id', config.botId);
+    }
     dispatch({ type: 'NEW_GAME', ...config });
   }, []);
 
@@ -743,7 +968,7 @@ async function saveGameToCloud(state, finalStatus, history, fen) {
     
     if (state.gameMode === 'online') {
       const socket = getSocket();
-      if (socket) socket.emit('resign');
+      if (socket) socket.emit('resign', { roomCode: state.roomCode });
       return;
     }
 
@@ -769,7 +994,7 @@ async function saveGameToCloud(state, finalStatus, history, fen) {
       opponent: state.gameMode === 'vsAI' ? `AI Lvl ${state.aiDifficulty}` : 'Local',
       moveCount: state.moveCount,
     });
-  }, [state.gameMode, state.aiDifficulty, playerElo, state.moveCount, state.gameStartTime, state.playerColor]);
+  }, [state.gameMode, state.roomCode, state.aiDifficulty, playerElo, state.moveCount, state.gameStartTime, state.playerColor]);
 
   const offerDraw = useCallback(() => {
     soundManager.playDraw();
@@ -777,9 +1002,25 @@ async function saveGameToCloud(state, finalStatus, history, fen) {
 
     if (state.gameMode === 'online') {
       const socket = getSocket();
-      if (socket) socket.emit('offer-draw');
+      if (socket) socket.emit('offer-draw', { roomCode: state.roomCode });
     }
-  }, [state.gameMode]);
+  }, [state.gameMode, state.roomCode]);
+
+  const acceptDraw = useCallback(() => {
+    if (state.gameMode === 'online') {
+      const socket = getSocket();
+      if (socket) socket.emit('accept-draw', { roomCode: state.roomCode });
+    }
+    dispatch({ type: 'SET_DRAW_OFFERED', payload: false });
+  }, [state.gameMode, state.roomCode]);
+
+  const declineDraw = useCallback(() => {
+    if (state.gameMode === 'online') {
+      const socket = getSocket();
+      if (socket) socket.emit('decline-draw', { roomCode: state.roomCode });
+    }
+    dispatch({ type: 'SET_DRAW_OFFERED', payload: false });
+  }, [state.gameMode, state.roomCode]);
 
   const undoMove = useCallback(() => {
     if (state.history.length === 0) return;
@@ -871,6 +1112,8 @@ async function saveGameToCloud(state, finalStatus, history, fen) {
       startNewGame,
       resign,
       offerDraw,
+      acceptDraw,
+      declineDraw,
       undoMove,
       setHintSquares,
       boardThemes,

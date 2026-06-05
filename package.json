@@ -1,6 +1,7 @@
 {
   "name": "chess-master",
   "private": true,
+  "homepage": "https://aum-patel14.github.io/chess-master-app",
   "version": "0.0.0",
   "type": "module",
   "scripts": {

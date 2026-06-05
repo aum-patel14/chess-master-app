@@ -18,9 +18,9 @@ function PlayRedirect() {
   return <Navigate to={`/game${loc.search}`} replace />;
 }
 
-const HomePage = lazy(() => import('./pages/HomePage'));
+const LandingPage = lazy(() => import('./pages/LandingPage'));
 const GamePage = lazy(() => import('./pages/GamePage'));
-const PuzzlePage = lazy(() => import('./pages/PuzzlePage'));
+const PuzzlesPage = lazy(() => import('./pages/PuzzlesPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const StatsPage = lazy(() => import('./pages/StatsPage'));
 const LeaderboardPage = lazy(() => import('./pages/LeaderboardPage'));
@@ -80,10 +80,10 @@ function RouteSwitch() {
       <AnimatePresence mode="wait">
         <Suspense fallback={suspenseFallback}>
           <Routes location={location} key={location.pathname}>
-            <Route path="/" element={<ErrorBoundary><HomePage /></ErrorBoundary>} />
+            <Route path="/" element={<ErrorBoundary><LandingPage /></ErrorBoundary>} />
             <Route path="/game" element={<ErrorBoundary><GamePage /></ErrorBoundary>} />
             <Route path="/play" element={<PlayRedirect />} />
-            <Route path="/puzzles" element={<ErrorBoundary><PuzzlePage /></ErrorBoundary>} />
+            <Route path="/puzzles" element={<ErrorBoundary><PuzzlesPage /></ErrorBoundary>} />
             <Route path="/learn" element={<ErrorBoundary><LearnPage /></ErrorBoundary>} />
             <Route path="/leaderboard" element={<ErrorBoundary><LeaderboardPage /></ErrorBoundary>} />
             <Route path="/stats" element={<ErrorBoundary><StatsPage /></ErrorBoundary>} />
@@ -144,24 +144,26 @@ export default function App() {
 
   return (
     <div className="app-root">
-      <MotionConfig reducedMotion="user">
-        {showOnboarding && !showSplash && <Onboarding onFinish={() => setShowOnboarding(false)} />}
-        <ToastProvider>
-          <AuthProvider>
-            <GameProvider>
-              <HashRouter>
-                {showSplash ? (
-                  <SplashScreen />
-                ) : (
-                  <AppShell>
-                    <RouteSwitch />
-                  </AppShell>
-                )}
-              </HashRouter>
-            </GameProvider>
-          </AuthProvider>
-        </ToastProvider>
-      </MotionConfig>
+      <ErrorBoundary>
+        <MotionConfig reducedMotion="user">
+          {showOnboarding && !showSplash && <Onboarding onFinish={() => setShowOnboarding(false)} />}
+          <ToastProvider>
+            <AuthProvider>
+              <GameProvider>
+                <HashRouter>
+                  {showSplash ? (
+                    <SplashScreen />
+                  ) : (
+                    <AppShell>
+                      <RouteSwitch />
+                    </AppShell>
+                  )}
+                </HashRouter>
+              </GameProvider>
+            </AuthProvider>
+          </ToastProvider>
+        </MotionConfig>
+      </ErrorBoundary>
     </div>
   );
 }

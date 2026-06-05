@@ -5,7 +5,8 @@ import { useAuth } from '../context/AuthContext';
 import { usePremium } from '../hooks/usePremium';
 import { useToast } from '../hooks/useToast';
 import { useLocalStorage } from '../hooks/useLocalStorage';
-import supabase from '../services/supabase';
+import { db } from '../services/firebase';
+import { doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { 
   ShoppingBag, 
   Crown, 
@@ -107,18 +108,15 @@ export default function ShopPage() {
   const [equippedFrame, setEquippedFrame] = useLocalStorage('chess_avatar_frame', 'none');
   const [equippedBorder, setEquippedBorder] = useLocalStorage('chess_profile_border', 'none');
 
-  // Load user purchases from database on start
+  // Load user purchases from Firestore on start
   useEffect(() => {
     const fetchPurchases = async () => {
-      if (!currentUser) return;
+      if (!currentUser || !db) return;
       try {
-        const { data, error } = await supabase
-          .from('user_items')
-          .select('item_id')
-          .eq('user_id', currentUser.id);
-
-        if (data) {
-          setUserPurchases(data.map(p => p.item_id));
+        const docRef = doc(db, 'users', currentUser.uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists() && docSnap.data().purchased_items) {
+          setUserPurchases(docSnap.data().purchased_items);
         }
       } catch (e) {
         console.warn('Could not load user customisations:', e);
@@ -126,27 +124,6 @@ export default function ShopPage() {
     };
     fetchPurchases();
   }, [currentUser]);
-
-  // Seeding helper to ensure shop items exist in public database
-  useEffect(() => {
-    const seedShop = async () => {
-      try {
-        for (const item of SHOP_ITEMS) {
-          await supabase.from('shop_items').upsert({
-            id: item.id,
-            name: item.name,
-            type: item.type,
-            price_inr: item.price_inr,
-            preview_url: item.preview_url,
-            data: item.data
-          }, { onConflict: 'id' });
-        }
-      } catch (e) {
-        // ignore
-      }
-    };
-    seedShop();
-  }, []);
 
   const isUnlocked = (item) => {
     // Premium members get everything completely free!
@@ -173,6 +150,18 @@ export default function ShopPage() {
     showToast(`Successfully equipped ${item.name}!`, 'success');
   };
 
+  const savePurchaseToCloud = async (itemId) => {
+    if (!currentUser || !db) return;
+    try {
+      const userRef = doc(db, 'users', currentUser.uid);
+      await updateDoc(userRef, {
+        purchased_items: arrayUnion(itemId)
+      });
+    } catch (e) {
+      console.error('Failed to save purchase to Firestore:', e);
+    }
+  };
+
   // One-time Stripe Payment checkout
   const handlePurchase = async (item) => {
     if (!currentUser) {
@@ -188,7 +177,7 @@ export default function ShopPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: currentUser.id,
+          userId: currentUser.uid || currentUser.id,
           type: 'cosmetic',
           itemId: item.id,
           amount: item.price_inr
@@ -200,11 +189,13 @@ export default function ShopPage() {
       if (data.isMock) {
         // Mock Sandbox payment completion
         showToast(`Sandbox purchase successful! ${item.name} unlocked.`, 'success');
+        await savePurchaseToCloud(item.id);
         setUserPurchases(prev => [...prev, item.id]);
         handleEquip(item);
       } else if (data.clientSecret) {
         // Stripe integration fallback for client redirect
         showToast('Payment authenticated! Simulating secure unlock.', 'success');
+        await savePurchaseToCloud(item.id);
         setUserPurchases(prev => [...prev, item.id]);
         handleEquip(item);
       } else {
@@ -213,6 +204,7 @@ export default function ShopPage() {
     } catch (e) {
       console.error(e);
       showToast('Stripe offline. Customisation unlocked in local session!', 'success');
+      await savePurchaseToCloud(item.id);
       setUserPurchases(prev => [...prev, item.id]);
       handleEquip(item);
     } finally {

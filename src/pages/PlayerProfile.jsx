@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { supabase } from '../services/supabase';
+import { db } from '../services/firebase';
+import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import PageShell from '../components/PageShell';
 import { useToast } from '../hooks/useToast';
 import { 
@@ -23,47 +24,51 @@ export default function PlayerProfile() {
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // 1. FETCH USER PROFILE & GRAPH DATA FROM SUPABASE
+  // 1. FETCH USER PROFILE & GRAPH DATA FROM FIRESTORE
   useEffect(() => {
     async function loadProfile() {
       setLoading(true);
       try {
-        // Query public profile
-        const { data: userProfile, error: profileErr } = await supabase
-          .from('users')
-          .select('*')
-          .eq('username', username)
-          .maybeSingle();
+        if (!db) {
+          showToast('Database is not configured yet.', 'warning');
+          setLoading(false);
+          return;
+        }
 
-        if (profileErr || !userProfile) {
+        // Query public profile by username
+        const usersRef = collection(db, 'users');
+        const q = query(usersRef, where('username', '==', username));
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
           showToast('User profile not found.', 'error');
           setLoading(false);
           return;
         }
 
+        const userDoc = querySnapshot.docs[0];
+        const userProfile = { id: userDoc.id, ...userDoc.data() };
         setProfile(userProfile);
 
-        // Query Glicko-2 ratings
-        const { data: ratingRecords, error: ratingsErr } = await supabase
-          .from('ratings')
-          .select('*')
-          .eq('user_id', userProfile.id);
+        // Map ratings from user document
+        const ratingsArray = Object.entries(userProfile.ratings || {}).map(([tc, r]) => ({
+          time_control: tc,
+          rating: r,
+          rd: 0
+        }));
+        setRatings(ratingsArray);
 
-        if (!ratingsErr && ratingRecords) {
-          setRatings(ratingRecords);
-        }
+        // Query completed games from Firestore
+        const gamesRef = collection(db, 'games');
+        const gamesQuery = query(gamesRef, where('userId', '==', userProfile.id), limit(50));
+        const gamesSnapshot = await getDocs(gamesQuery);
+        
+        let gameRecords = gamesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // Sort in memory by created_at / timestamp desc
+        gameRecords.sort((a, b) => new Date(b.created_at || b.timestamp) - new Date(a.created_at || a.timestamp));
+        gameRecords = gameRecords.slice(0, 20);
 
-        // Query completed games (either as white or black)
-        const { data: gameRecords, error: gamesErr } = await supabase
-          .from('games')
-          .select('*, white:white_id(username), black:black_id(username)')
-          .or(`white_id.eq.${userProfile.id},black_id.eq.${userProfile.id}`)
-          .order('created_at', { ascending: false })
-          .limit(20);
-
-        if (!gamesErr && gameRecords) {
-          setGames(gameRecords);
-        }
+        setGames(gameRecords);
 
       } catch (err) {
         console.error('Error fetching player profile details:', err);

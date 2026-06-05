@@ -1,32 +1,45 @@
 import { useState } from 'react';
-import Sidebar from './Sidebar';
-import { TopBar } from './TopBar';
+import { useLocation } from 'react-router-dom';
+import Navbar from '../Navbar';
+import Drawer from '../Drawer';
 import AdBanner from '../game/AdBanner';
 import { SignUpModal, LoginModal } from '../modals/Modals';
 import './AppShell.css';
 
 export default function AppShell({ children }) {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const location = useLocation();
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [showSignUp, setShowSignUp] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
+
+  const isLandingPage = location.pathname === '/';
+
+  if (isLandingPage) {
+    return (
+      <div className="app-shell landing-shell" style={{ height: '100vh', overflow: 'hidden' }}>
+        <main style={{ width: '100%', height: '100%', overflow: 'hidden' }}>
+          {children}
+        </main>
+      </div>
+    );
+  }
 
   return (
-    <div className="app-shell" style={{ '--sidebar-width': isExpanded ? '220px' : '64px' }}>
-      <Sidebar 
-        isExpanded={isExpanded}
-        onToggle={() => setIsExpanded(prev => !prev)}
+    <div className="app-shell">
+      <Navbar 
+        onOpenDrawer={() => setDrawerOpen(true)}
         onOpenSignUp={() => setShowSignUp(true)}
         onOpenLogin={() => setShowLogin(true)}
-        mobileOpen={mobileMenuOpen}
-        setMobileOpen={setMobileMenuOpen}
+      />
+      
+      <Drawer
+        isOpen={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        onOpenSignUp={() => setShowSignUp(true)}
+        onOpenLogin={() => setShowLogin(true)}
       />
       
       <div className="main-area">
-        <TopBar 
-          onOpenMobileMenu={() => setMobileMenuOpen(prev => !prev)} 
-          mobileMenuOpen={mobileMenuOpen}
-        />
         <main className="page-content" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
           {children}
         </main>

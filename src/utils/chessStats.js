@@ -31,9 +31,10 @@ export function writeElo(n) {
 
 /** Map aiDifficulty 1–5 to phase string */
 export function difficultyTier(aiDifficulty) {
-  if (aiDifficulty <= 2) return 'easy'
-  if (aiDifficulty === 3) return 'medium'
-  return 'hard'
+  const diff = Number(aiDifficulty);
+  if (diff <= 2) return 'easy';
+  if (diff <= 6) return 'medium';
+  return 'hard';
 }
 
 const ELO_DELTA = { easy: { win: 8, loss: -8, draw: 4 }, medium: { win: 15, loss: -15, draw: 4 }, hard: { win: 25, loss: -25, draw: 4 } }

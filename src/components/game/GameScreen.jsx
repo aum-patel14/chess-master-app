@@ -17,6 +17,7 @@ import { DIFFICULTY_CONFIG } from '../../services/stockfishService';
 import { Play, RotateCcw, Flag, Sparkles, RefreshCw, Save, Share2, Settings } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
 import { useChessClock } from '../../hooks/useChessClock';
+import { BOTS } from '../../data/bots';
 
 const initGame = (fen) => {
   try {
@@ -121,7 +122,7 @@ const EvalBar = ({ score, isMate, mateIn, flipped }) => {
 
 export default function GameScreen() {
   const { 
-    state, dispatch, resign, offerDraw, undoMove, startNewGame, 
+    state, dispatch, resign, offerDraw, acceptDraw, declineDraw, undoMove, startNewGame, 
     opponentDisconnectedCountdown, checkFeatureLimit, incrementUsage,
     isPremium, setShowUpgradeModal, isSimpleMode: contextSimpleMode,
   } = useGame();
@@ -389,16 +390,22 @@ export default function GameScreen() {
   const myName = localStorage.getItem('chess_display_name') || 'You';
   const myElo = parseInt(localStorage.getItem('chess_elo')) || 1200;
 
+  const activeBot = BOTS.find(b => b.id === state.aiBotId) || BOTS[1];
+
   const topPlayer = {
-    name: gameMode === 'vsAI' && playerColor === topColor
-      ? `AI — ${DIFFICULTY_NAMES[aiDifficulty]}`
+    name: gameMode === 'vsAI' && playerColor !== topColor
+      ? activeBot.name
       : gameMode === 'online'
       ? (topColor === playerColor ? myName : (state.opponentName || 'Opponent'))
       : (topColor === playerColor ? 'You' : 'Opponent'),
-    rating: gameMode === 'online'
+    rating: gameMode === 'vsAI' && playerColor !== topColor
+      ? activeBot.elo
+      : gameMode === 'online'
       ? (topColor === playerColor ? myElo : (state.opponentRating || 1200))
       : 1500,
     isAI: gameMode === 'vsAI' && playerColor !== topColor,
+    avatarEmoji: activeBot.avatar,
+    avatarTheme: activeBot.theme,
     color: topColor,
     time: topColor === 'w' ? clockWhiteTime : clockBlackTime,
     isActive: initGame(reviewFen || fen).turn() === topColor,
@@ -407,15 +414,19 @@ export default function GameScreen() {
   };
 
   const bottomPlayer = {
-    name: gameMode === 'vsAI' && playerColor === bottomColor
-      ? `AI — ${DIFFICULTY_NAMES[aiDifficulty]}`
+    name: gameMode === 'vsAI' && playerColor !== bottomColor
+      ? activeBot.name
       : gameMode === 'online'
       ? (bottomColor === playerColor ? myName : (state.opponentName || 'Opponent'))
       : (bottomColor === playerColor ? 'You' : 'Opponent'),
-    rating: gameMode === 'online'
+    rating: gameMode === 'vsAI' && playerColor !== bottomColor
+      ? activeBot.elo
+      : gameMode === 'online'
       ? (bottomColor === playerColor ? myElo : (state.opponentRating || 1200))
       : 1500,
     isAI: gameMode === 'vsAI' && playerColor !== bottomColor,
+    avatarEmoji: activeBot.avatar,
+    avatarTheme: activeBot.theme,
     color: bottomColor,
     time: bottomColor === 'w' ? clockWhiteTime : clockBlackTime,
     isActive: initGame(reviewFen || fen).turn() === bottomColor,
@@ -564,56 +575,102 @@ export default function GameScreen() {
     5: { label: 'Master', elo: 2800, bots: '25 bots', avatar: '🧠', desc: 'Grandmaster strength Stockfish engine.' },
   };
 
-  const activeBot = {
-    ...(BOT_LEVELS[selectedDifficulty] || BOT_LEVELS[3]),
-    label: DIFFICULTY_CONFIG[selectedDifficulty]?.label ?? BOT_LEVELS[selectedDifficulty]?.label,
-    elo: parseInt(DIFFICULTY_CONFIG[selectedDifficulty]?.elo?.replace(/\D/g, '') || '1200', 10),
-    desc: DIFFICULTY_CONFIG[selectedDifficulty]?.description ?? BOT_LEVELS[selectedDifficulty]?.desc,
+  const getBotDifficulty = (botId) => {
+    const mapping = {
+      rookie: 1,
+      beginner: 2,
+      casual: 3,
+      club: 5,
+      intermediate: 6,
+      advanced: 8,
+      expert: 9,
+      master: 10,
+    };
+    return mapping[botId] || 3;
   };
 
   const handleStartGame = () => {
-    startNewGame({ mode: 'vsAI', playerColor, difficulty: selectedDifficulty, timeControl });
+    const activeBotObj = BOTS.find(b => b.id === state.aiBotId) || BOTS[1];
+    
+    // Lock check
+    if (!isPremium && (activeBotObj.id === 'expert' || activeBotObj.id === 'master')) {
+      setShowUpgradeModal(true);
+      return;
+    }
+
+    const mapping = {
+      rookie: 1,
+      beginner: 2,
+      casual: 3,
+      club: 5,
+      intermediate: 6,
+      advanced: 8,
+      expert: 9,
+      master: 10,
+    };
+    const diff = mapping[activeBotObj.id] || 3;
+
+    startNewGame({ 
+      mode: 'vsAI', 
+      playerColor: playerColor === 'r' ? (Math.random() < 0.5 ? 'w' : 'b') : playerColor, 
+      difficulty: diff, 
+      botId: activeBotObj.id,
+      timeControl: state.timeControl || { base: 10, increment: 0 }
+    });
     setIsSetupPhase(false);
   };
 
   const playBotsPanel = (
-    <div className="play-bots-panel">
+    <div className="play-bots-panel sidebar-bot-selector">
       {/* HEADER */}
       <div className="play-bots-header">
         <span style={{ fontSize: '18px' }}>🖥</span>
         <h2>Play Bots</h2>
       </div>
 
-      {/* BOT INFO CARD */}
-      <div className="bot-info-card">
-        <div className="bot-info-avatar">
+      {/* SELECTED BOT SPOTLIGHT */}
+      <div className="bot-info-card sidebar-spotlight" style={{ background: activeBot.theme + '15', borderColor: activeBot.theme + '30' }}>
+        <div className="bot-info-avatar" style={{ background: activeBot.theme }}>
           {activeBot.avatar}
         </div>
         <div className="bot-info-details">
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-            <h3 style={{ margin: 0, fontSize: '15px', color: '#fff', fontWeight: '700' }}>{activeBot.label}</h3>
-            <span className="bot-rating">({activeBot.elo})</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <h3 style={{ margin: 0, fontSize: '15px', color: '#fff', fontWeight: '700' }}>{activeBot.name}</h3>
+            <span className="bot-rating" style={{ background: activeBot.theme, color: '#111', fontSize: '11px', padding: '1px 6px', borderRadius: '6px', fontWeight: '800' }}>({activeBot.elo})</span>
           </div>
-          <p className="bot-desc">{activeBot.desc}</p>
+          <div style={{ fontSize: '11px', color: '#e2b04a', fontWeight: '600', marginTop: '2px' }}>{activeBot.personality}</div>
+          <p className="bot-desc" style={{ fontSize: '11px', opacity: 0.8, marginTop: '4px', margin: 0 }}>{activeBot.bio}</p>
         </div>
       </div>
 
-      <div className="bot-categories-label" style={{ marginTop: '12px' }}>
-        Engine difficulty
-      </div>
-      <div className="difficulty-selector-wrap">
-        <DifficultySelector
-          value={selectedDifficulty}
-          onChange={handleDifficultyChange}
-          isPremium={isPremium}
-          onUpgradeClick={() => setShowUpgradeModal(true)}
-        />
+      {/* BOTS GRID LIST */}
+      <div className="sidebar-bots-grid">
+        {BOTS.map((bot) => {
+          const isSelected = state.aiBotId === bot.id;
+          const isLocked = !isPremium && (bot.id === 'expert' || bot.id === 'master');
+          return (
+            <div
+              key={bot.id}
+              className={`sidebar-bot-card ${isSelected ? 'selected' : ''} ${isLocked ? 'locked' : ''}`}
+              onClick={() => {
+                dispatch({ type: 'SET_BOT_ID', payload: bot.id });
+                handleDifficultyChange(getBotDifficulty(bot.id));
+              }}
+              style={{ '--theme-gradient': bot.theme }}
+            >
+              <span className="sidebar-bot-emoji">{bot.avatar}</span>
+              <span className="sidebar-bot-card-name">{bot.name.replace(' Bot', '').replace(' Player', '')}</span>
+              <span className="sidebar-bot-card-elo">{bot.elo}</span>
+              {isLocked && <span className="sidebar-bot-lock">🔒</span>}
+            </div>
+          );
+        })}
       </div>
 
       {/* OPTIONS ROW & COLOR SELECTOR */}
       <div className="play-bots-options-row" style={{ position: 'relative' }} ref={optionsRef}>
         <div className="options-dropdown" onClick={() => setShowOptions(!showOptions)}>
-          <span>⚙ Options</span>
+          <span>⚙ Settings & Time</span>
           <span style={{ fontSize: '9px', marginLeft: '6px' }}>{showOptions ? '▲' : '▼'}</span>
         </div>
 
@@ -644,14 +701,13 @@ export default function GameScreen() {
 
             {[
               { label: 'Casual (∞)', value: null },
-              { label: '1+0 (Bullet)', value: { base: 60, increment: 0 } },
-              { label: '3+2 (Blitz)', value: { base: 180, increment: 2 } },
-              { label: '10+0 (Rapid)', value: { base: 600, increment: 0 } },
-              { label: '30+0 (Classical)', value: { base: 1800, increment: 0 } }
+              { label: '1+0 (Bullet)', value: { base: 1, increment: 0 } },
+              { label: '3+2 (Blitz)', value: { base: 3, increment: 2 } },
+              { label: '10+0 (Rapid)', value: { base: 10, increment: 0 } },
+              { label: '30+0 (Classical)', value: { base: 30, increment: 0 } }
             ].map((tcOption, index) => {
-              const tcBase = timeControl ? (typeof timeControl === 'object' ? timeControl.base : (Number(timeControl) > 30 ? Number(timeControl) : Number(timeControl) * 60)) : null;
               const isSelected = (!timeControl && !tcOption.value) || 
-                                 (timeControl && tcOption.value && tcBase === tcOption.value.base);
+                                 (timeControl && tcOption.value && timeControl.base === tcOption.value.base && timeControl.increment === tcOption.value.increment);
               return (
                 <div 
                   key={index} 
@@ -672,7 +728,6 @@ export default function GameScreen() {
         )}
 
         <div className="color-selector-group">
-          {/* Play as White */}
           <button 
             className={`color-btn ${playerColor === 'w' ? 'active' : ''}`}
             onClick={() => dispatch({ type: 'SET_PLAYER_COLOR', payload: 'w' })}
@@ -680,7 +735,6 @@ export default function GameScreen() {
           >
             ♔
           </button>
-          {/* Play as Random */}
           <button 
             className={`color-btn ${playerColor === 'r' ? 'active' : ''}`}
             onClick={() => dispatch({ type: 'SET_PLAYER_COLOR', payload: 'r' })}
@@ -688,7 +742,6 @@ export default function GameScreen() {
           >
             ?
           </button>
-          {/* Play as Black */}
           <button 
             className={`color-btn ${playerColor === 'b' ? 'active' : ''}`}
             onClick={() => dispatch({ type: 'SET_PLAYER_COLOR', payload: 'b' })}
@@ -711,6 +764,10 @@ export default function GameScreen() {
     else if (action === 'hint') handleHint();
     else if (action === 'flip') dispatch({ type: 'TOGGLE_BOARD_FLIP' });
     else if (action === 'new') startNewGame({ mode: gameMode, playerColor, difficulty: aiDifficulty });
+    else if (action === 'draw') {
+      offerDraw();
+      showToast('Draw offered to opponent.', 'info');
+    }
   };
 
   const renderClock = (player) => {
@@ -763,56 +820,30 @@ export default function GameScreen() {
           </div>
           {/* Board + player bars + file labels */}
           <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
-            {/* Black player bar (Top) */}
-            <div className="player-bar" style={{ width: 'var(--board-size)' }}>
-              {topPlayer.isAI ? (
-                <AiStatusBar
-                  isThinking={isAIThinking}
-                  isSimpleMode={isSimpleMode}
-                  difficulty={selectedDifficulty}
-                  label={DIFFICULTY_CONFIG[selectedDifficulty]?.label ?? topPlayer.name}
-                />
-              ) : (
-                <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
-                  <div style={{width:'32px',height:'32px',borderRadius:'50%',background:'#374151',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'14px',fontWeight:'600',color:'white'}}>{avatarLetterTop}</div>
-                  <div style={{display:'flex',flexDirection:'column'}}>
-                    <div style={{display:'flex',alignItems:'center',gap:'6px'}}>
-                      <span style={{fontSize:'14px',fontWeight:'500',color:'white'}}>{topPlayer.name}</span>
-                      <span style={{fontSize:'12px',padding:'2px 8px',background:'rgba(255,255,255,0.1)',borderRadius:'99px',color:'#aaa'}}>{topPlayer.rating}</span>
-                    </div>
-                  </div>
+            {state.opponentDisconnected && (
+              <div style={disconnectBannerStyle}>
+                ⚠️ Opponent disconnected. Game ends in {opponentDisconnectedCountdown}s
+              </div>
+            )}
+            {state.drawOfferedByOpponent && (
+              <div style={drawOfferBannerStyle}>
+                🤝 Opponent offered a draw.
+                <div style={{ display: 'flex', gap: '8px', marginTop: '6px', justifyContent: 'center' }}>
+                  <button onClick={acceptDraw} style={btnAcceptDraw}>Accept</button>
+                  <button onClick={declineDraw} style={btnDeclineDraw}>Decline</button>
                 </div>
-              )}
-              {renderClock(topPlayer)}
-            </div>
+              </div>
+            )}
+            {/* Top player bar */}
+            <PlayerInfoBar player={topPlayer} isAIThinking={isAIThinking} />
 
             {/* Chessboard outer frame */}
             <div className="board-outer">
               <ChessBoard bestMoveArrow={analysisArrow} analysisResults={analysisResults} currentReviewIndex={reviewIndex} />
             </div>
 
-            {/* White player bar (Bottom) */}
-            <div className="player-bar" style={{ width: 'var(--board-size)' }}>
-              {bottomPlayer.isAI ? (
-                <AiStatusBar
-                  isThinking={isAIThinking}
-                  isSimpleMode={isSimpleMode}
-                  difficulty={selectedDifficulty}
-                  label={DIFFICULTY_CONFIG[selectedDifficulty]?.label ?? bottomPlayer.name}
-                />
-              ) : (
-                <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
-                  <div style={{width:'32px',height:'32px',borderRadius:'50%',background:'#4B5563',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'14px',fontWeight:'600',color:'white'}}>{avatarLetterBottom}</div>
-                  <div style={{display:'flex',flexDirection:'column'}}>
-                    <div style={{display:'flex',alignItems:'center',gap:'6px'}}>
-                      <span style={{fontSize:'14px',fontWeight:'500',color:'white'}}>{bottomPlayer.name}</span>
-                      <span style={{fontSize:'12px',padding:'2px 8px',background:'rgba(255,255,255,0.1)',borderRadius:'99px',color:'#aaa'}}>{bottomPlayer.rating}</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-              {renderClock(bottomPlayer)}
-            </div>
+            {/* Bottom player bar */}
+            <PlayerInfoBar player={bottomPlayer} isAIThinking={isAIThinking} />
 
             {/* File labels BOTTOM */}
             <div style={{display:'flex',flexDirection:'row',width:'var(--board-size)',flexShrink:0}}>
@@ -869,13 +900,31 @@ export default function GameScreen() {
               ))}
             </div>
 
-            {/* ACTION BUTTONS 2x2 */}
+            {/* ACTION BUTTONS */}
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px',padding:'8px 12px'}}>
-              {[['↩ Undo','undo'],['💡 Hint','hint'],['⟲ Flip','flip'],['＋ New','new']].map(([label,action])=>(
-                <button key={action} onClick={()=>handleAction(action)} style={{height:'40px',background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:'6px',color:'white',fontSize:'12px',cursor:'pointer',fontWeight:'500'}}>
-                  {label}
-                </button>
-              ))}
+              {gameMode === 'online' ? (
+                <>
+                  <button 
+                    disabled={isGameOver}
+                    onClick={() => handleAction('draw')} 
+                    style={{height:'40px',background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:'6px',color:'white',fontSize:'12px',cursor:'pointer',fontWeight:'500',opacity: isGameOver ? 0.35 : 1}}
+                  >
+                    🤝 Offer Draw
+                  </button>
+                  <button 
+                    onClick={() => handleAction('flip')} 
+                    style={{height:'40px',background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:'6px',color:'white',fontSize:'12px',cursor:'pointer',fontWeight:'500'}}
+                  >
+                    ⟲ Flip Board
+                  </button>
+                </>
+              ) : (
+                [['↩ Undo','undo'],['💡 Hint','hint'],['⟲ Flip','flip'],['＋ New','new']].map(([label,action])=>(
+                  <button key={action} onClick={()=>handleAction(action)} style={{height:'40px',background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:'6px',color:'white',fontSize:'12px',cursor:'pointer',fontWeight:'500'}}>
+                    {label}
+                  </button>
+                ))
+              )}
             </div>
 
             {/* SAVE + SHARE */}
@@ -903,6 +952,12 @@ export default function GameScreen() {
                 </button>
               )}
             </div>
+
+            {gameMode === 'online' && (
+              <div style={{ padding: '0 12px 16px' }}>
+                <ChatPanel roomCode={state.roomCode} />
+              </div>
+            )}
           </>
         )}
       </div>
@@ -912,7 +967,20 @@ export default function GameScreen() {
           status={status}
           onNewGame={() => {
             setShowGameOver(false);
-            startNewGame({ mode: gameMode, playerColor, difficulty: aiDifficulty });
+            if (gameMode === 'online') {
+              dispatch({ type: 'SET_MODE', payload: 'menu' });
+            } else {
+              startNewGame({ mode: gameMode, playerColor: 'w', difficulty: aiDifficulty, botId: state.aiBotId });
+            }
+          }}
+          onRematch={() => {
+            setShowGameOver(false);
+            if (gameMode !== 'online') {
+              dispatch({ type: 'REMATCH' });
+            } else {
+              // for online, start a new quick matching or similar
+              dispatch({ type: 'SET_MODE', payload: 'menu' });
+            }
           }}
           onMenu={handleBack}
           moveCount={moveCount}
@@ -936,4 +1004,39 @@ const disconnectBannerStyle = {
   fontSize: '13px',
   boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)',
   animation: 'pulse 1.5s ease-in-out infinite'
+};
+
+const drawOfferBannerStyle = {
+  background: 'rgba(212, 175, 55, 0.95)',
+  border: '1px solid var(--gold)',
+  color: '#000',
+  padding: '10px 16px',
+  borderRadius: '8px',
+  marginBottom: '12px',
+  textAlign: 'center',
+  fontWeight: 700,
+  fontSize: '13px',
+  boxShadow: '0 4px 12px rgba(212, 175, 55, 0.3)',
+};
+
+const btnAcceptDraw = {
+  background: '#10B981',
+  color: '#fff',
+  border: 'none',
+  padding: '4px 12px',
+  borderRadius: '4px',
+  cursor: 'pointer',
+  fontWeight: '700',
+  fontSize: '12px'
+};
+
+const btnDeclineDraw = {
+  background: '#EF4444',
+  color: '#fff',
+  border: 'none',
+  padding: '4px 12px',
+  borderRadius: '4px',
+  cursor: 'pointer',
+  fontWeight: '700',
+  fontSize: '12px'
 };

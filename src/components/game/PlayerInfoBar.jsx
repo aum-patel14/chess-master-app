@@ -23,16 +23,18 @@ export default function PlayerInfoBar({ player, isAIThinking }) {
 
   const getClockClass = () => {
     let classes = ['info-bar-clock'];
-    if (player.isActive && state.timerRunning && !state.isAIThinking) {
+    if (player.isActive && state.timerRunning) {
       classes.push('clock-active');
     } else {
       classes.push('clock-inactive');
     }
     
-    if (player.time < 10) {
-      classes.push('clock-danger'); // red + pulse animation
+    if (player.time < 5) {
+      classes.push('clock-danger clock-flash');
+    } else if (player.time < 10) {
+      classes.push('clock-danger');
     } else if (player.time < 30) {
-      classes.push('clock-warning'); // orange
+      classes.push('clock-warning');
     }
     
     return classes.join(' ');
@@ -50,9 +52,16 @@ export default function PlayerInfoBar({ player, isAIThinking }) {
       <div className="info-bar-left">
         <div 
           className="info-bar-avatar" 
-          style={{ backgroundColor: avatarBg, color: player.color === 'w' ? '#100f20' : '#ffffff' }}
+          style={{ 
+            backgroundColor: player.isAI ? undefined : avatarBg, 
+            background: player.isAI ? player.avatarTheme : undefined,
+            color: player.color === 'w' ? '#100f20' : '#ffffff',
+            boxShadow: player.isAI ? '0 0 10px rgba(226, 176, 74, 0.2)' : undefined,
+            border: player.isAI ? '1px solid rgba(226, 176, 74, 0.4)' : undefined,
+            fontSize: player.isAI ? '20px' : undefined
+          }}
         >
-          {avatarLetter}
+          {player.isAI ? (player.avatarEmoji || '🤖') : avatarLetter}
         </div>
         <div className="info-bar-meta">
           <div className="info-bar-name-row">
