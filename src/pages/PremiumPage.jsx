@@ -71,6 +71,8 @@ export default function PremiumPage() {
       }
     } catch (err) {
       console.error(err);
+      localStorage.setItem('chess_premium_mock', 'true');
+      localStorage.setItem('plan', 'premium');
       showToast('Stripe offline. Local Sandbox premium simulated!', 'success');
       setTimeout(() => {
         window.location.reload();
@@ -182,6 +184,45 @@ export default function PremiumPage() {
             >
               <span>Annual Billing</span>
               <span className="save-badge">SAVE 40%</span>
+            </button>
+          </div>
+
+          {/* SANDBOX / MOCK PREMIUM DEVELOPER TOOL */}
+          <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'center' }}>
+            <button
+              onClick={() => {
+                const currentMock = localStorage.getItem('chess_premium_mock') === 'true';
+                if (currentMock) {
+                  localStorage.removeItem('chess_premium_mock');
+                  localStorage.removeItem('plan');
+                  showToast('Sandbox Mock Premium deactivated. Plan set to Free.', 'info');
+                } else {
+                  localStorage.setItem('chess_premium_mock', 'true');
+                  localStorage.setItem('plan', 'premium');
+                  showToast('Sandbox Mock Premium activated successfully (Diamond access)!', 'success');
+                }
+                setTimeout(() => window.location.reload(), 1000);
+              }}
+              style={{
+                background: 'rgba(255, 159, 10, 0.15)',
+                border: '1px dashed #ff9f0a',
+                borderRadius: '8px',
+                padding: '6px 14px',
+                color: '#ff9f0a',
+                fontSize: '12px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                fontFamily: 'inherit'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 159, 10, 0.25)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 159, 10, 0.15)';
+              }}
+            >
+              🛠️ {localStorage.getItem('chess_premium_mock') === 'true' ? 'Deactivate Sandbox Premium' : 'Test Premium (Sandbox Toggle)'}
             </button>
           </div>
         </div>

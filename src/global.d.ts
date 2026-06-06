@@ -13,3 +13,10 @@ declare module '*/hooks/useToast' {
 declare module '*/board/usePiecePositions' {
   export function usePiecePositions(fen: string): any[];
 }
+
+interface ImportMeta {
+  readonly env: {
+    readonly [key: string]: any;
+  };
+}
+

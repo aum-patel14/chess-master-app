@@ -723,13 +723,13 @@ export default function PuzzlesPage() {
                   }}
                 >
                   {board.map((row, rIdx) => {
-                    const actualRow = boardFlipped ? rIdx : 7 - rIdx;
+                    const actualRow = boardFlipped ? 7 - rIdx : rIdx;
                     return board[actualRow].map((cell, cIdx) => {
                       const actualCol = boardFlipped ? 7 - cIdx : cIdx;
                       const activeCell = board[actualRow][actualCol];
                       
                       const file = String.fromCharCode(97 + actualCol);
-                      const rank = actualRow + 1;
+                      const rank = boardFlipped ? rIdx + 1 : 8 - rIdx;
                       const square = `${file}${rank}`;
                       
                       const isSelected = selectedSquare === square;
@@ -918,13 +918,13 @@ export default function PuzzlesPage() {
                   }}
                 >
                   {board.map((row, rIdx) => {
-                    const actualRow = boardFlipped ? rIdx : 7 - rIdx;
+                    const actualRow = boardFlipped ? 7 - rIdx : rIdx;
                     return board[actualRow].map((cell, cIdx) => {
                       const actualCol = boardFlipped ? 7 - cIdx : cIdx;
                       const activeCell = board[actualRow][actualCol];
                       
                       const file = String.fromCharCode(97 + actualCol);
-                      const rank = actualRow + 1;
+                      const rank = boardFlipped ? rIdx + 1 : 8 - rIdx;
                       const square = `${file}${rank}`;
                       
                       const isSelected = selectedSquare === square;

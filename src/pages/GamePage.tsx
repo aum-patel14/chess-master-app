@@ -194,12 +194,12 @@ export default function GamePage() {
     let playerScore = 0;
     let opponentScore = 0;
 
-    playerCaptures.forEach(p => {
+    playerCaptures.forEach((p: any) => {
       const type = typeof p === 'string' ? p.toLowerCase() : p.type.toLowerCase();
       playerScore += PIECE_VALUES[type] || 0;
     });
 
-    opponentCaptures.forEach(p => {
+    opponentCaptures.forEach((p: any) => {
       const type = typeof p === 'string' ? p.toLowerCase() : p.type.toLowerCase();
       opponentScore += PIECE_VALUES[type] || 0;
     });
@@ -530,7 +530,7 @@ export default function GamePage() {
                     {/* Captured pieces + material diff */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
                       <span style={{ fontSize: '13px', color: '#ffffff', letterSpacing: '1px' }}>
-                        {opponentCaptures.map((p, idx) => (
+                        {opponentCaptures.map((p: any, idx: number) => (
                           <span key={idx} style={{ color: '#ffffff' }}>{CAPTURED_SYMBOLS[typeof p === 'string' ? p : p.type]}</span>
                         ))}
                       </span>
@@ -614,7 +614,7 @@ export default function GamePage() {
                     {/* Captured pieces + material diff */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
                       <span style={{ fontSize: '13px', color: '#111111', letterSpacing: '1px' }}>
-                        {playerCaptures.map((p, idx) => (
+                        {playerCaptures.map((p: any, idx: number) => (
                           <span key={idx} style={{ color: '#111111' }}>{CAPTURED_SYMBOLS[typeof p === 'string' ? p : p.type]}</span>
                         ))}
                       </span>
@@ -672,7 +672,7 @@ export default function GamePage() {
                   <AnalysisPanel
                     history={state.history}
                     onJumpToMove={handleMoveClick}
-                    onSelectArrow={(arrow) => setBestMoveArrow(arrow)}
+                    onSelectArrow={(arrow: any) => setBestMoveArrow(arrow)}
                     onCloseAnalysis={() => {
                       setShowAnalysis(false);
                       setBestMoveArrow(null);
@@ -868,7 +868,7 @@ export default function GamePage() {
                   <AnalysisPanel
                     history={state.history}
                     onJumpToMove={handleMoveClick}
-                    onSelectArrow={(arrow) => setBestMoveArrow(arrow)}
+                    onSelectArrow={(arrow: any) => setBestMoveArrow(arrow)}
                     onCloseAnalysis={() => {
                       setShowAnalysis(false);
                       setBestMoveArrow(null);
@@ -1015,7 +1015,7 @@ export default function GamePage() {
                           {state.history.length === 0 ? (
                             <span style={{ color: '#555' }}>No moves made yet.</span>
                           ) : (
-                            state.history.map((m, idx) => {
+                            state.history.map((m: any, idx: number) => {
                               const isWhiteMove = idx % 2 === 0;
                               const turnNum = Math.floor(idx / 2) + 1;
                               return (

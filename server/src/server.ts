@@ -19,18 +19,23 @@ import { calculateGlicko2Update } from './glicko2.js';
 dotenv.config();
 
 import stripeRouter from './stripe.js';
+import { getFirestoreUser, updateFirestoreUser, saveGameToFirestore } from './db.js';
 
 const app = express();
 app.use(cors());
 
-// Configure express JSON parser to retain the raw request body buffer for Stripe signature verification
-app.use(express.json({
-  verify: (req: any, res, buf) => {
-    if (req.originalUrl && req.originalUrl.startsWith('/api/stripe/webhook')) {
-      req.rawBody = buf;
-    }
+// Configure express JSON parser to skip Stripe webhook to prevent conflicts with raw body parsing
+app.use((req, res, next) => {
+  if (req.originalUrl && req.originalUrl.startsWith('/api/stripe/webhook')) {
+    next();
+  } else {
+    express.json({
+      verify: (req: any, res, buf) => {
+        req.rawBody = buf;
+      }
+    })(req, res, next);
   }
-}));
+});
 
 app.use('/api/stripe', stripeRouter);
 
@@ -41,15 +46,21 @@ const httpServer = createServer(app);
 const supabaseUrl = process.env.SUPABASE_URL || '';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
-if (!supabaseUrl || !supabaseServiceKey) {
-  console.error(
-    'CRITICAL: Supabase credentials (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY) are missing in server environment variables!'
-  );
-}
+let supabase: any = null;
 
-const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: { persistSession: false }
-});
+if (!supabaseUrl || !supabaseServiceKey) {
+  console.warn(
+    'WARNING: Supabase credentials (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY) are missing. Running in mock/fallback mode.'
+  );
+} else {
+  try {
+    supabase = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { persistSession: false }
+    });
+  } catch (err) {
+    console.error('Failed to initialize Supabase client:', err);
+  }
+}
 
 // 2. SOCKET SERVER INITIALIZATION
 const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
@@ -174,15 +185,17 @@ async function createPuzzleBattleMatch(
   let dbPuzzles: any[] = [];
   try {
     const avgRating = Math.round((playerA.rating + playerB.rating) / 2);
-    const { data } = await supabase
-      .from('puzzles')
-      .select('*')
-      .gte('rating', avgRating - 300)
-      .lte('rating', avgRating + 400)
-      .limit(15);
-      
-    if (data && data.length >= 5) {
-      dbPuzzles = data;
+    if (supabase) {
+      const { data } = await supabase
+        .from('puzzles')
+        .select('*')
+        .gte('rating', avgRating - 300)
+        .lte('rating', avgRating + 400)
+        .limit(15);
+        
+      if (data && data.length >= 5) {
+        dbPuzzles = data;
+      }
     }
   } catch (err) {
     console.error('[Puzzle Sockets] Failed to load puzzles from database:', err);
@@ -439,31 +452,62 @@ async function resolveGameOver(
       ratingChangeWhite = newWhiteGlicko.rating - room.white.rating;
       ratingChangeBlack = newBlackGlicko.rating - room.black.rating;
 
-      // Update ratings inside Supabase public database
-      await supabase
-        .from('ratings')
-        .update({
-          rating: newWhiteGlicko.rating,
-          rd: newWhiteGlicko.rd,
-          volatility: newWhiteGlicko.volatility,
-          games_played: room.white.rd === 350 ? 1 : 1 // Increment count will be done in query or trigger later, or manually
-        })
-        .eq('user_id', room.white.id)
-        .eq('time_control', timeControlCategory);
+      // Update ratings inside Firestore
+      try {
+        const whiteUserDoc = await getFirestoreUser(room.white.id);
+        const whiteRatings = whiteUserDoc?.ratings || { bullet: 1200, blitz: 1200, rapid: 1200, classical: 1200, puzzle: 1200 };
+        whiteRatings[timeControlCategory] = Math.round(newWhiteGlicko.rating);
+        whiteRatings.rd = Math.round(newWhiteGlicko.rd);
+        whiteRatings.volatility = newWhiteGlicko.volatility;
+        await updateFirestoreUser(room.white.id, {
+          rating: Math.round(newWhiteGlicko.rating),
+          ratings: whiteRatings
+        });
 
-      await supabase
-        .from('ratings')
-        .update({
-          rating: newBlackGlicko.rating,
-          rd: newBlackGlicko.rd,
-          volatility: newBlackGlicko.volatility
-        })
-        .eq('user_id', room.black.id)
-        .eq('time_control', timeControlCategory);
+        const blackUserDoc = await getFirestoreUser(room.black.id);
+        const blackRatings = blackUserDoc?.ratings || { bullet: 1200, blitz: 1200, rapid: 1200, classical: 1200, puzzle: 1200 };
+        blackRatings[timeControlCategory] = Math.round(newBlackGlicko.rating);
+        blackRatings.rd = Math.round(newBlackGlicko.rd);
+        blackRatings.volatility = newBlackGlicko.volatility;
+        await updateFirestoreUser(room.black.id, {
+          rating: Math.round(newBlackGlicko.rating),
+          ratings: blackRatings
+        });
+      } catch (err) {
+        console.error('[Firestore Update] Error updating ratings on game over:', err);
+      }
 
-      // Increment games played
-      await supabase.rpc('increment_games_played', { uid: room.white.id, tc: timeControlCategory });
-      await supabase.rpc('increment_games_played', { uid: room.black.id, tc: timeControlCategory });
+      // Update ratings inside Supabase if client is available
+      if (supabase) {
+        try {
+          await supabase
+            .from('ratings')
+            .update({
+              rating: newWhiteGlicko.rating,
+              rd: newWhiteGlicko.rd,
+              volatility: newWhiteGlicko.volatility,
+              games_played: room.white.rd === 350 ? 1 : 1
+            })
+            .eq('user_id', room.white.id)
+            .eq('time_control', timeControlCategory);
+
+          await supabase
+            .from('ratings')
+            .update({
+              rating: newBlackGlicko.rating,
+              rd: newBlackGlicko.rd,
+              volatility: newBlackGlicko.volatility
+            })
+            .eq('user_id', room.black.id)
+            .eq('time_control', timeControlCategory);
+
+          // Increment games played in Supabase
+          await supabase.rpc('increment_games_played', { uid: room.white.id, tc: timeControlCategory });
+          await supabase.rpc('increment_games_played', { uid: room.black.id, tc: timeControlCategory });
+        } catch (err) {
+          console.warn('[Supabase Update] Failed updating ratings:', err);
+        }
+      }
 
     } catch (err) {
       console.error('[Glicko Engine] Error calculating rating updates:', err);
@@ -473,18 +517,36 @@ async function resolveGameOver(
   // Generate PGN
   const pgn = buildPgn(room, result, reason);
 
-  try {
-    // Save game record in Supabase
-    await supabase.from('games').insert({
-      white_id: room.white.id,
-      black_id: room.black.id,
-      pgn: pgn,
-      result: result === 'draw' ? '1/2-1/2' : winnerColor === 'w' ? '1-0' : '0-1',
-      time_control: `${room.timeControl / 60}+${room.increment}`,
-      rated: room.rated
-    });
-  } catch (err) {
-    console.error('[Supabase Save] Failed saving PGN to DB:', err);
+  // Save game record in Firestore
+  const gameData = {
+    userId: room.white.id,
+    white_id: room.white.id,
+    black_id: room.black.id,
+    white: { username: room.white.username },
+    black: { username: room.black.username },
+    pgn: pgn,
+    result: result === 'draw' ? '1/2-1/2' : winnerColor === 'w' ? '1-0' : '0-1',
+    time_control: `${room.timeControl / 60}+${room.increment}`,
+    rated: room.rated,
+    created_at: new Date().toISOString(),
+    timestamp: new Date().toISOString()
+  };
+  await saveGameToFirestore(gameData);
+
+  // Save game record in Supabase if client is available
+  if (supabase) {
+    try {
+      await supabase.from('games').insert({
+        white_id: room.white.id,
+        black_id: room.black.id,
+        pgn: pgn,
+        result: result === 'draw' ? '1/2-1/2' : winnerColor === 'w' ? '1-0' : '0-1',
+        time_control: `${room.timeControl / 60}+${room.increment}`,
+        rated: room.rated
+      });
+    } catch (err) {
+      console.error('[Supabase Save] Failed saving PGN to DB:', err);
+    }
   }
 
   // Notify clients
@@ -515,17 +577,35 @@ io.on('connection', (socket: Socket) => {
 
     try {
       const tcCategory = getRatingCategory(timeControl);
-      // Fetch Glicko-2 ratings directly from Supabase
-      const { data: ratingDetails } = await supabase
-        .from('ratings')
-        .select('rating, rd, volatility')
-        .eq('user_id', userId)
-        .eq('time_control', tcCategory)
-        .single();
+      let rating = 1200;
+      let rd = 350;
+      let volatility = 0.06;
 
-      const rating = ratingDetails?.rating ?? 1200;
-      const rd = ratingDetails?.rd ?? 350;
-      const volatility = ratingDetails?.volatility ?? 0.06;
+      // Try fetching from Firestore first
+      const firestoreUser = await getFirestoreUser(userId);
+      if (firestoreUser) {
+        rating = firestoreUser.ratings?.[tcCategory] ?? firestoreUser.rating ?? 1200;
+        rd = firestoreUser.ratings?.rd ?? 350;
+        volatility = firestoreUser.ratings?.volatility ?? 0.06;
+      } else if (supabase) {
+        // Fall back to Supabase
+        try {
+          const { data: ratingDetails } = await supabase
+            .from('ratings')
+            .select('rating, rd, volatility')
+            .eq('user_id', userId)
+            .eq('time_control', tcCategory)
+            .single();
+
+          if (ratingDetails) {
+            rating = ratingDetails.rating ?? 1200;
+            rd = ratingDetails.rd ?? 350;
+            volatility = ratingDetails.volatility ?? 0.06;
+          }
+        } catch (err) {
+          console.warn('[Supabase Fetch] Failed fetching user ratings:', err);
+        }
+      }
 
       const playerEntry: MatchmakePlayer = {
         socketId: socket.id,

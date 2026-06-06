@@ -1,0 +1,11 @@
+export function useGame(): any;
+export const GameContext: any;
+export function GameProvider(props: any): any;
+export const BOARD_THEMES: any;
+export function updateStats(result: string): any;
+export function updateEloForResult(result: string, aiDifficulty: string): number;
+export function appendGameHistory(entry: any): void;
+export function readStats(): any;
+export function writeStats(stats: any): void;
+export function readElo(): number;
+export function writeElo(elo: number): void;
