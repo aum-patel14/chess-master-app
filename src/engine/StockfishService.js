@@ -1,6 +1,5 @@
+import StockfishEngine from './StockfishEngine.js';
 import { BOTS } from '../data/bots';
-
-const BASE_URL = import.meta.env.BASE_URL ?? '/chess-master-app/';
 
 export const DIFFICULTY_CONFIG = {
   1: { label: 'Level 1', elo: '~400', skill: 0, depth: 1, movetime: 150, description: 'Rookie strength' },
@@ -15,27 +14,11 @@ export const DIFFICULTY_CONFIG = {
   10: { label: 'Level 10', elo: '~2400+', skill: 20, depth: 15, movetime: 2000, description: 'Master strength' },
 };
 
-export class StockfishEngine {
+class CompatibleStockfishEngine extends StockfishEngine {
   constructor() {
-    this.worker = null;
-    this.isReady = false;
-    this.failed = false; // backward compatibility
-    this.isThinking = false; // backward compatibility
-    this.resolvers = new Map(); // pending promise resolvers
-    this.currentEvalResolver = null;
-
-    // Difficulty presets
-    this.DIFFICULTY = {
-      beginner: { depth: 1,  skillLevel: 0,  moveTime: 100,  label: 'Beginner'  },
-      easy:     { depth: 3,  skillLevel: 5,  moveTime: 200,  label: 'Easy'      },
-      medium:   { depth: 8,  skillLevel: 10, moveTime: 500,  label: 'Medium'    },
-      hard:     { depth: 14, skillLevel: 17, moveTime: 1000, label: 'Hard'      },
-      master:   { depth: 20, skillLevel: 20, moveTime: 2000, label: 'Master'    },
-    };
-
-    this.currentDifficulty = this.DIFFICULTY.medium;
-    this.pendingMove = null;
-    this.pendingEval = null;
+    super();
+    this.failed = false;
+    this.isThinking = false;
 
     // Auto-init for backward compatibility
     this.init().then(() => {
@@ -46,43 +29,17 @@ export class StockfishEngine {
     });
   }
 
-  /**
-   * Initialize the Stockfish worker.
-   */
   async init() {
-    return new Promise((resolve, reject) => {
-      try {
-        this.worker = new Worker(this._getStockfishPath());
-      } catch (err) {
-        this.failed = true;
-        reject(new Error('Failed to load Stockfish worker: ' + err.message));
-        return;
-      }
-
-      this.worker.onmessage = (event) => this._handleMessage(event.data);
-      this.worker.onerror = (err) => {
-        console.error('Stockfish worker error:', err);
-        this.failed = true;
-        reject(err);
-      };
-
-      this._waitForReady().then(() => {
-        this.isReady = true;
-        this.failed = false;
-        this._send('uci');
-        this._send('setoption name Threads value 1');
-        this._send('setoption name Hash value 32');
-        this._applyDifficultyOptions();
-        resolve(this);
-      });
-
-      this._send('isready');
-    });
+    try {
+      const res = await super.init();
+      this.failed = false;
+      return res;
+    } catch (err) {
+      this.failed = true;
+      throw err;
+    }
   }
 
-  /**
-   * Set difficulty level.
-   */
   setDifficulty(level) {
     if (typeof level === 'number') {
       const config = DIFFICULTY_CONFIG[level] || DIFFICULTY_CONFIG[3];
@@ -92,20 +49,13 @@ export class StockfishEngine {
         moveTime: config.movetime,
         label: config.label
       };
+      if (this.isReady) this._applyDifficultyOptions();
     } else {
-      const preset = this.DIFFICULTY[level];
-      if (!preset) throw new Error(`Unknown difficulty: ${level}. Use: ${Object.keys(this.DIFFICULTY).join(', ')}`);
-      this.currentDifficulty = preset;
+      super.setDifficulty(level);
     }
-    if (this.isReady) this._applyDifficultyOptions();
   }
 
-  /**
-   * Get the best move for a given position.
-   */
   async getBestMove(fen, movesOrDifficulty = [], option2 = null) {
-    if (!this.isReady) throw new Error('Engine not initialized. Call init() first.');
-
     let moves = [];
     if (typeof movesOrDifficulty === 'number' || typeof movesOrDifficulty === 'string') {
       this.setDifficulty(movesOrDifficulty);
@@ -115,30 +65,17 @@ export class StockfishEngine {
 
     this.isThinking = true;
 
-    return new Promise((resolve, reject) => {
-      this.pendingMove = { resolve, reject };
-
-      const posCmd = moves.length > 0
-        ? `position fen ${fen} moves ${moves.join(' ')}`
-        : `position fen ${fen}`;
-      this._send(posCmd);
-
-      const { depth, moveTime } = this.currentDifficulty;
-      this._send(`go depth ${depth} movetime ${moveTime}`);
-
-      setTimeout(() => {
-        if (this.pendingMove) {
-          this.isThinking = false;
-          this.pendingMove.reject(new Error('Engine timeout'));
-          this.pendingMove = null;
-        }
-      }, moveTime * 3 + 5000);
-    });
+    try {
+      const parsedMove = await super.getBestMove(fen, moves);
+      return parsedMove.move; // resolves to a string (e.g. "e2e4")
+    } catch (err) {
+      console.error("CompatibleStockfishEngine getBestMove error:", err);
+      throw err;
+    } finally {
+      this.isThinking = false;
+    }
   }
 
-  /**
-   * Evaluate the current position (get a score in centipawns).
-   */
   async evaluate(fen) {
     if (!this.isReady) throw new Error('Engine not initialized. Call init() first.');
 
@@ -150,9 +87,6 @@ export class StockfishEngine {
     });
   }
 
-  /**
-   * Evaluate position for analysis panel.
-   */
   async evaluatePosition(fen, depth = 10) {
     try {
       const res = await this.evaluate(fen);
@@ -166,72 +100,8 @@ export class StockfishEngine {
     }
   }
 
-  /**
-   * Stop the calculation.
-   */
-  stop() {
-    this._send('stop');
-    this.isThinking = false;
-  }
-
-  /**
-   * Reset game.
-   */
-  newGame() {
-    this._send('ucinewgame');
-  }
-
-  /**
-   * Destroy worker.
-   */
-  destroy() {
-    if (this.worker) {
-      this._send('quit');
-      this.worker.terminate();
-      this.worker = null;
-      this.isReady = false;
-      this.isThinking = false;
-    }
-  }
-
-  // ─── Private Methods ───────────────────────────────────────────────────────
-
-  _send(cmd) {
-    if (this.worker) {
-      this.worker.postMessage(cmd);
-    }
-  }
-
-  _getStockfishPath() {
-    return `${BASE_URL}stockfish.js`.replace(/\/+/g, '/');
-  }
-
-  _waitForReady() {
-    return new Promise((resolve) => {
-      const handler = (event) => {
-        const msg = typeof event.data === 'string' ? event.data : event.data?.data;
-        if (msg === 'readyok') {
-          this.worker.removeEventListener('message', handler);
-          resolve();
-        }
-      };
-      this.worker.addEventListener('message', handler);
-    });
-  }
-
-  _applyDifficultyOptions() {
-    const { skillLevel } = this.currentDifficulty;
-    this._send(`setoption name Skill Level value ${skillLevel}`);
-    if (skillLevel < 10) {
-      const errorProb = Math.round((10 - skillLevel) * 50);
-      this._send(`setoption name Move Overhead value ${errorProb}`);
-    }
-  }
-
-  _handleMessage(messageData) {
-    const message = typeof messageData === 'string' ? messageData : messageData?.data;
-    if (!message) return;
-
+  _handleMessage(message) {
+    // We override handle message to intercept bestMove and mate score configuration
     if (message.startsWith('bestmove')) {
       const parts = message.split(' ');
       const uciMove = parts[1];
@@ -250,7 +120,8 @@ export class StockfishEngine {
       }
 
       if (uciMove && uciMove !== '(none)' && this.pendingMove) {
-        this.pendingMove.resolve(uciMove);
+        const parsed = this._parseUCIMove(uciMove);
+        this.pendingMove.resolve(parsed);
         this.pendingMove = null;
       }
     }
@@ -272,7 +143,8 @@ export class StockfishEngine {
   }
 }
 
-export const stockfishEngine = new StockfishEngine();
+export { CompatibleStockfishEngine as StockfishEngine };
+export const stockfishEngine = new CompatibleStockfishEngine();
 
 export const initStockfish = () => {
   if (stockfishEngine.isReady) return Promise.resolve(true);
