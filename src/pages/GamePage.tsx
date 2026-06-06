@@ -11,6 +11,9 @@ import { readElo, readStats, writeStats } from '../utils/chessStats';
 import { ArrowLeft, ArrowRight, ChevronsLeft, ChevronsRight, Flag, RefreshCw, Undo2, HelpCircle, Download, Share2 } from 'lucide-react';
 import AnalysisPanel from '../components/game/AnalysisPanel';
 import { downloadPgn, generatePgnString } from '../utils/pgnExporter';
+import EvalBar from '../components/chesscom/EvalBar';
+import EngineDifficultyBar from '../components/chesscom/EngineDifficultyBar';
+import ThinkingIndicator from '../components/chesscom/ThinkingIndicator';
 
 interface Bot {
   id: string;
@@ -272,6 +275,12 @@ export default function GamePage() {
     dispatch({ type: 'TOGGLE_BOARD_FLIP' });
   };
 
+  const handleEngineDifficulty = (level: number) => {
+    dispatch({ type: 'SET_DIFFICULTY', payload: level });
+    localStorage.setItem('chess_difficulty', String(level));
+    showToast(`Engine set to level ${level}`, 'info', 1500);
+  };
+
   const handleSelectBot = (bot: Bot) => {
     setSelectedBot(bot);
     setGameState('timepicker');
@@ -491,6 +500,14 @@ export default function GamePage() {
                 boxShadow: isDesktop ? '0 10px 30px rgba(0,0,0,0.5)' : 'none',
               }}
             >
+              {state.gameMode === 'vsAI' && (
+                <EngineDifficultyBar
+                  value={state.aiDifficulty}
+                  onChange={handleEngineDifficulty}
+                  disabled={state.isAIThinking}
+                />
+              )}
+
               {/* 1. OPPONENT INFO BAR */}
               <div
                 style={{
@@ -565,14 +582,23 @@ export default function GamePage() {
                 )}
               </div>
 
-              {/* 2. CHESS BOARD */}
-              <div style={{ width: '100%', position: 'relative' }}>
-                <ChessBoard
-                  currentReviewIndex={reviewIndex}
-                  analysisResults={analysisResults}
-                  bestMoveArrow={bestMoveArrow}
-                />
+              {/* 2. CHESS BOARD + EVAL BAR */}
+              <div style={{ width: '100%', position: 'relative', display: 'flex', alignItems: 'stretch', gap: '6px' }}>
+                {state.gameMode === 'vsAI' && (
+                  <EvalBar fen={state.reviewFen || state.fen} flipped={state.boardFlipped} />
+                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <ChessBoard
+                    currentReviewIndex={reviewIndex}
+                    analysisResults={analysisResults}
+                    bestMoveArrow={bestMoveArrow}
+                  />
+                </div>
               </div>
+
+              <ThinkingIndicator
+                visible={state.gameMode === 'vsAI' && state.isAIThinking}
+              />
 
               {/* 3. PLAYER INFO BAR */}
               <div

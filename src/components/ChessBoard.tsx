@@ -205,7 +205,7 @@ export default function ChessBoard({ bestMoveArrow, analysisResults, currentRevi
         position: 'relative',
         width: '100%',
         aspectRatio: '1',
-        background: '#b58863', // Dark squares default
+        background: '#769656', // Chess.com dark squares
         display: 'grid',
         gridTemplateColumns: 'repeat(8, 1fr)',
         gridTemplateRows: 'repeat(8, 1fr)',
@@ -220,7 +220,7 @@ export default function ChessBoard({ bestMoveArrow, analysisResults, currentRevi
       {renderedSquares.map(({ row, col, rankLabel, fileLabel, squareName, cell }) => {
         // Determine square coordinate color and active state colors
         const isLight = (row + col) % 2 !== 0; // standard alternation
-        const defaultBg = isLight ? '#f0d9b5' : '#b58863';
+        const defaultBg = isLight ? '#eeeed2' : '#769656';
         
         const isSelected = selectedSquare === squareName;
         const isLastMove = lastMove && (lastMove.from === squareName || lastMove.to === squareName);
@@ -231,9 +231,13 @@ export default function ChessBoard({ bestMoveArrow, analysisResults, currentRevi
         // Compute background color overrides
         let sqBg = defaultBg;
         if (isCheck) {
-          sqBg = 'rgba(239, 68, 68, 0.8)'; // Red king square
-        } else if (isSelected || isLastMove || isHint || isDragOver) {
-          sqBg = 'rgba(235, 208, 5, 0.4)'; // Chess.com semi-transparent yellow highlight
+          sqBg = '#FF6B6B';
+        } else if (isSelected) {
+          sqBg = '#7FC97F';
+        } else if (isLastMove) {
+          sqBg = isLight ? '#F6F669' : '#BACA2B';
+        } else if (isHint || isDragOver) {
+          sqBg = isLight ? 'rgba(127, 201, 127, 0.55)' : 'rgba(127, 201, 127, 0.45)';
         }
 
         const isValidTarget = validMoves.includes(squareName);
@@ -281,7 +285,7 @@ export default function ChessBoard({ bestMoveArrow, analysisResults, currentRevi
                   left: '4px',
                   fontSize: '11px',
                   fontWeight: 700,
-                  color: isLight ? '#b58863' : '#f0d9b5',
+                  color: isLight ? '#769656' : '#eeeed2',
                   opacity: 0.55,
                   pointerEvents: 'none',
                 }}
@@ -299,7 +303,7 @@ export default function ChessBoard({ bestMoveArrow, analysisResults, currentRevi
                   right: '4px',
                   fontSize: '11px',
                   fontWeight: 700,
-                  color: isLight ? '#b58863' : '#f0d9b5',
+                  color: isLight ? '#769656' : '#eeeed2',
                   opacity: 0.55,
                   pointerEvents: 'none',
                 }}

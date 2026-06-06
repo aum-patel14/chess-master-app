@@ -1,9 +1,10 @@
 import './LandingPage.css';
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useGame } from '../context/GameContext';
 import { SignUpModal, LoginModal } from '../components/Modals';
 import LandingPageToast from '../components/LandingPageToast';
+import { CHESSCOM_NAV, LANDING_BOTS } from '../data/chesscomNav';
 
 // Helper to convert FEN string to a 2D grid of chess pieces
 function fenToGrid(fen) {
@@ -26,18 +27,11 @@ function fenToGrid(fen) {
   return grid;
 }
 
-// BOTS mapping for starting games
-const BOTS = [
-  { id: 'casual', name: 'Aria', elo: 800, avatar: '😊', difficulty: 3 },
-  { id: 'club', name: 'Martin', elo: 1200, avatar: '🧔', difficulty: 4 },
-  { id: 'intermediate', name: 'Zara', elo: 1500, avatar: '👩', difficulty: 5 },
-  { id: 'advanced', name: 'Viktor', elo: 1800, avatar: '🧠', difficulty: 6 },
-  { id: 'master', name: 'Magnus', elo: 2850, avatar: '👑', difficulty: 8 },
-  { id: 'master', name: 'Stockfish', elo: 3500, avatar: '🤖', difficulty: 10 },
-];
+const BOTS = LANDING_BOTS.map((b, i) => ({ ...b, id: b.name.toLowerCase() + i }));
 
 export default function LandingPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { startNewGame } = useGame();
   const [toastMsg, setToastMsg] = useState('');
   const [showSignUp, setShowSignUp] = useState(false);
@@ -48,6 +42,19 @@ export default function LandingPage() {
   const [heroBoardHighlighted, setHeroBoardHighlighted] = useState(null);
   const [puzzleBoardHighlighted, setPuzzleBoardHighlighted] = useState(null);
   const [mobileBoardHighlighted, setMobileBoardHighlighted] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const handleNavItem = (item) => {
+    if (item.soon) {
+      showToast('Coming soon!');
+      return;
+    }
+    if (item.state) {
+      navigate(item.path, { state: item.state });
+    } else {
+      navigate(item.path);
+    }
+  };
 
   const showToast = (msg) => {
     setToastMsg(msg);
@@ -62,15 +69,14 @@ export default function LandingPage() {
       mode: 'vsAI',
       playerColor: 'w',
       difficulty: bot.difficulty,
-      botId: bot.id
     });
     navigate('/game', {
       state: {
         mode: 'ai',
         difficulty: bot.difficulty,
         playerColor: 'w',
-        botId: bot.id
-      }
+        botId: bot.id,
+      },
     });
   };
 
@@ -146,72 +152,54 @@ export default function LandingPage() {
       <aside id="sidebar" className="desktop-only">
         <div className="logo" onClick={() => navigate('/')}>
           <div className="logo-icon">♛</div>
-          <span><em>Chess</em>Master</span>
+          <span>ChessMaster Pro</span>
         </div>
 
         <nav>
-          <div className="nav-item">
-            <div className="nav-link active" onClick={handlePlayDefault}>
-              <span className="nav-icon">🎮</span> Play
+          {CHESSCOM_NAV.map((section, idx) => (
+            <div key={section.id} className="nav-item">
+              <div
+                className={`nav-link${location.pathname === section.path ? ' active' : ''}`}
+                onClick={() => handleNavItem({ path: section.path, soon: false })}
+              >
+                <span className="nav-icon">{section.icon}</span> {section.label}
+              </div>
+              {section.items?.length > 0 && (
+                <div className="dropdown" style={{ top: `${80 + idx * 44}px` }}>
+                  {section.items.map((item) => (
+                    <span
+                      key={item.label}
+                      className="dropdown-link"
+                      onClick={() => handleNavItem(item)}
+                    >
+                      <span className="di">{item.icon}</span> {item.label}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
-            <div className="dropdown" style={{ top: '80px' }}>
-              <span className="dropdown-link" onClick={handlePlayDefault}><span className="di">🤖</span> Play Bots</span>
-              <span className="dropdown-link" onClick={handlePlayDefault}><span className="di">👨‍🏫</span> Play Coach</span>
-              <span className="dropdown-link" onClick={() => navigate('/stats')}><span className="di">📊</span> Stats</span>
-              <span className="dropdown-link" onClick={() => navigate('/tournaments')}><span className="di">🏆</span> Tournaments</span>
-              <span className="dropdown-link" onClick={() => navigate('/history')}><span className="di">📜</span> Game History</span>
-            </div>
-          </div>
-
-          <div className="nav-item">
-            <div className="nav-link" onClick={() => navigate('/puzzles')}>
-              <span className="nav-icon">🧩</span> Puzzles
-            </div>
-            <div className="dropdown" style={{ top: '124px' }}>
-              <span className="dropdown-link" onClick={() => navigate('/puzzles')}><span className="di">🧩</span> Puzzles</span>
-              <span className="dropdown-link" onClick={() => navigate('/puzzles')}><span className="di">⚡</span> Puzzle Rush</span>
-            </div>
-          </div>
-
-          <div className="nav-item">
-            <div className="nav-link" onClick={() => navigate('/learn')}>
-              <span className="nav-icon">🎓</span> Learn
-            </div>
-            <div className="dropdown" style={{ top: '168px' }}>
-              <span className="dropdown-link" onClick={() => navigate('/learn')}><span className="di">📖</span> Lessons</span>
-              <span className="dropdown-link" onClick={() => navigate('/learn')}><span className="di">📚</span> Openings</span>
-            </div>
-          </div>
-
-          <div className="nav-item">
-            <span className="nav-link" onClick={() => navigate('/watch')}>
-              <span className="nav-icon">🏋️</span> Train
-            </span>
-          </div>
-
-          <div className="nav-item">
-            <span className="nav-link" onClick={() => navigate('/watch')}>
-              <span className="nav-icon">📺</span> Watch
-            </span>
-          </div>
-
-          <div className="nav-item">
-            <span className="nav-link" onClick={() => navigate('/leaderboard')}>
-              <span className="nav-icon">👥</span> Community
-            </span>
-          </div>
-
-          <div className="nav-item">
-            <span className="nav-link" onClick={() => navigate('/other')}>
-              <span className="nav-icon">•••</span> Other
-            </span>
-          </div>
+          ))}
         </nav>
 
         <div className="sidebar-bottom">
-          <button className="btn-signup" onClick={() => setShowSignUp(true)}>Sign Up</button>
-          <button className="btn-login" onClick={() => setShowLogin(true)}>Log In</button>
+          <input
+            type="search"
+            className="sidebar-search"
+            placeholder="Search..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && searchQuery.trim()) {
+                showToast(`Searching for "${searchQuery}"...`);
+              }
+            }}
+          />
+          <button type="button" className="btn-signup" onClick={() => setShowSignUp(true)}>Sign Up</button>
+          <button type="button" className="btn-login" onClick={() => setShowLogin(true)}>Log In</button>
           <span className="help-link" onClick={() => showToast('Help section coming soon!')}>❓ Help &amp; Support</span>
+          <div className="lang-select">
+            <span>🌐</span> English
+          </div>
         </div>
       </aside>
 

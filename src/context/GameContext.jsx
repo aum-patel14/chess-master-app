@@ -30,7 +30,7 @@ const initGame = (fen) => {
 const GameContext = createContext(null);
 
 const BOARD_THEMES = {
-  classic:  { light: '#f0d9b5', dark: '#b58863', name: 'Classic', accent: '#c4a028' },
+  classic:  { light: '#eeeed2', dark: '#769656', name: 'Classic', accent: '#81b64c' },
   ocean:    { light: '#dee3e6', dark: '#8ca2ad', name: 'Ocean',   accent: '#4a728a' },
   wood:     { light: '#f0c070', dark: '#8a4f2a', name: 'Wood',    accent: '#734122' },
   midnight: { light: '#6f8fa4', dark: '#2e4057', name: 'Midnight',accent: '#8866ff' },

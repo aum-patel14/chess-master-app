@@ -15,8 +15,8 @@ export const theme = {
     gold:         '#f5c518',  // premium badge
 
     // Board colours (classic Chess.com)
-    boardLight:   '#f0d9b5',  // light squares
-    boardDark:    '#b58863',  // dark squares
+    boardLight:   '#eeeed2',  // light squares
+    boardDark:    '#769656',  // dark squares
     boardHighlight: 'rgba(235,208,5,0.4)',   // last move
     boardSelected:  'rgba(20,85,30,0.5)',    // selected piece
     boardDot:       'rgba(0,0,0,0.2)',       // valid move dots
