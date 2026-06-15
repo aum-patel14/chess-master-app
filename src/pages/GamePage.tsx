@@ -1,7 +1,54 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Chess } from 'chess.js';
 import { useGame } from '../context/GameContext';
+import { useAuth } from '../context/AuthContext';
+import { supabase } from '../services/supabase';
+
+const ENUM_TO_SECONDS: Record<string, number> = {
+  'bullet_1_0': 60,
+  'bullet_1_1': 60,
+  'bullet_2_1': 120,
+  'blitz_3_0': 180,
+  'blitz_3_2': 180,
+  'blitz_5_0': 300,
+  'blitz_5_3': 300,
+  'rapid_10_0': 600,
+  'rapid_10_5': 600,
+  'rapid_15_10': 900,
+  'classical_30_0': 1800
+};
+
+const reconstructMovesFromFens = (fens: string[]) => {
+  if (!fens || fens.length <= 1) return [];
+  const chess = new Chess();
+  const moves = [];
+  for (let i = 1; i < fens.length; i++) {
+    const targetFen = fens[i];
+    const legalMoves = chess.moves({ verbose: true });
+    let matchedMove = null;
+    for (const m of legalMoves) {
+      const testChess = new Chess(chess.fen());
+      const testMove = testChess.move({ from: m.from, to: m.to, promotion: m.promotion || 'q' });
+      if (testMove && testChess.fen() === targetFen) {
+        matchedMove = {
+          from: m.from,
+          to: m.to,
+          promotion: m.promotion,
+          san: testMove.san
+        };
+        break;
+      }
+    }
+    if (matchedMove) {
+      chess.move({ from: matchedMove.from, to: matchedMove.to, promotion: matchedMove.promotion });
+      moves.push(matchedMove);
+    } else {
+      break;
+    }
+  }
+  return moves;
+};
 import { useToast } from '../hooks/useToast';
 import PageShell from '../components/PageShell';
 import ChessBoard from '../components/ChessBoard';
@@ -39,8 +86,127 @@ export default function GamePage() {
   const { showToast } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
+  const { roomCode } = useParams<{ roomCode?: string }>();
+  const { currentUser } = useAuth();
 
   const userRating = readElo();
+  const pgnLoadedRef = useRef(false);
+
+  // Load online game if roomCode is in URL
+  useEffect(() => {
+    if (roomCode && currentUser?.uid && currentUser.uid !== 'guest' && state.roomCode !== roomCode) {
+      const loadOnlineGame = async () => {
+        try {
+          const { data: game, error } = await supabase
+            .from('online_games')
+            .select('*')
+            .eq('room_code', roomCode)
+            .maybeSingle();
+
+          if (error) {
+            showToast('Error loading game: ' + error.message, 'error');
+            return;
+          }
+
+          if (game) {
+            if (game.status === 'completed' || game.status === 'abandoned') {
+              showToast('This game has already ended.', 'info');
+              navigate('/play/online');
+              return;
+            }
+
+            const isWhite = game.white_id === currentUser.uid;
+            const isBlack = game.black_id === currentUser.uid;
+
+            if (isWhite || isBlack) {
+              const opponentName = isWhite ? game.black_username : game.white_username;
+              const opponentRating = isWhite ? game.black_elo : game.white_elo;
+              const timeControlSecs = ENUM_TO_SECONDS[game.time_control] || 180;
+              const reconstructedHistory = reconstructMovesFromFens(game.fen_history || []);
+
+              // Set active game locally
+              localStorage.setItem('active_online_game', JSON.stringify({
+                roomCode: game.room_code,
+                color: isWhite ? 'white' : 'black',
+                opponentName,
+                opponentRating,
+                timeControl: timeControlSecs
+              }));
+
+              dispatch({
+                type: 'RESTORE_ONLINE_GAME',
+                payload: {
+                  roomCode: game.room_code,
+                  color: isWhite ? 'white' : 'black',
+                  opponentName,
+                  opponentRating,
+                  fen: game.current_fen,
+                  history: reconstructedHistory,
+                  timeControl: timeControlSecs
+                }
+              });
+
+              dispatch({
+                type: 'SYNC_TIMES',
+                payload: {
+                  whiteTime: (game.white_time_ms || 180000) / 1000,
+                  blackTime: (game.black_time_ms || 180000) / 1000
+                }
+              });
+
+              setIsPlaying(true);
+              setGameState('playing');
+            } else {
+              showToast('You are not a player in this game room.', 'warning');
+              navigate('/play/online');
+            }
+          } else {
+            showToast('Game room not found.', 'error');
+            navigate('/play/online');
+          }
+        } catch (err: any) {
+          console.error(err);
+          showToast('Failed to load game room: ' + err.message, 'error');
+        }
+      };
+
+      loadOnlineGame();
+    }
+  }, [roomCode, currentUser, state.roomCode]);
+
+  // Load analysis game if PGN is in location.state
+  useEffect(() => {
+    if (location.state?.pgn && location.state?.mode === 'analysis' && !pgnLoadedRef.current) {
+      pgnLoadedRef.current = true;
+      try {
+        const tempChess = new Chess();
+        tempChess.loadPgn(location.state.pgn);
+        const moves = tempChess.history({ verbose: true }).map((m: any) => ({
+          from: m.from,
+          to: m.to,
+          promotion: m.promotion,
+          san: m.san
+        }));
+        
+        dispatch({
+          type: 'LOAD_ANALYSIS_GAME',
+          payload: {
+            history: moves,
+            color: location.state.playerColor || 'w',
+            opponentName: location.state.opponentName || 'Opponent',
+            opponentRating: location.state.opponentRating || 1200
+          }
+        });
+        
+        setIsPlaying(true);
+        setGameState('playing');
+        setShowAnalysis(true);
+      } catch (err: any) {
+        console.error('Failed to load PGN for analysis:', err);
+        showToast('Failed to load game history: ' + err.message, 'error');
+      }
+    }
+  }, [location.state?.pgn, location.state?.mode, dispatch, showToast]);
 
   const chess = useMemo(() => {
     try {
@@ -527,7 +693,7 @@ export default function GamePage() {
  
               {/* 2. CHESS BOARD + EVAL BAR */}
               <div style={{ width: '100%', position: 'relative', display: 'flex', alignItems: 'stretch', gap: '6px' }}>
-                {state.gameMode === 'vsAI' && (
+                {(state.gameMode === 'vsAI' || state.gameMode === 'analysis') && (
                   <EvalBar fen={state.reviewFen || state.fen} flipped={state.boardFlipped} refreshKey={state.evalTick} />
                 )}
                 <div style={{ flex: 1, minWidth: 0, pointerEvents: state.isAIThinking || isStockfishThinking ? 'none' : 'auto' }}>
@@ -655,10 +821,10 @@ export default function GamePage() {
                     {/* Game / Opponent Header */}
                     <div style={{ borderBottom: '1px solid #333', paddingBottom: '14px', marginBottom: '16px', textAlign: 'left' }}>
                       <h3 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: '#fff' }}>
-                        {state.gameMode === 'vsAI' ? `🤖 vs ${activeBot.name}` : state.gameMode === 'online' ? `⚔️ vs ${state.opponentName || 'Online'}` : '👥 Local Game'}
+                        {state.gameMode === 'vsAI' ? `🤖 vs ${activeBot.name}` : state.gameMode === 'online' ? `⚔️ vs ${state.opponentName || 'Online'}` : state.gameMode === 'analysis' ? '🔬 Game Analysis' : '👥 Local Game'}
                       </h3>
                       <p style={{ fontSize: '12px', color: '#aaaaaa', marginTop: '4px', margin: '4px 0 0 0', lineHeight: '1.4' }}>
-                        {state.gameMode === 'vsAI' ? activeBot.description : 'Analyze positions, review mistakes and play in real time.'}
+                        {state.gameMode === 'vsAI' ? activeBot.description : state.gameMode === 'analysis' ? 'Analyze positions, review mistakes and explore optimal moves.' : 'Analyze positions, review mistakes and play in real time.'}
                       </p>
                     </div>
 

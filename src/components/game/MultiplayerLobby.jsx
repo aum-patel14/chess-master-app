@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { useSocket } from '../../hooks/useSocket';
+import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../services/supabase';
 import { useToast } from '../../hooks/useToast';
-import { Cpu, Users, Copy, Check, Play } from 'lucide-react';
+import { Cpu, Users, Copy, Play } from 'lucide-react';
+import { SignUpModal, LoginModal } from '../Modals';
 
 const TIME_PRESETS = [
   { label: 'Bullet 1m', sec: 60 },
@@ -9,8 +11,28 @@ const TIME_PRESETS = [
   { label: 'Rapid 10m', sec: 600 }
 ];
 
+const SECONDS_TO_ENUM = {
+  60: 'bullet_1_0',
+  180: 'blitz_3_0',
+  600: 'rapid_10_0'
+};
+
+const ENUM_TO_SECONDS = {
+  'bullet_1_0': 60,
+  'bullet_1_1': 60,
+  'bullet_2_1': 120,
+  'blitz_3_0': 180,
+  'blitz_3_2': 180,
+  'blitz_5_0': 300,
+  'blitz_5_3': 300,
+  'rapid_10_0': 600,
+  'rapid_10_5': 600,
+  'rapid_15_10': 900,
+  'classical_30_0': 1800
+};
+
 export default function MultiplayerLobby({ onStartGame }) {
-  const socket = useSocket();
+  const { currentUser, userData } = useAuth();
   const { showToast } = useToast();
 
   const [activeTab, setActiveTab] = useState('matchmake'); // 'matchmake' | 'friend'
@@ -18,9 +40,15 @@ export default function MultiplayerLobby({ onStartGame }) {
   const [joinCode, setJoinCode] = useState('');
   const [createdRoomCode, setCreatedRoomCode] = useState(null);
   
+  // Auth modals
+  const [showSignUp, setShowSignUp] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
+
   // Matchmaking status
   const [isQueued, setIsQueued] = useState(false);
   const [queueTime, setQueueTime] = useState(0);
+
+  const isGuest = !currentUser || currentUser.uid === 'guest';
 
   // Timer for active queue
   useEffect(() => {
@@ -36,75 +64,228 @@ export default function MultiplayerLobby({ onStartGame }) {
     };
   }, [isQueued]);
 
-  // Setup socket room events
+  // Subscribe to matchmaking matches
   useEffect(() => {
-    if (!socket) return;
+    if (!currentUser || currentUser.uid === 'guest') return;
 
-    const handleRoomCreated = ({ roomCode }) => {
-      setCreatedRoomCode(roomCode);
-      showToast(`Private room created: ${roomCode}`, 'success');
-    };
-
-    const handleGameStart = (gameData) => {
-      setIsQueued(false);
-      onStartGame(gameData);
-    };
-
-    const handleErrorMsg = (msg) => {
-      showToast(msg, 'error');
-    };
-
-    socket.on('room-created', handleRoomCreated);
-    socket.on('game-start', handleGameStart);
-    socket.on('error-msg', handleErrorMsg);
+    const channel = supabase
+      .channel('lobby-matches')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'online_games',
+          filter: `status=eq.active`
+        },
+        (payload) => {
+          const game = payload.new;
+          if (game.white_id === currentUser.uid || game.black_id === currentUser.uid) {
+            setIsQueued(false);
+            const isWhite = game.white_id === currentUser.uid;
+            onStartGame({
+              roomCode: game.room_code,
+              color: isWhite ? 'white' : 'black',
+              opponentName: isWhite ? game.black_username : game.white_username,
+              opponentRating: isWhite ? game.black_elo : game.white_elo,
+              timeControl: ENUM_TO_SECONDS[game.time_control] || 180
+            });
+          }
+        }
+      )
+      .subscribe();
 
     return () => {
-      socket.off('room-created', handleRoomCreated);
-      socket.off('game-start', handleGameStart);
-      socket.off('error-msg', handleErrorMsg);
+      supabase.removeChannel(channel);
     };
-  }, [socket, onStartGame, showToast]);
+  }, [currentUser, onStartGame]);
 
-  const handleJoinQueue = () => {
-    if (!socket) return;
+  // Subscribe to private room opponent joining
+  useEffect(() => {
+    if (!createdRoomCode) return;
+
+    const channel = supabase
+      .channel(`lobby-${createdRoomCode}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'online_games',
+          filter: `room_code=eq.${createdRoomCode}`
+        },
+        (payload) => {
+          const game = payload.new;
+          if (game.status === 'active' && game.black_id) {
+            setCreatedRoomCode(null);
+            onStartGame({
+              roomCode: game.room_code,
+              color: 'white',
+              opponentName: game.black_username,
+              opponentRating: game.black_elo,
+              timeControl: ENUM_TO_SECONDS[game.time_control] || selectedTime
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [createdRoomCode, onStartGame, selectedTime]);
+
+  const handleJoinQueue = async () => {
+    if (isGuest) return;
     setIsQueued(true);
-    socket.emit('join-queue', {
-      name: localStorage.getItem('chess_display_name') || 'Guest Player',
-      rating: parseInt(localStorage.getItem('chess_elo')) || 1200,
-      timeControl: selectedTime
-    });
+    
+    try {
+      const tcEnum = SECONDS_TO_ENUM[selectedTime] || 'blitz_3_0';
+      const username = userData?.username || currentUser?.displayName || 'Player';
+      const elo = userData?.rating || 1200;
+      
+      const { data, error } = await supabase.rpc('join_matchmaking', {
+        p_user_id: currentUser.uid,
+        p_username: username,
+        p_elo: elo,
+        p_time_control: tcEnum,
+        p_is_rated: true
+      });
+      
+      if (error) {
+        setIsQueued(false);
+        showToast(error.message, 'error');
+        return;
+      }
+      
+      if (data && data.matched) {
+        setIsQueued(false);
+        const game = data.game;
+        const isWhite = game.white_id === currentUser.uid;
+        onStartGame({
+          roomCode: game.room_code,
+          color: isWhite ? 'white' : 'black',
+          opponentName: isWhite ? game.black_username : game.white_username,
+          opponentRating: isWhite ? game.black_elo : game.white_elo,
+          timeControl: ENUM_TO_SECONDS[game.time_control] || selectedTime
+        });
+      }
+    } catch (err) {
+      setIsQueued(false);
+      showToast('Error joining matchmaking queue', 'error');
+      console.error(err);
+    }
   };
 
-  const handleCancelQueue = () => {
-    if (!socket) return;
+  const handleCancelQueue = async () => {
     setIsQueued(false);
-    socket.emit('disconnect'); // Clean disconnect re-registers queue
-    socket.connect();
-    showToast('Matchmaking queue cancelled', 'info');
+    if (!currentUser) return;
+    try {
+      await supabase
+        .from('matchmaking_queue')
+        .delete()
+        .eq('user_id', currentUser.uid);
+      showToast('Matchmaking queue cancelled', 'info');
+    } catch (err) {
+      console.error('Error cancelling queue:', err);
+    }
   };
 
-  const handleCreateRoom = () => {
-    if (!socket) return;
-    socket.emit('create-room', {
-      name: localStorage.getItem('chess_display_name') || 'Guest Player',
-      rating: parseInt(localStorage.getItem('chess_elo')) || 1200,
-      timeControl: selectedTime
-    });
+  const handleCreateRoom = async () => {
+    if (isGuest) return;
+    
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let roomCode = '';
+    for (let i = 0; i < 6; i++) {
+      roomCode += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    
+    const tcEnum = SECONDS_TO_ENUM[selectedTime] || 'blitz_3_0';
+    const username = userData?.username || currentUser?.displayName || 'Player';
+    const elo = userData?.rating || 1200;
+    
+    try {
+      const { error } = await supabase
+        .from('online_games')
+        .insert({
+          room_code: roomCode,
+          white_id: currentUser.uid,
+          white_username: username,
+          white_elo: elo,
+          time_control: tcEnum,
+          status: 'waiting'
+        });
+        
+      if (error) {
+        showToast('Failed to create private lobby. Please try again.', 'error');
+        console.error(error);
+        return;
+      }
+      
+      setCreatedRoomCode(roomCode);
+      showToast(`Private room created: ${roomCode}`, 'success');
+    } catch (err) {
+      showToast('Error creating room', 'error');
+      console.error(err);
+    }
   };
 
-  const handleJoinRoom = (e) => {
+  const handleJoinRoom = async (e) => {
     e.preventDefault();
-    if (!socket || !joinCode) return;
+    if (isGuest || !joinCode) return;
     const cleanCode = joinCode.trim().toUpperCase();
     if (cleanCode.length !== 6) {
       showToast('Room codes must be exactly 6 characters.', 'warning');
       return;
     }
-    socket.emit('join-room', {
-      roomCode: cleanCode,
-      name: localStorage.getItem('chess_display_name') || 'Guest Player',
-      rating: parseInt(localStorage.getItem('chess_elo')) || 1200
-    });
+    
+    try {
+      const username = userData?.username || currentUser?.displayName || 'Player';
+      const elo = userData?.rating || 1200;
+      
+      const { data, error } = await supabase.rpc('join_private_game', {
+        p_room_code: cleanCode,
+        p_user_id: currentUser.uid,
+        p_username: username,
+        p_elo: elo
+      });
+      
+      if (error) {
+        showToast(error.message, 'error');
+        return;
+      }
+      
+      if (data && data.success) {
+        const game = data.game;
+        onStartGame({
+          roomCode: game.room_code,
+          color: 'black',
+          opponentName: game.white_username,
+          opponentRating: game.white_elo,
+          timeControl: ENUM_TO_SECONDS[game.time_control] || 180
+        });
+      } else {
+        showToast(data.message || 'Failed to join private room', 'error');
+      }
+    } catch (err) {
+      showToast('Error joining room', 'error');
+      console.error(err);
+    }
+  };
+
+  const handleLeaveLobby = async () => {
+    if (createdRoomCode) {
+      try {
+        await supabase
+          .from('online_games')
+          .delete()
+          .eq('room_code', createdRoomCode)
+          .eq('status', 'waiting');
+      } catch (err) {
+        console.error('Error deleting waiting game:', err);
+      }
+    }
+    setCreatedRoomCode(null);
   };
 
   const copyRoomCode = () => {
@@ -112,6 +293,40 @@ export default function MultiplayerLobby({ onStartGame }) {
     navigator.clipboard.writeText(createdRoomCode);
     showToast('Lobby code copied to clipboard!', 'success');
   };
+
+  if (isGuest) {
+    return (
+      <div style={lobbyWrapper}>
+        <h2 style={lobbyHeader}>🌐 Online Multiplayer</h2>
+        <div style={guestCard}>
+          <div style={guestIconContainer}>⚔️</div>
+          <h3 style={guestTitle}>Sign In to Play Online</h3>
+          <p style={guestText}>
+            Realtime multiplayer requires a registered account to track ratings, match histories, and unlock achievements.
+          </p>
+          <div style={guestActionButtons}>
+            <button style={btnPrimary} onClick={() => setShowLogin(true)}>
+              Log In
+            </button>
+            <button style={btnSecondary} onClick={() => setShowSignUp(true)}>
+              Sign Up
+            </button>
+          </div>
+        </div>
+
+        <LoginModal 
+          show={showLogin} 
+          onClose={() => setShowLogin(false)} 
+          onSwitchToSignUp={() => { setShowLogin(false); setShowSignUp(true); }} 
+        />
+        <SignUpModal 
+          show={showSignUp} 
+          onClose={() => setShowSignUp(false)} 
+          onSwitchToLogin={() => { setShowSignUp(false); setShowLogin(true); }} 
+        />
+      </div>
+    );
+  }
 
   return (
     <div style={lobbyWrapper}>
@@ -205,7 +420,7 @@ export default function MultiplayerLobby({ onStartGame }) {
             Waiting for friend to join...
           </div>
 
-          <button style={btnCancel} onClick={() => setCreatedRoomCode(null)}>
+          <button style={btnCancel} onClick={handleLeaveLobby}>
             Leave Lobby
           </button>
         </div>
@@ -429,3 +644,39 @@ const pulseDot = {
   background: 'var(--gold)',
   animation: 'dotPulse 1s ease-in-out infinite'
 };
+
+const guestCard = {
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  textAlign: 'center',
+  padding: '24px 12px',
+};
+
+const guestIconContainer = {
+  fontSize: '48px',
+  marginBottom: '16px',
+};
+
+const guestTitle = {
+  fontFamily: 'Cinzel, serif',
+  fontSize: '20px',
+  color: 'var(--gold)',
+  margin: '0 0 12px'
+};
+
+const guestText = {
+  fontSize: '14px',
+  color: 'var(--text-secondary)',
+  lineHeight: 1.5,
+  marginBottom: '24px',
+  maxWidth: '320px'
+};
+
+const guestActionButtons = {
+  display: 'flex',
+  flexDirection: 'column',
+  width: '100%',
+  gap: '12px'
+};
+

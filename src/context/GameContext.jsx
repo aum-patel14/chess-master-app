@@ -15,11 +15,24 @@ import { readElo, writeElo, updateStats, updateEloForResult, appendGameHistory, 
 import { checkAndUnlockAchievements } from '../utils/achievements';
 import AchievementToast from '../components/AchievementToast';
 import UpgradeModal from '../components/modals/UpgradeModal';
-import { getSocket } from '../hooks/useSocket';
 import { useAuth } from './AuthContext';
 import { supabase } from '../services/supabase';
 import { generatePgnString } from '../utils/pgnExporter';
 import { BOTS } from '../config/bots';
+
+const ENUM_TO_SECONDS = {
+  'bullet_1_0': 60,
+  'bullet_1_1': 60,
+  'bullet_2_1': 120,
+  'blitz_3_0': 180,
+  'blitz_3_2': 180,
+  'blitz_5_0': 300,
+  'blitz_5_3': 300,
+  'rapid_10_0': 600,
+  'rapid_10_5': 600,
+  'rapid_15_10': 900,
+  'classical_30_0': 1800
+};
 
 
 const initGame = (fen) => {
@@ -203,6 +216,50 @@ function gameReducer(state, action) {
         drawOfferedByOpponent: false,
       };
     }
+    case 'LOAD_ANALYSIS_GAME': {
+      const chess = new Chess();
+      const reconstructedHistory = [];
+      for (const m of action.payload.history) {
+        const moveRes = chess.move({ from: m.from, to: m.to, promotion: m.promotion });
+        if (moveRes) {
+          reconstructedHistory.push({
+            from: m.from,
+            to: m.to,
+            promotion: m.promotion,
+            san: m.san || moveRes.san,
+            fen: chess.fen()
+          });
+        }
+      }
+
+      const status = getGameStatus(chess);
+      const capturedPieces = computeCaptured(chess.history({ verbose: true }));
+
+      return {
+        ...state,
+        gameMode: 'analysis',
+        roomCode: null,
+        playerColor: action.payload.color || 'w',
+        opponentName: action.payload.opponentName || 'Opponent',
+        opponentRating: action.payload.opponentRating || 1200,
+        timeControl: null,
+        fen: chess.fen(),
+        history: reconstructedHistory,
+        selectedSquare: null,
+        validMoves: [],
+        lastMove: reconstructedHistory.length ? { from: reconstructedHistory[reconstructedHistory.length - 1].from, to: reconstructedHistory[reconstructedHistory.length - 1].to } : null,
+        status,
+        timerRunning: false,
+        opponentDisconnected: false,
+        capturedPieces,
+        checkSquare: null,
+        reviewFen: null,
+        hintSquares: null,
+        moveCount: reconstructedHistory.length,
+        gameStartTime: Date.now(),
+        drawOfferedByOpponent: false,
+      };
+    }
     case 'SET_DRAW_OFFERED':
       return {
         ...state,
@@ -244,6 +301,13 @@ function gameReducer(state, action) {
     case 'CLEAR_ERROR_SQUARE': return { ...state, errorSquare: null };
     case 'SET_AI_THINKING': return { ...state, isAIThinking: action.payload };
     case 'SET_PROMOTION_PENDING': return { ...state, promotionPending: action.payload };
+    case 'SYNC_TIMES': {
+      return {
+        ...state,
+        whiteTime: action.payload.whiteTime,
+        blackTime: action.payload.blackTime
+      };
+    }
     case 'SET_TIME_CONTROL': return {
       ...state,
       timeControl: action.payload,
@@ -410,11 +474,18 @@ export function GameProvider({ children }) {
   const [state, dispatch] = useReducer(gameReducer, initialState);
   const [playerElo, setPlayerElo] = useState(readElo());
   const auth = useAuth();
+  const userData = auth?.userData;
   const updateEloInCloud = auth?.updateEloInCloud;
   const [eloChange, setEloChange] = useState(0);
   const [unlockedAchievements, setUnlockedAchievements] = useState([]);
   const [aiStatus, setAiStatus] = useState('loading'); // 'loading', 'ready', 'fallback'
-  const [opponentDisconnectedCountdown, setOpponentDisconnectedCountdown] = useState(30);
+  const [opponentDisconnectedCountdown, setOpponentDisconnectedCountdown] = useState(50);
+  
+  // Chat messages local state
+  const [chatMessages, setChatMessages] = useState([]);
+  
+  // Ref to track the current Supabase channel
+  const channelRef = useRef(null);
 
   const fenRef = useRef(state.fen);
   const gameModeRef = useRef(state.gameMode);
@@ -426,43 +497,111 @@ export function GameProvider({ children }) {
     playerColorRef.current = state.playerColor;
   }, [state.fen, state.gameMode, state.playerColor]);
 
-  useEffect(() => {
-    let interval = null;
-    if (state.opponentDisconnected) {
-      setOpponentDisconnectedCountdown(30);
-      interval = setInterval(() => {
-        setOpponentDisconnectedCountdown(c => Math.max(0, c - 1));
-      }, 1000);
+  // Reconstruct moves helper
+  const reconstructMovesFromFens = (fens) => {
+    if (!fens || fens.length <= 1) return [];
+    const chess = new Chess();
+    const moves = [];
+    for (let i = 1; i < fens.length; i++) {
+      const targetFen = fens[i];
+      const legalMoves = chess.moves({ verbose: true });
+      let matchedMove = null;
+      for (const m of legalMoves) {
+        const testChess = new Chess(chess.fen());
+        const testMove = testChess.move({ from: m.from, to: m.to, promotion: m.promotion || 'q' });
+        if (testMove && testChess.fen() === targetFen) {
+          matchedMove = {
+            from: m.from,
+            to: m.to,
+            promotion: m.promotion,
+            san: testMove.san
+          };
+          break;
+        }
+      }
+      if (matchedMove) {
+        chess.move({ from: matchedMove.from, to: matchedMove.to, promotion: matchedMove.promotion });
+        moves.push(matchedMove);
+      } else {
+        break;
+      }
     }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [state.opponentDisconnected]);
+    return moves;
+  };
 
+  // Reconnection and Presence Tracking
+  const [opponentPresent, setOpponentPresent] = useState(true);
+
+  // Restore active online game on mount
   useEffect(() => {
-    const socket = getSocket();
-    if (!socket) return;
-
-    const handleConnect = () => {
+    const restoreActiveGame = async () => {
       const saved = localStorage.getItem('active_online_game');
-      if (saved) {
+      if (saved && auth?.currentUser?.uid && auth.currentUser.uid !== 'guest') {
         try {
           const parsed = JSON.parse(saved);
           if (parsed && parsed.roomCode) {
-            console.log(`Socket connected, sending reconnect-game for room: ${parsed.roomCode}`);
-            socket.emit('reconnect-game', {
-              roomCode: parsed.roomCode,
-              color: parsed.color,
-              name: localStorage.getItem('chess_display_name') || 'Guest Player',
-              rating: parseInt(localStorage.getItem('chess_elo')) || 1200
-            });
+            console.log(`Restoring active game for room: ${parsed.roomCode}`);
+            const { data: game, error } = await supabase
+              .from('online_games')
+              .select('*')
+              .eq('room_code', parsed.roomCode)
+              .maybeSingle();
+
+            if (game && !error && game.status === 'active') {
+              const isWhite = game.white_id === auth.currentUser.uid;
+              const reconstructedHistory = reconstructMovesFromFens(game.fen_history || []);
+              
+              dispatch({
+                type: 'RESTORE_ONLINE_GAME',
+                payload: {
+                  roomCode: game.room_code,
+                  color: isWhite ? 'white' : 'black',
+                  opponentName: isWhite ? game.black_username : game.white_username,
+                  opponentRating: isWhite ? game.black_elo : game.white_elo,
+                  fen: game.current_fen,
+                  history: reconstructedHistory,
+                  timeControl: ENUM_TO_SECONDS[game.time_control] || 180
+                }
+              });
+              
+              dispatch({
+                type: 'SYNC_TIMES',
+                payload: {
+                  whiteTime: (game.white_time_ms || 180000) / 1000,
+                  blackTime: (game.black_time_ms || 180000) / 1000
+                }
+              });
+            } else {
+              localStorage.removeItem('active_online_game');
+            }
           }
-        } catch(e) {}
+        } catch (e) {
+          console.error('Failed to restore active online game:', e);
+        }
       }
     };
+    
+    restoreActiveGame();
+  }, [auth?.currentUser]);
 
-    const handleMoveMade = ({ from, to, promotion }) => {
-      if (gameModeRef.current !== 'online') return;
+  // Main game channel subscription and broadcast listeners
+  useEffect(() => {
+    if (state.gameMode !== 'online' || !state.roomCode || !auth?.currentUser?.uid) return;
+
+    console.log(`Setting up Supabase Realtime channel for room: ${state.roomCode}`);
+    setChatMessages([]);
+
+    const channel = supabase.channel(`game:${state.roomCode}`, {
+      config: {
+        presence: {
+          key: auth.currentUser.uid
+        }
+      }
+    });
+    
+    channelRef.current = channel;
+
+    const handleMoveMade = ({ from, to, promotion, whiteTime: oppWhiteTime, blackTime: oppBlackTime }) => {
       const chess = new Chess(fenRef.current);
       if (chess.turn() === playerColorRef.current) return;
 
@@ -470,90 +609,148 @@ export function GameProvider({ children }) {
       if (moveResult && applyMoveRef.current) {
         applyMoveRef.current(moveResult, chess);
       }
-    };
-
-    const handleOpponentDisconnected = ({ secondsToReconnect }) => {
-      dispatch({ type: 'SET_OPPONENT_DISCONNECTED', payload: { disconnected: true, seconds: secondsToReconnect } });
-    };
-
-    const handleOpponentReconnected = () => {
-      dispatch({ type: 'SET_OPPONENT_DISCONNECTED', payload: { disconnected: false, seconds: null } });
-    };
-
-    const handleGameOver = ({ result, reason, winnerColor }) => {
-      const isWin = result === 'win' || (result === 'loss' && winnerColor === playerColorRef.current);
-      const isDraw = result === 'draw';
-      
-      let msg = 'Game Over';
-      if (reason === 'disconnect-timeout') {
-        msg = 'Opponent disconnected (reconnection timeout)';
-      } else if (reason === 'resignation') {
-        msg = `${winnerColor === 'w' ? 'White' : 'Black'} won by resignation`;
-      } else if (reason === 'agreement' || reason === 'draw-agreement') {
-        msg = 'Draw by agreement';
-      } else if (reason === 'checkmate') {
-        msg = `${winnerColor === 'w' ? 'White' : 'Black'} won by checkmate`;
-      } else if (reason === 'stalemate') {
-        msg = 'Game drawn by stalemate';
+      if (oppWhiteTime !== undefined && oppBlackTime !== undefined) {
+        dispatch({ type: 'SYNC_TIMES', payload: { whiteTime: oppWhiteTime, blackTime: oppBlackTime } });
       }
+    };
 
-      dispatch({
-        type: 'SET_GAME_OVER_STATUS',
-        payload: {
-          type: isDraw ? 'draw' : isWin ? 'win' : 'loss',
-          message: msg,
-          winner: winnerColor === 'w' ? 'White' : winnerColor === 'b' ? 'Black' : null
+    channel
+      .on('broadcast', { event: 'move-made' }, ({ payload }) => {
+        handleMoveMade(payload);
+      })
+      .on('broadcast', { event: 'resign' }, ({ payload }) => {
+        const { resigningPlayerId } = payload;
+        if (resigningPlayerId !== auth.currentUser.uid) {
+          soundManager.playWin();
+          const winner = state.playerColor === 'w' ? 'White' : 'Black';
+          dispatch({
+            type: 'SET_GAME_OVER_STATUS',
+            payload: {
+              type: 'win',
+              message: resigningPlayerId === 'abandoned' ? 'Opponent abandoned the game. You win!' : 'Opponent resigned. You win!',
+              winner
+            }
+          });
+          
+          // Calculate Elo change
+          const oldElo = playerElo;
+          const opponentElo = state.opponentRating || 1200;
+          const expectedScore = 1 / (1 + Math.pow(10, (opponentElo - oldElo) / 400));
+          const eloDiff = Math.round(32 * (1 - expectedScore));
+          const updatedElo = oldElo + eloDiff;
+          setEloChange(eloDiff);
+          setPlayerElo(updatedElo);
+          writeElo(updatedElo);
+          if (auth?.updateEloInCloud) {
+            auth.updateEloInCloud(updatedElo);
+          }
         }
-      });
-    };
-
-    const handleGameRestored = (gameData) => {
-      dispatch({
-        type: 'RESTORE_ONLINE_GAME',
-        payload: {
-          roomCode: gameData.roomCode,
-          color: gameData.color,
-          opponentName: gameData.opponentName,
-          opponentRating: gameData.opponentRating,
-          fen: gameData.fen,
-          history: gameData.history,
-          timeControl: gameData.timeControl
+      })
+      .on('broadcast', { event: 'offer-draw' }, ({ payload }) => {
+        const { senderId } = payload;
+        if (senderId !== auth.currentUser.uid) {
+          dispatch({ type: 'SET_DRAW_OFFERED', payload: true });
         }
+      })
+      .on('broadcast', { event: 'accept-draw' }, ({ payload }) => {
+        const { senderId } = payload;
+        if (senderId !== auth.currentUser.uid) {
+          soundManager.playDraw();
+          dispatch({
+            type: 'SET_GAME_OVER_STATUS',
+            payload: {
+              type: 'draw',
+              message: 'Draw by agreement',
+              winner: null
+            }
+          });
+          
+          // Calculate Elo change
+          const oldElo = playerElo;
+          const opponentElo = state.opponentRating || 1200;
+          const expectedScore = 1 / (1 + Math.pow(10, (opponentElo - oldElo) / 400));
+          const eloDiff = Math.round(32 * (0.5 - expectedScore));
+          const updatedElo = oldElo + eloDiff;
+          setEloChange(eloDiff);
+          setPlayerElo(updatedElo);
+          writeElo(updatedElo);
+          if (auth?.updateEloInCloud) {
+            auth.updateEloInCloud(updatedElo);
+          }
+        }
+      })
+      .on('broadcast', { event: 'decline-draw' }, ({ payload }) => {
+        const { senderId } = payload;
+        if (senderId !== auth.currentUser.uid) {
+          dispatch({ type: 'SET_DRAW_OFFERED', payload: false });
+        }
+      })
+      .on('broadcast', { event: 'chat-message' }, ({ payload }) => {
+        setChatMessages(prev => {
+          if (prev.some(m => m.id === payload.id)) return prev;
+          return [...prev, payload];
+        });
+      })
+      .on('presence', { event: 'sync' }, () => {
+        const presenceState = channel.presenceState();
+        const users = [];
+        for (const id in presenceState) {
+          presenceState[id].forEach(u => users.push(u));
+        }
+        const isOpponentInPresence = users.some(u => u.uid && u.uid !== auth.currentUser.uid);
+        setOpponentPresent(isOpponentInPresence);
       });
+
+    channel.subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') {
+        const username = userData?.username || auth.currentUser.displayName || 'Player';
+        await channel.track({
+          uid: auth.currentUser.uid,
+          username,
+          online_at: new Date().toISOString()
+        });
+      }
+    });
+
+    return () => {
+      console.log(`Cleaning up Supabase Realtime channel for room: ${state.roomCode}`);
+      channel.unsubscribe();
+      channelRef.current = null;
     };
+  }, [state.gameMode, state.roomCode, auth?.currentUser, userData]);
 
-    const handleDrawOffered = () => {
-      dispatch({ type: 'SET_DRAW_OFFERED', payload: true });
-    };
+  // Handle opponent disconnection timers
+  useEffect(() => {
+    if (state.gameMode !== 'online' || !state.roomCode) return;
+    if (state.status.type !== 'playing' && state.status.type !== 'check') return;
 
-    const handleDrawDeclined = () => {
-      dispatch({ type: 'SET_DRAW_OFFERED', payload: false });
-    };
+    let tenSecondTimer = null;
+    let countdownInterval = null;
 
-    socket.on('connect', handleConnect);
-    socket.on('move-made', handleMoveMade);
-    socket.on('opponent-disconnected', handleOpponentDisconnected);
-    socket.on('opponent-reconnected', handleOpponentReconnected);
-    socket.on('game-over', handleGameOver);
-    socket.on('game-restored', handleGameRestored);
-    socket.on('draw-offered', handleDrawOffered);
-    socket.on('draw-declined', handleDrawDeclined);
+    if (!opponentPresent) {
+      tenSecondTimer = setTimeout(() => {
+        dispatch({ type: 'SET_OPPONENT_DISCONNECTED', payload: { disconnected: true, seconds: 50 } });
+        setOpponentDisconnectedCountdown(50);
 
-    if (socket.connected) {
-      handleConnect();
+        let currentCountdown = 50;
+        countdownInterval = setInterval(() => {
+          currentCountdown = Math.max(0, currentCountdown - 1);
+          setOpponentDisconnectedCountdown(currentCountdown);
+          if (currentCountdown === 0) {
+            clearInterval(countdownInterval);
+          }
+        }, 1000);
+      }, 10000);
+    } else {
+      dispatch({ type: 'SET_OPPONENT_DISCONNECTED', payload: { disconnected: false, seconds: null } });
+      setOpponentDisconnectedCountdown(50);
     }
 
     return () => {
-      socket.off('connect', handleConnect);
-      socket.off('move-made', handleMoveMade);
-      socket.off('opponent-disconnected', handleOpponentDisconnected);
-      socket.off('opponent-reconnected', handleOpponentReconnected);
-      socket.off('game-over', handleGameOver);
-      socket.off('game-restored', handleGameRestored);
-      socket.off('draw-offered', handleDrawOffered);
-      socket.off('draw-declined', handleDrawDeclined);
+      if (tenSecondTimer) clearTimeout(tenSecondTimer);
+      if (countdownInterval) clearInterval(countdownInterval);
     };
-  }, []);
+  }, [opponentPresent, state.gameMode, state.roomCode, state.status.type]);
 
   const aiTimerRef = useRef(null);
   const timerIntervalRef = useRef(null);
@@ -754,6 +951,21 @@ async function saveBotGameToSupabase(state, finalStatus, history, fen) {
 
         // Save bot game statistics to Supabase
         saveBotGameToSupabase(state, status, chess.history({ verbose: true }), chess.fen());
+      } else if (state.gameMode === 'online') {
+        // Online Elo calculation
+        const oldElo = playerElo;
+        const opponentElo = state.opponentRating || 1200;
+        const expectedScore = 1 / (1 + Math.pow(10, (opponentElo - oldElo) / 400));
+        const score = localResult === 'win' ? 1 : localResult === 'loss' ? 0 : 0.5;
+        const eloDiff = Math.round(32 * (score - expectedScore));
+        const updatedElo = oldElo + eloDiff;
+        
+        setEloChange(eloDiff);
+        setPlayerElo(updatedElo);
+        writeElo(updatedElo);
+        if (updateEloInCloud) {
+          updateEloInCloud(updatedElo);
+        }
       } else {
         const s = readStats();
         s.gamesPlayed = (s.gamesPlayed || 0) + 1;
@@ -972,17 +1184,45 @@ async function saveBotGameToSupabase(state, finalStatus, history, fen) {
           applyMove(moveResult, chess);
 
           if (state.gameMode === 'online') {
-            const socket = getSocket();
-            if (socket) {
-              socket.emit('make-move', {
-                roomCode: state.roomCode,
-                from: state.selectedSquare,
-                to: square,
-                promotion: targetMove.promotion,
-                fen: chess.fen(),
-                san: moveResult.san
+            if (channelRef.current) {
+              channelRef.current.send({
+                type: 'broadcast',
+                event: 'move-made',
+                payload: {
+                  from: state.selectedSquare,
+                  to: square,
+                  promotion: targetMove.promotion,
+                  fen: chess.fen(),
+                  san: moveResult.san,
+                  whiteTime: state.whiteTime,
+                  blackTime: state.blackTime
+                }
               });
             }
+
+            const statusObj = getGameStatus(chess);
+            const pgnStr = generatePgnString(chess.history({ verbose: true }), state.opponentName, state.playerColor);
+            const historyFens = chess.history().map(m => m.fen || chess.fen());
+            
+            supabase
+              .from('online_games')
+              .update({
+                current_fen: chess.fen(),
+                pgn: pgnStr,
+                fen_history: historyFens,
+                status: (statusObj.type !== 'playing' && statusObj.type !== 'check') ? 'completed' : 'active',
+                result: (statusObj.type !== 'playing' && statusObj.type !== 'check') 
+                  ? (statusObj.type === 'draw' || statusObj.type === 'stalemate' ? 'draw' : (statusObj.winner === 'White' ? 'white_wins' : 'black_wins')) 
+                  : null,
+                white_time_ms: Math.round(state.whiteTime * 1000),
+                black_time_ms: Math.round(state.blackTime * 1000),
+                last_move_at: new Date().toISOString(),
+                completed_at: (statusObj.type !== 'playing' && statusObj.type !== 'check') ? new Date().toISOString() : null
+              })
+              .eq('room_code', state.roomCode)
+              .then(({ error }) => {
+                if (error) console.error('Error updating move in Supabase:', error);
+              });
           }
         }
         return;
@@ -1008,17 +1248,45 @@ async function saveBotGameToSupabase(state, finalStatus, history, fen) {
       applyMove(moveResult, chess);
 
       if (state.gameMode === 'online') {
-        const socket = getSocket();
-        if (socket) {
-          socket.emit('make-move', {
-            roomCode: state.roomCode,
-            from: state.promotionPending.from,
-            to: state.promotionPending.to,
-            promotion: piece,
-            fen: chess.fen(),
-            san: moveResult.san
+        if (channelRef.current) {
+          channelRef.current.send({
+            type: 'broadcast',
+            event: 'move-made',
+            payload: {
+              from: state.promotionPending.from,
+              to: state.promotionPending.to,
+              promotion: piece,
+              fen: chess.fen(),
+              san: moveResult.san,
+              whiteTime: state.whiteTime,
+              blackTime: state.blackTime
+            }
           });
         }
+
+        const statusObj = getGameStatus(chess);
+        const pgnStr = generatePgnString(chess.history({ verbose: true }), state.opponentName, state.playerColor);
+        const historyFens = chess.history().map(m => m.fen || chess.fen());
+        
+        supabase
+          .from('online_games')
+          .update({
+            current_fen: chess.fen(),
+            pgn: pgnStr,
+            fen_history: historyFens,
+            status: (statusObj.type !== 'playing' && statusObj.type !== 'check') ? 'completed' : 'active',
+            result: (statusObj.type !== 'playing' && statusObj.type !== 'check') 
+              ? (statusObj.type === 'draw' || statusObj.type === 'stalemate' ? 'draw' : (statusObj.winner === 'White' ? 'white_wins' : 'black_wins')) 
+              : null,
+            white_time_ms: Math.round(state.whiteTime * 1000),
+            black_time_ms: Math.round(state.blackTime * 1000),
+            last_move_at: new Date().toISOString(),
+            completed_at: (statusObj.type !== 'playing' && statusObj.type !== 'check') ? new Date().toISOString() : null
+          })
+          .eq('room_code', state.roomCode)
+          .then(({ error }) => {
+            if (error) console.error('Error updating promotion in Supabase:', error);
+          });
       }
     }
   }, [state, applyMove]);
@@ -1043,9 +1311,40 @@ async function saveBotGameToSupabase(state, finalStatus, history, fen) {
     soundManager.playDraw();
     dispatch({ type: 'RESIGN' });
     
-    if (state.gameMode === 'online') {
-      const socket = getSocket();
-      if (socket) socket.emit('resign', { roomCode: state.roomCode });
+    if (state.gameMode === 'online' && state.roomCode) {
+      if (channelRef.current) {
+        channelRef.current.send({
+          type: 'broadcast',
+          event: 'resign',
+          payload: { resigningPlayerId: auth?.currentUser?.uid }
+        });
+      }
+
+      const oppColorName = state.playerColor === 'w' ? 'black_wins' : 'white_wins';
+      supabase
+        .from('online_games')
+        .update({
+          status: 'completed',
+          result: oppColorName,
+          completed_at: new Date().toISOString()
+        })
+        .eq('room_code', state.roomCode)
+        .then(({ error }) => {
+          if (error) console.error('Error resigning in DB:', error);
+        });
+
+      // Update local Elo/stats
+      const oldElo = playerElo;
+      const opponentElo = state.opponentRating || 1200;
+      const expectedScore = 1 / (1 + Math.pow(10, (opponentElo - oldElo) / 400));
+      const eloDiff = Math.round(32 * (0 - expectedScore));
+      const updatedElo = oldElo + eloDiff;
+      setEloChange(eloDiff);
+      setPlayerElo(updatedElo);
+      writeElo(updatedElo);
+      if (auth?.updateEloInCloud) {
+        auth.updateEloInCloud(updatedElo);
+      }
       return;
     }
 
@@ -1071,33 +1370,154 @@ async function saveBotGameToSupabase(state, finalStatus, history, fen) {
       opponent: state.gameMode === 'vsAI' ? `AI Lvl ${state.aiDifficulty}` : 'Local',
       moveCount: state.moveCount,
     });
-  }, [state.gameMode, state.roomCode, state.aiDifficulty, playerElo, state.moveCount, state.gameStartTime, state.playerColor]);
+  }, [state.gameMode, state.roomCode, state.aiDifficulty, playerElo, state.moveCount, state.gameStartTime, state.playerColor, state.opponentRating, auth?.currentUser]);
 
   const offerDraw = useCallback(() => {
     soundManager.playDraw();
     dispatch({ type: 'OFFER_DRAW' });
 
-    if (state.gameMode === 'online') {
-      const socket = getSocket();
-      if (socket) socket.emit('offer-draw', { roomCode: state.roomCode });
+    if (state.gameMode === 'online' && state.roomCode) {
+      if (channelRef.current) {
+        channelRef.current.send({
+          type: 'broadcast',
+          event: 'offer-draw',
+          payload: { senderId: auth?.currentUser?.uid }
+        });
+      }
+      supabase
+        .from('online_games')
+        .update({ draw_offered_by: auth?.currentUser?.uid })
+        .eq('room_code', state.roomCode)
+        .then(({ error }) => {
+          if (error) console.error('Error offering draw in DB:', error);
+        });
     }
-  }, [state.gameMode, state.roomCode]);
+  }, [state.gameMode, state.roomCode, auth?.currentUser]);
 
   const acceptDraw = useCallback(() => {
-    if (state.gameMode === 'online') {
-      const socket = getSocket();
-      if (socket) socket.emit('accept-draw', { roomCode: state.roomCode });
+    if (state.gameMode === 'online' && state.roomCode) {
+      if (channelRef.current) {
+        channelRef.current.send({
+          type: 'broadcast',
+          event: 'accept-draw',
+          payload: { senderId: auth?.currentUser?.uid }
+        });
+      }
+      supabase
+        .from('online_games')
+        .update({
+          status: 'completed',
+          result: 'draw',
+          completed_at: new Date().toISOString(),
+          draw_offered_by: null
+        })
+        .eq('room_code', state.roomCode)
+        .then(({ error }) => {
+          if (error) console.error('Error accepting draw in DB:', error);
+        });
+
+      const oldElo = playerElo;
+      const opponentElo = state.opponentRating || 1200;
+      const expectedScore = 1 / (1 + Math.pow(10, (opponentElo - oldElo) / 400));
+      const eloDiff = Math.round(32 * (0.5 - expectedScore));
+      const updatedElo = oldElo + eloDiff;
+      setEloChange(eloDiff);
+      setPlayerElo(updatedElo);
+      writeElo(updatedElo);
+      if (auth?.updateEloInCloud) {
+        auth.updateEloInCloud(updatedElo);
+      }
     }
     dispatch({ type: 'SET_DRAW_OFFERED', payload: false });
-  }, [state.gameMode, state.roomCode]);
+  }, [state.gameMode, state.roomCode, auth?.currentUser, playerElo, state.opponentRating]);
 
   const declineDraw = useCallback(() => {
-    if (state.gameMode === 'online') {
-      const socket = getSocket();
-      if (socket) socket.emit('decline-draw', { roomCode: state.roomCode });
+    if (state.gameMode === 'online' && state.roomCode) {
+      if (channelRef.current) {
+        channelRef.current.send({
+          type: 'broadcast',
+          event: 'decline-draw',
+          payload: { senderId: auth?.currentUser?.uid }
+        });
+      }
+      supabase
+        .from('online_games')
+        .update({ draw_offered_by: null })
+        .eq('room_code', state.roomCode)
+        .then(({ error }) => {
+          if (error) console.error('Error declining draw in DB:', error);
+        });
     }
     dispatch({ type: 'SET_DRAW_OFFERED', payload: false });
-  }, [state.gameMode, state.roomCode]);
+  }, [state.gameMode, state.roomCode, auth?.currentUser]);
+
+  const claimAbandonmentWin = useCallback(() => {
+    if (state.gameMode !== 'online' || !state.roomCode) return;
+    
+    soundManager.playWin();
+    dispatch({
+      type: 'SET_GAME_OVER_STATUS',
+      payload: {
+        type: 'win',
+        message: 'Opponent abandoned the game. You win!',
+        winner: state.playerColor === 'w' ? 'White' : 'Black'
+      }
+    });
+
+    if (channelRef.current) {
+      channelRef.current.send({
+        type: 'broadcast',
+        event: 'resign',
+        payload: { resigningPlayerId: 'abandoned' }
+      });
+    }
+
+    const winnerResult = state.playerColor === 'w' ? 'white_wins' : 'black_wins';
+    supabase
+      .from('online_games')
+      .update({
+        status: 'abandoned',
+        result: winnerResult,
+        completed_at: new Date().toISOString()
+      })
+      .eq('room_code', state.roomCode)
+      .then(({ error }) => {
+        if (error) console.error('Error claiming abandonment win in DB:', error);
+      });
+
+    const oldElo = playerElo;
+    const opponentElo = state.opponentRating || 1200;
+    const expectedScore = 1 / (1 + Math.pow(10, (opponentElo - oldElo) / 400));
+    const eloDiff = Math.round(32 * (1 - expectedScore));
+    const updatedElo = oldElo + eloDiff;
+    setEloChange(eloDiff);
+    setPlayerElo(updatedElo);
+    writeElo(updatedElo);
+    if (auth?.updateEloInCloud) {
+      auth.updateEloInCloud(updatedElo);
+    }
+  }, [state.gameMode, state.roomCode, state.playerColor, playerElo, state.opponentRating]);
+
+  const sendChatMessage = useCallback((text) => {
+    if (!state.roomCode || !text.trim()) return;
+    const msgId = Math.random().toString(36).substring(2, 11);
+    const msg = {
+      id: msgId,
+      senderId: auth?.currentUser?.uid || 'guest',
+      senderName: userData?.username || auth?.currentUser?.displayName || 'You',
+      text: text.trim()
+    };
+    
+    setChatMessages(prev => [...prev, msg]);
+    
+    if (channelRef.current) {
+      channelRef.current.send({
+        type: 'broadcast',
+        event: 'chat-message',
+        payload: msg
+      });
+    }
+  }, [state.roomCode, auth?.currentUser, userData]);
 
   const undoMove = useCallback(() => {
     if (state.history.length === 0) return;
@@ -1210,6 +1630,9 @@ async function saveBotGameToSupabase(state, finalStatus, history, fen) {
       setShowUpgradeModal,
       setUpgradeReason,
       applyMove,
+      chatMessages,
+      sendChatMessage,
+      claimAbandonmentWin,
     }}>
       {children}
       <AchievementToast unlockedIds={unlockedAchievements} />

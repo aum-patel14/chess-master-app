@@ -125,6 +125,7 @@ export default function GameScreen() {
     state, dispatch, resign, offerDraw, acceptDraw, declineDraw, undoMove, startNewGame, 
     opponentDisconnectedCountdown, checkFeatureLimit, incrementUsage,
     isPremium, setShowUpgradeModal, isSimpleMode: contextSimpleMode,
+    claimAbandonmentWin,
   } = useGame();
   const { showToast } = useToast();
   const {
@@ -823,7 +824,16 @@ export default function GameScreen() {
           <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
             {state.opponentDisconnected && (
               <div style={disconnectBannerStyle}>
-                ⚠️ Opponent disconnected. Game ends in {opponentDisconnectedCountdown}s
+                {opponentDisconnectedCountdown > 0 ? (
+                  <span>⚠️ Opponent disconnected. Game ends in {opponentDisconnectedCountdown}s</span>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
+                    <span>⚠️ Opponent abandoned the game. You can now claim the win!</span>
+                    <button onClick={claimAbandonmentWin} style={btnClaimWinStyle}>
+                      Claim Win by Abandonment
+                    </button>
+                  </div>
+                )}
               </div>
             )}
             {state.drawOfferedByOpponent && (
@@ -1005,6 +1015,20 @@ const disconnectBannerStyle = {
   fontSize: '13px',
   boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)',
   animation: 'pulse 1.5s ease-in-out infinite'
+};
+
+const btnClaimWinStyle = {
+  background: 'var(--gold)',
+  color: '#0a0a14',
+  border: 'none',
+  borderRadius: '4px',
+  padding: '6px 12px',
+  fontWeight: 800,
+  fontSize: '12px',
+  cursor: 'pointer',
+  marginTop: '4px',
+  transition: 'transform 0.15s',
+  boxShadow: '0 2px 6px rgba(0,0,0,0.3)'
 };
 
 const drawOfferBannerStyle = {

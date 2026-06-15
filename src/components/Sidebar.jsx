@@ -1,4 +1,4 @@
-import { Search, Play, Puzzle, BookOpen, Swords, Tv, Users, MoreHorizontal, Globe } from 'lucide-react';
+import { Search, Play, Puzzle, BookOpen, Swords, Tv, Users, MoreHorizontal, Globe, Laptop } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 export default function Sidebar({ onToast, onOpenSignUp, onOpenLogin, mobileOpen, setMobileOpen }) {
@@ -46,7 +46,8 @@ export default function Sidebar({ onToast, onOpenSignUp, onOpenLogin, mobileOpen
 
       {/* Navigation Links */}
       <nav style={{ padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-        <SidebarLink icon={<Play size={20} color="var(--lp-gold)" />} label="Play" active={location.pathname === '/play'} onClick={() => handleNav('/play', false)} />
+        <SidebarLink icon={<Play size={20} color="var(--lp-gold)" />} label="Play" active={location.pathname.startsWith('/play')} onClick={() => handleNav('/play', false)} />
+        <SidebarLink icon={<Laptop size={20} color="var(--lp-green)" />} label="Play vs Computer" active={location.pathname === '/game'} onClick={() => handleNav('/game', false)} />
         <SidebarLink icon={<Puzzle size={20} color="var(--lp-purple)" />} label="Puzzles" onClick={() => handleNav('', true)} />
         <SidebarLink icon={<BookOpen size={20} color="#60A5FA" />} label="Learn" onClick={() => handleNav('', true)} />
         <SidebarLink icon={<Swords size={20} color="var(--lp-red)" />} label="Compete" onClick={() => handleNav('', true)} />

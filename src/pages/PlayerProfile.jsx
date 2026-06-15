@@ -16,6 +16,31 @@ import { supabase } from '../services/supabase';
 import { BOTS } from '../config/bots';
 import './PlayerProfile.css';
 
+const formatTimeControl = (tc) => {
+  if (!tc) return 'Unknown';
+  const parts = tc.split('_');
+  if (parts.length < 3) return tc;
+  const type = parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
+  return `${parts[1]}+${parts[2]} ${type}`;
+};
+
+const getEloChange = (game, userId) => {
+  if (!game.is_rated) return null;
+  const isWhite = game.white_id === userId;
+  const myRating = isWhite ? game.white_elo : game.black_elo;
+  const oppRating = isWhite ? game.black_elo : game.white_elo;
+  if (!myRating || !oppRating) return null;
+
+  let outcomeScore = 0.5;
+  if (game.result === 'white_wins') outcomeScore = isWhite ? 1.0 : 0.0;
+  else if (game.result === 'black_wins') outcomeScore = isWhite ? 0.0 : 1.0;
+  else if (game.result === 'abandoned') outcomeScore = 1.0;
+
+  const expected = 1.0 / (1.0 + Math.pow(10, (oppRating - myRating) / 400.0));
+  const change = Math.round(32 * (outcomeScore - expected));
+  return change >= 0 ? `+${change}` : `${change}`;
+};
+
 export default function PlayerProfile() {
   const { username } = useParams();
   const navigate = useNavigate();
@@ -23,7 +48,34 @@ export default function PlayerProfile() {
 
   const [profile, setProfile] = useState(null);
   const [ratings, setRatings] = useState([]);
-  const [games, setGames] = useState([]);
+  const [aiGames, setAiGames] = useState([]);
+  const [onlineGames, setOnlineGames] = useState([]);
+  const [historyFilter, setHistoryFilter] = useState('All');
+  
+  const games = useMemo(() => {
+    return [...aiGames, ...onlineGames].sort((a, b) => {
+      const dateA = new Date(a.created_at || a.timestamp || a.completed_at);
+      const dateB = new Date(b.created_at || b.timestamp || b.completed_at);
+      return dateB - dateA;
+    });
+  }, [aiGames, onlineGames]);
+
+  const displayedGames = useMemo(() => {
+    let list = [];
+    if (historyFilter === 'All') {
+      list = [...aiGames, ...onlineGames];
+    } else if (historyFilter === 'vs AI') {
+      list = aiGames;
+    } else if (historyFilter === 'Online') {
+      list = onlineGames;
+    }
+    return list.sort((a, b) => {
+      const dateA = new Date(a.created_at || a.timestamp || a.completed_at);
+      const dateB = new Date(b.created_at || b.timestamp || b.completed_at);
+      return dateB - dateA;
+    });
+  }, [aiGames, onlineGames, historyFilter]);
+
   const [highestBotBeaten, setHighestBotBeaten] = useState(null);
   const [loading, setLoading] = useState(true);
   const [puzzleStats, setPuzzleStats] = useState({
@@ -62,7 +114,8 @@ export default function PlayerProfile() {
             { time_control: 'classical', rating: 1200, rd: 0 },
             { time_control: 'puzzle', rating: 1200, rd: 0 }
           ]);
-          setGames([]);
+          setAiGames([]);
+          setOnlineGames([]);
           setHighestBotBeaten(null);
           setLoading(false);
           return;
@@ -102,12 +155,30 @@ export default function PlayerProfile() {
         const gamesQuery = query(gamesRef, where('userId', '==', userProfile.id), limit(50));
         const gamesSnapshot = await getDocs(gamesQuery);
         
-        let gameRecords = gamesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        // Sort in memory by created_at / timestamp desc
+        let gameRecords = gamesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), isOnline: false }));
         gameRecords.sort((a, b) => new Date(b.created_at || b.timestamp) - new Date(a.created_at || a.timestamp));
         gameRecords = gameRecords.slice(0, 20);
 
-        setGames(gameRecords);
+        setAiGames(gameRecords);
+
+        // Query online games from Supabase
+        try {
+          const { data: onlineData, error: onlineError } = await supabase
+            .from('online_games')
+            .select('*')
+            .or(`white_id.eq.${userProfile.id},black_id.eq.${userProfile.id}`)
+            .eq('status', 'completed')
+            .order('completed_at', { ascending: false })
+            .limit(50);
+          
+          if (onlineError) {
+            console.error('Error fetching online games:', onlineError);
+          } else if (onlineData) {
+            setOnlineGames(onlineData.map(g => ({ ...g, isOnline: true })));
+          }
+        } catch (supabaseErr) {
+          console.warn('Failed to fetch online games:', supabaseErr);
+        }
 
         // Query Supabase for highest bot beaten
         try {
@@ -357,12 +428,14 @@ export default function PlayerProfile() {
 
     games.forEach((g) => {
       const isWhite = g.white_id === profile.id;
-      if (g.result === '1/2-1/2') {
+      const isDraw = g.result === '1/2-1/2' || g.result === 'draw';
+      const isWin = g.isOnline
+        ? ((g.result === 'white_wins' && isWhite) || (g.result === 'black_wins' && !isWhite))
+        : ((g.result === '1-0' && isWhite) || (g.result === '0-1' && !isWhite));
+      
+      if (isDraw) {
         draws++;
-      } else if (
-        (g.result === '1-0' && isWhite) ||
-        (g.result === '0-1' && !isWhite)
-      ) {
+      } else if (isWin) {
         wins++;
       } else {
         losses++;
@@ -380,12 +453,15 @@ export default function PlayerProfile() {
     const chronologicalGames = [...games].reverse();
     chronologicalGames.forEach((g) => {
       const isWhite = g.white_id === profile.id;
-      const isWin = (g.result === '1-0' && isWhite) || (g.result === '0-1' && !isWhite);
+      const isWin = g.isOnline
+        ? ((g.result === 'white_wins' && isWhite) || (g.result === 'black_wins' && !isWhite))
+        : ((g.result === '1-0' && isWhite) || (g.result === '0-1' && !isWhite));
+      const isDraw = g.result === '1/2-1/2' || g.result === 'draw';
       
       if (isWin) {
         currentStreak++;
         maxStreak = Math.max(maxStreak, currentStreak);
-      } else if (g.result !== '1/2-1/2') {
+      } else if (!isDraw) {
         currentStreak = 0; // Win streak resets on loss
       }
     });
@@ -631,8 +707,32 @@ export default function PlayerProfile() {
 
         {/* RECENT MATCHES TABLE */}
         <div className="profile-matches-panel">
-          <h3 className="section-title font-cinzel">⚔ Recent Completed Matches</h3>
-          {games.length === 0 ? (
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '20px' }}>
+            <h3 className="section-title font-cinzel" style={{ margin: 0 }}>⚔ Recent Completed Matches</h3>
+            <div style={{ display: 'flex', gap: '8px', overflowX: 'auto' }}>
+              {['All', 'vs AI', 'Online'].map(f => (
+                <button
+                  key={f}
+                  onClick={() => setHistoryFilter(f)}
+                  style={{
+                    padding: '6px 16px',
+                    borderRadius: '20px',
+                    border: historyFilter === f ? '1px solid #d4af37' : '1px solid rgba(255,255,255,0.1)',
+                    background: historyFilter === f ? 'rgba(212,175,55,0.15)' : 'transparent',
+                    color: historyFilter === f ? '#d4af37' : '#94a3b8',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    fontSize: '12.5px',
+                    transition: 'all 0.15s'
+                  }}
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {displayedGames.length === 0 ? (
             <p className="no-matches-msg font-cinzel">No games recorded inside our database yet.</p>
           ) : (
             <div className="matches-table-wrap">
@@ -647,35 +747,105 @@ export default function PlayerProfile() {
                   </tr>
                 </thead>
                 <tbody>
-                  {games.map((g) => {
+                  {displayedGames.map((g) => {
                     const isWhite = g.white_id === profile.id;
-                    const opponentName = isWhite ? (g.black?.username ?? 'Opponent') : (g.white?.username ?? 'Opponent');
                     const side = isWhite ? 'White' : 'Black';
 
+                    let opponentName = 'Opponent';
+                    let typeDisplay = 'Local';
+                    let eloChangeVal = null;
                     let outcome = 'Draw';
                     let outcomeClass = 'draw-pill';
-                    if (g.result === '1/2-1/2') {
-                      outcome = 'Draw';
-                      outcomeClass = 'draw-pill';
-                    } else if (
-                      (g.result === '1-0' && isWhite) ||
-                      (g.result === '0-1' && !isWhite)
-                    ) {
-                      outcome = 'Win';
-                      outcomeClass = 'win-pill';
+
+                    if (g.isOnline) {
+                      opponentName = isWhite 
+                        ? `${g.black_username || 'Opponent'} (${g.black_elo || 1200})`
+                        : `${g.white_username || 'Opponent'} (${g.white_elo || 1200})`;
+                      typeDisplay = formatTimeControl(g.time_control);
+                      
+                      const change = getEloChange(g, profile.id);
+                      if (change !== null) {
+                        eloChangeVal = change;
+                      }
+
+                      if (g.result === 'draw') {
+                        outcome = 'Draw';
+                        outcomeClass = 'draw-pill';
+                      } else if (
+                        (g.result === 'white_wins' && isWhite) ||
+                        (g.result === 'black_wins' && !isWhite)
+                      ) {
+                        outcome = 'Win';
+                        outcomeClass = 'win-pill';
+                      } else {
+                        outcome = 'Loss';
+                        outcomeClass = 'loss-pill';
+                      }
                     } else {
-                      outcome = 'Loss';
-                      outcomeClass = 'loss-pill';
+                      opponentName = isWhite ? (g.black?.username ?? 'Opponent') : (g.white?.username ?? 'Opponent');
+                      typeDisplay = g.time_control || 'vs AI';
+                      
+                      if (g.result === '1/2-1/2') {
+                        outcome = 'Draw';
+                        outcomeClass = 'draw-pill';
+                      } else if (
+                        (g.result === '1-0' && isWhite) ||
+                        (g.result === '0-1' && !isWhite)
+                      ) {
+                        outcome = 'Win';
+                        outcomeClass = 'win-pill';
+                      } else {
+                        outcome = 'Loss';
+                        outcomeClass = 'loss-pill';
+                      }
                     }
 
-                    const dateFormatted = new Date(g.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                    const dateFormatted = new Date(g.created_at || g.completed_at || g.timestamp).toLocaleDateString(undefined, {
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    });
+
+                    const handleClick = () => {
+                      if (g.isOnline && g.pgn) {
+                        navigate('/game', {
+                          state: {
+                            mode: 'analysis',
+                            pgn: g.pgn,
+                            playerColor: isWhite ? 'w' : 'b',
+                            opponentName: isWhite ? g.black_username : g.white_username,
+                            opponentRating: isWhite ? (g.black_elo || 1200) : (g.white_elo || 1200)
+                          }
+                        });
+                      }
+                    };
 
                     return (
-                      <tr key={g.id} className="match-row">
-                        <td className="opp-cell font-cinzel"><Users size={12} style={{ marginRight: '6px', opacity: 0.6 }} /> {opponentName}</td>
+                      <tr 
+                        key={g.id} 
+                        className="match-row" 
+                        onClick={handleClick} 
+                        style={{ cursor: (g.isOnline && g.pgn) ? 'pointer' : 'default' }}
+                      >
+                        <td className="opp-cell font-cinzel">
+                          <Users size={12} style={{ marginRight: '6px', opacity: 0.6 }} /> {opponentName}
+                        </td>
                         <td>{side}</td>
-                        <td><span className={`outcome-pill ${outcomeClass}`}>{outcome}</span></td>
-                        <td className="type-cell font-cinzel">{g.time_control}</td>
+                        <td>
+                          <span className={`outcome-pill ${outcomeClass}`}>{outcome}</span>
+                          {eloChangeVal && (
+                            <span style={{
+                              marginLeft: '8px',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              color: eloChangeVal.startsWith('+') ? '#81b64c' : '#ff6b6b'
+                            }}>
+                              {eloChangeVal}
+                            </span>
+                          )}
+                        </td>
+                        <td className="type-cell font-cinzel">{typeDisplay}</td>
                         <td className="date-cell">{dateFormatted}</td>
                       </tr>
                     );

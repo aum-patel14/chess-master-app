@@ -18,6 +18,9 @@ function PlayRedirect() {
 
 const LandingPage = lazy(() => import('./pages/LandingPage'));
 const GamePage = lazy(() => import('./pages/GamePage'));
+const PlayOnline = lazy(() => import('./pages/PlayOnline'));
+const OnlineGamePage = lazy(() => import('./pages/OnlineGamePage'));
+const JoinGame = lazy(() => import('./pages/JoinGame'));
 const PuzzlesPage = lazy(() => import('./pages/PuzzlesPage'));
 const PuzzlePage = lazy(() => import('./pages/PuzzlePage'));
 const PuzzleHub = lazy(() => import('./pages/PuzzleHub'));
@@ -83,7 +86,11 @@ function RouteSwitch() {
           <Routes location={location} key={location.pathname}>
             <Route path="/" element={<ErrorBoundary><LandingPage /></ErrorBoundary>} />
             <Route path="/game" element={<ErrorBoundary><GamePage /></ErrorBoundary>} />
-            <Route path="/play" element={<PlayRedirect />} />
+            <Route path="/play" element={<ErrorBoundary><PlayOnline /></ErrorBoundary>} />
+            <Route path="/play/online" element={<Navigate to="/play" replace />} />
+            <Route path="/play/online/:code" element={<ErrorBoundary><OnlineGamePage /></ErrorBoundary>} />
+            <Route path="/play/online/:roomCode" element={<ErrorBoundary><OnlineGamePage /></ErrorBoundary>} />
+            <Route path="/join/:code" element={<ErrorBoundary><JoinGame /></ErrorBoundary>} />
             <Route path="/puzzles" element={<ErrorBoundary><PuzzleHub /></ErrorBoundary>} />
             <Route path="/puzzles/rated" element={<ErrorBoundary><PuzzlePage mode="rated" /></ErrorBoundary>} />
             <Route path="/puzzles/daily" element={<ErrorBoundary><PuzzlePage mode="daily" /></ErrorBoundary>} />

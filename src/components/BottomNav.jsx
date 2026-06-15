@@ -5,7 +5,7 @@ import { supabase } from '../services/supabase';
 
 const tabs = [
   { to: '/', label: 'Home', icon: <Home size={20} /> },
-  { to: '/game', label: 'Play', icon: <Play size={20} /> },
+  { to: '/play', label: 'Play', icon: <Play size={20} /> },
   { to: '/puzzles', label: 'Puzzles', icon: <Puzzle size={20} /> },
   { to: '/learn', label: 'Learn', icon: <BookOpen size={20} /> },
   { to: '/settings', label: 'Settings', icon: <Settings size={20} /> },

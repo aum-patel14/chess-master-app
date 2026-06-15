@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
-import { useSocket } from '../../hooks/useSocket';
+import { useGame } from '../../context/GameContext';
+import { useAuth } from '../../context/AuthContext';
 import { Send, EyeOff, Eye } from 'lucide-react';
 
 const PRESETS = ["Good luck!", "Nice move!", "Good game!", "Thanks!", "Oops!", "Well played!"];
 
 export default function ChatPanel({ roomCode }) {
-  const socket = useSocket();
-  const [messages, setMessages] = useState([]);
+  const { chatMessages, sendChatMessage } = useGame();
+  const { currentUser } = useAuth();
   const [inputText, setInputText] = useState('');
   const [isBlocked, setIsBlocked] = useState(false);
   const scrollRef = useRef(null);
@@ -16,35 +17,12 @@ export default function ChatPanel({ roomCode }) {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
-
-  // Setup socket listener for messages
-  useEffect(() => {
-    if (!socket) return;
-
-    const handleMessageReceived = (msg) => {
-      setMessages(prev => [...prev, msg]);
-    };
-
-    socket.on('chat-message-received', handleMessageReceived);
-
-    return () => {
-      socket.off('chat-message-received', handleMessageReceived);
-    };
-  }, [socket]);
-
-  const sendMessage = (text) => {
-    if (!socket || !text.trim()) return;
-    socket.emit('chat-message', {
-      text: text.trim(),
-      senderName: localStorage.getItem('chess_display_name') || 'You'
-    });
-  };
+  }, [chatMessages]);
 
   const handleSend = (e) => {
     e.preventDefault();
-    if (!inputText) return;
-    sendMessage(inputText);
+    if (!inputText.trim()) return;
+    sendChatMessage(inputText);
     setInputText('');
   };
 
@@ -63,11 +41,11 @@ export default function ChatPanel({ roomCode }) {
       </div>
 
       <div style={msgScroll} ref={scrollRef}>
-        {messages.length === 0 ? (
+        {chatMessages.length === 0 ? (
           <div style={emptyMsg}>No messages. Say hello!</div>
         ) : (
-          messages.map(msg => {
-            const isMe = msg.senderSocket === socket?.id;
+          chatMessages.map(msg => {
+            const isMe = msg.senderId === currentUser?.uid;
             // Hide opponent's message if they are muted
             if (!isMe && isBlocked) return null;
 
@@ -92,7 +70,7 @@ export default function ChatPanel({ roomCode }) {
       {/* Preset greetings */}
       <div style={presetsContainer}>
         {PRESETS.map(p => (
-          <button key={p} style={presetChip} onClick={() => sendMessage(p)}>
+          <button key={p} style={presetChip} onClick={() => sendChatMessage(p)}>
             {p}
           </button>
         ))}

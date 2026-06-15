@@ -53,6 +53,8 @@ function ScrollReveal({ children }: ScrollRevealProps) {
   );
 }
 
+import { useLobbyPresence } from '../hooks/useLobbyPresence';
+
 // Interactive Animated CSS Chessboard cycling moves
 const BOARD_POSITIONS = [
   // Position 1: Starting Position
@@ -169,6 +171,7 @@ export default function HomePage() {
   const { startNewGame } = useGame();
   const { showToast } = useToast();
   const stats = readStats();
+  const onlineCount = useLobbyPresence();
 
   const handlePlayBot = (bot: BotData) => {
     startNewGame({
@@ -669,6 +672,32 @@ export default function HomePage() {
               grid-template-columns: repeat(2, 1fr);
             }
           }
+          
+          .online-indicator-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #81b64c;
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 8px rgba(129, 182, 76, 0.7);
+            animation: pulse 2s infinite;
+          }
+          
+          @keyframes pulse {
+            0% {
+              transform: scale(0.9);
+              opacity: 0.6;
+            }
+            50% {
+              transform: scale(1.25);
+              opacity: 1;
+              box-shadow: 0 0 12px rgba(129, 182, 76, 0.9);
+            }
+            100% {
+              transform: scale(0.9);
+              opacity: 0.6;
+            }
+          }
         `}</style>
 
         {/* 1. STATS BAR */}
@@ -677,7 +706,13 @@ export default function HomePage() {
           <div className="stat-sep"></div>
           <div className="stat"><span className="stat-num">1M+</span><span className="stat-label">Games / day</span></div>
           <div className="stat-sep"></div>
-          <div className="stat"><span className="stat-num">50K+</span><span className="stat-label">Online now</span></div>
+          <div className="stat">
+            <span className="stat-num" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+              <span className="online-indicator-dot" />
+              {onlineCount.toLocaleString()}
+            </span>
+            <span className="stat-label">Online now</span>
+          </div>
           <div className="stat-sep"></div>
           <div className="stat"><span className="stat-num">#1</span><span className="stat-label">Chess site</span></div>
         </div>
@@ -687,7 +722,7 @@ export default function HomePage() {
           <div className="hero-text">
             <h1>Play Chess Online<br />on the #1 Site!</h1>
             <p>Join 250+ million players in the world's largest chess community. Play fast, play smart, play beautiful.</p>
-            <button className="btn-cta" onClick={() => navigate('/game')}>Get Started</button>
+            <button className="btn-cta" onClick={() => navigate('/play')}>Get Started</button>
             
             <div className="feature-row">
               <div className="fpill"><span className="dot"></span>Free to play</div>

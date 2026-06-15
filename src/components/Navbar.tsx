@@ -3,6 +3,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 import { supabase } from '../services/supabase';
 
+import { useLobbyPresence } from '../hooks/useLobbyPresence';
+
 interface NavbarProps {
   onOpenDrawer: () => void;
   onOpenSignUp: () => void;
@@ -13,6 +15,7 @@ export default function Navbar({ onOpenDrawer, onOpenSignUp, onOpenLogin }: Navb
   const location = useLocation();
   const navigate = useNavigate();
   const [dailyStreak, setDailyStreak] = useState(0);
+  const onlineCount = useLobbyPresence();
 
   useEffect(() => {
     const fetchStreak = async () => {
@@ -40,7 +43,8 @@ export default function Navbar({ onOpenDrawer, onOpenSignUp, onOpenLogin }: Navb
   }, []);
 
   const navLinks = [
-    { label: 'Play', path: '/game' },
+    { label: 'Play', path: '/play' },
+    { label: 'Play vs Computer', path: '/game' },
     { label: 'Puzzles', path: '/puzzles' },
     { label: 'Learn', path: '/learn' },
     { label: 'Train', path: '/train' },
@@ -160,6 +164,30 @@ export default function Navbar({ onOpenDrawer, onOpenSignUp, onOpenLogin }: Navb
             display: flex !important;
           }
         }
+        .online-indicator-dot {
+          width: 8px;
+          height: 8px;
+          background-color: #81b64c;
+          border-radius: 50%;
+          display: inline-block;
+          box-shadow: 0 0 8px rgba(129, 182, 76, 0.7);
+          animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+          0% {
+            transform: scale(0.9);
+            opacity: 0.6;
+          }
+          50% {
+            transform: scale(1.25);
+            opacity: 1;
+            box-shadow: 0 0 12px rgba(129, 182, 76, 0.9);
+          }
+          100% {
+            transform: scale(0.9);
+            opacity: 0.6;
+          }
+        }
       `}</style>
 
       {/* LEFT: Mobile Hamburger, Desktop Logo */}
@@ -194,7 +222,10 @@ export default function Navbar({ onOpenDrawer, onOpenSignUp, onOpenLogin }: Navb
       {/* CENTER: Desktop Nav Links */}
       <nav className="nav-desktop-links">
         {navLinks.map((link) => {
-          const isActive = location.pathname === link.path || (link.path === '/game' && location.pathname.startsWith('/game'));
+          const isActive = 
+            location.pathname === link.path ||
+            (link.path === '/play' && location.pathname.startsWith('/play')) ||
+            (link.path === '/game' && location.pathname === '/game');
           const isPuzzles = link.label === 'Puzzles';
           const label = isPuzzles && dailyStreak > 0 ? `Puzzles 🔥 ${dailyStreak}` : link.label;
           return (
@@ -210,7 +241,11 @@ export default function Navbar({ onOpenDrawer, onOpenSignUp, onOpenLogin }: Navb
       </nav>
 
       {/* RIGHT: Login / Signup buttons */}
-      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#81b64c', fontSize: '13px', fontWeight: 600, marginRight: '4px' }}>
+          <span className="online-indicator-dot" />
+          <span>{onlineCount.toLocaleString()} online</span>
+        </div>
         <button
           className="navbar-auth-btn-grey"
           onClick={onOpenLogin}

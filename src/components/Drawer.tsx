@@ -15,7 +15,8 @@ export default function Drawer({ isOpen, onClose, onOpenSignUp, onOpenLogin }: D
 
   // Menu items list matching Chess.com Mobile Nav exactly
   const menuItems = [
-    { label: 'Play', path: '/game', icon: '♟' },
+    { label: 'Play', path: '/play', icon: '♟' },
+    { label: 'Play vs Computer', path: '/game', icon: '🤖' },
     { label: 'Puzzles', path: '/puzzles', icon: '🧩' },
     { label: 'Learn', path: '/learn', icon: '🎓' },
     { label: 'Train', path: '/train', icon: '💪' },
@@ -120,7 +121,10 @@ export default function Drawer({ isOpen, onClose, onOpenSignUp, onOpenLogin }: D
         {/* Menu Items List */}
         <nav style={{ display: 'flex', flexDirection: 'column', padding: '8px 0' }}>
           {menuItems.map((item) => {
-            const isActive = location.pathname === item.path || (item.path === '/game' && location.pathname.startsWith('/game'));
+            const isActive = 
+              location.pathname === item.path ||
+              (item.path === '/play' && location.pathname.startsWith('/play')) ||
+              (item.path === '/game' && location.pathname === '/game');
             return (
               <div
                 key={item.label}

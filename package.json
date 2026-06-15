@@ -34,6 +34,7 @@
     "framer-motion": "^12.38.0",
     "glicko2-lite": "^6.0.0",
     "lucide-react": "^1.14.0",
+    "puppeteer-core": "^25.1.0",
     "react": "^19.2.5",
     "react-confetti": "^6.4.0",
     "react-dom": "^19.2.5",
