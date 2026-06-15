@@ -72,11 +72,59 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- RPC for rating-based random puzzle selection
-CREATE OR REPLACE FUNCTION get_puzzle_for_rating(target_rating INT, exclude_ids TEXT[])
-RETURNS SETOF puzzles AS $$
-  SELECT * FROM puzzles
+DROP FUNCTION IF EXISTS get_puzzle_for_rating(INT, TEXT[]);
+CREATE OR REPLACE FUNCTION get_puzzle_for_rating(target_rating INT, exclude_ids TEXT[], selected_themes TEXT[] DEFAULT '{}')
+RETURNS SETOF public.puzzles AS $$
+  SELECT * FROM public.puzzles
   WHERE rating BETWEEN target_rating - 100 AND target_rating + 100
     AND id != ALL(exclude_ids)
+    AND (
+      cardinality(selected_themes) = 0 
+      OR themes && selected_themes
+    )
   ORDER BY random()
   LIMIT 1;
 $$ LANGUAGE sql STABLE;
+
+-- RPC atomically updating daily puzzle solving streaks
+CREATE OR REPLACE FUNCTION update_daily_streak(uid UUID)
+RETURNS void AS $$
+DECLARE last_date DATE;
+BEGIN
+  SELECT daily_last_solved INTO last_date FROM public.puzzle_ratings WHERE user_id = uid;
+  IF last_date = CURRENT_DATE - 1 THEN
+    UPDATE public.puzzle_ratings SET daily_streak_days = daily_streak_days + 1, daily_last_solved = CURRENT_DATE WHERE user_id = uid;
+  ELSIF last_date IS NULL OR last_date != CURRENT_DATE THEN
+    UPDATE public.puzzle_ratings SET daily_streak_days = 1, daily_last_solved = CURRENT_DATE WHERE user_id = uid;
+  END IF;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- RPC returning deterministic daily puzzle based on date seed
+CREATE OR REPLACE FUNCTION get_daily_puzzle(today_date TEXT)
+RETURNS SETOF public.puzzles AS $$
+DECLARE
+  total_count INT;
+  seed_val INT;
+BEGIN
+  -- Count total puzzles with popularity > 80
+  SELECT COUNT(*) INTO total_count FROM public.puzzles WHERE popularity > 80;
+  
+  IF total_count = 0 THEN
+    SELECT COUNT(*) INTO total_count FROM public.puzzles;
+  END IF;
+
+  seed_val := abs(hashtext(today_date));
+
+  IF total_count > 0 THEN
+    RETURN QUERY
+    SELECT * FROM public.puzzles
+    WHERE (popularity > 80 OR NOT EXISTS (SELECT 1 FROM public.puzzles WHERE popularity > 80))
+    ORDER BY id
+    OFFSET (seed_val % total_count)
+    LIMIT 1;
+  ELSE
+    RETURN;
+  END IF;
+END;
+$$ LANGUAGE plpgsql STABLE;

@@ -1,5 +1,7 @@
+import { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { Home, Play, Puzzle, BookOpen, Settings } from 'lucide-react';
+import { supabase } from '../services/supabase';
 
 const tabs = [
   { to: '/', label: 'Home', icon: <Home size={20} /> },
@@ -10,6 +12,33 @@ const tabs = [
 ];
 
 export default function BottomNav() {
+  const [dailyStreak, setDailyStreak] = useState(0);
+
+  useEffect(() => {
+    const fetchStreak = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data, error } = await supabase
+            .from('puzzle_ratings')
+            .select('daily_streak_days')
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+          if (data && !error) {
+            setDailyStreak(data.daily_streak_days || 0);
+          }
+        } else {
+          const guestStreak = parseInt(localStorage.getItem('guest_daily_streak') || '0', 10);
+          setDailyStreak(guestStreak);
+        }
+      } catch (err) {
+        console.error('Error fetching bottom nav daily streak:', err);
+      }
+    };
+    fetchStreak();
+  }, []);
+
   return (
     <nav
       className="bottom-nav"
@@ -31,26 +60,30 @@ export default function BottomNav() {
           .bottom-nav { display: grid !important; grid-template-columns: repeat(5, 1fr); align-items: center; }
         }
       `}</style>
-      {tabs.map((t) => (
-        <NavLink
-          key={t.to}
-          to={t.to}
-          end={t.to === '/'}
-          style={({ isActive }) => ({
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '4px',
-            textDecoration: 'none',
-            color: isActive ? '#d4af37' : '#666',
-            minHeight: '44px',
-          })}
-        >
-          {t.icon}
-          <span style={{ fontSize: '10px', fontWeight: 600 }}>{t.label}</span>
-        </NavLink>
-      ))}
+      {tabs.map((t) => {
+        const isPuzzles = t.label === 'Puzzles';
+        const label = isPuzzles && dailyStreak > 0 ? `Puzzles 🔥 ${dailyStreak}` : t.label;
+        return (
+          <NavLink
+            key={t.to}
+            to={t.to}
+            end={t.to === '/'}
+            style={({ isActive }) => ({
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '4px',
+              textDecoration: 'none',
+              color: isActive ? '#d4af37' : '#666',
+              minHeight: '44px',
+            })}
+          >
+            {t.icon}
+            <span style={{ fontSize: '10px', fontWeight: 600 }}>{label}</span>
+          </NavLink>
+        );
+      })}
     </nav>
   );
 }

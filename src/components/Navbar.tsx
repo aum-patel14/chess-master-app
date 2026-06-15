@@ -1,5 +1,7 @@
+import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Menu } from 'lucide-react';
+import { supabase } from '../services/supabase';
 
 interface NavbarProps {
   onOpenDrawer: () => void;
@@ -10,6 +12,32 @@ interface NavbarProps {
 export default function Navbar({ onOpenDrawer, onOpenSignUp, onOpenLogin }: NavbarProps) {
   const location = useLocation();
   const navigate = useNavigate();
+  const [dailyStreak, setDailyStreak] = useState(0);
+
+  useEffect(() => {
+    const fetchStreak = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data, error } = await supabase
+            .from('puzzle_ratings')
+            .select('daily_streak_days')
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+          if (data && !error) {
+            setDailyStreak(data.daily_streak_days || 0);
+          }
+        } else {
+          const guestStreak = parseInt(localStorage.getItem('guest_daily_streak') || '0', 10);
+          setDailyStreak(guestStreak);
+        }
+      } catch (err) {
+        console.error('Error fetching navbar daily streak:', err);
+      }
+    };
+    fetchStreak();
+  }, []);
 
   const navLinks = [
     { label: 'Play', path: '/game' },
@@ -167,13 +195,15 @@ export default function Navbar({ onOpenDrawer, onOpenSignUp, onOpenLogin }: Navb
       <nav className="nav-desktop-links">
         {navLinks.map((link) => {
           const isActive = location.pathname === link.path || (link.path === '/game' && location.pathname.startsWith('/game'));
+          const isPuzzles = link.label === 'Puzzles';
+          const label = isPuzzles && dailyStreak > 0 ? `Puzzles 🔥 ${dailyStreak}` : link.label;
           return (
             <div
               key={link.label}
               onClick={() => handleNav(link.path)}
               className={`nav-desktop-link-item ${isActive ? 'active' : ''}`}
             >
-              {link.label}
+              {label}
             </div>
           );
         })}

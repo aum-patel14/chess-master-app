@@ -10,13 +10,25 @@ interface ChessBoardProps {
   bestMoveArrow?: { from: string; to: string } | null;
   analysisResults?: any;
   currentReviewIndex?: number | null;
+  customState?: any;
+  customHandleSquareClick?: (square: string) => void;
+  customHandlePromotion?: (pieceType: string) => void;
 }
 
 const FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 const RANKS = ['8', '7', '6', '5', '4', '3', '2', '1'];
 
-export default function ChessBoard({ bestMoveArrow, analysisResults, currentReviewIndex }: ChessBoardProps) {
-  const { state, handleSquareClick, currentTheme, dispatch } = useGame();
+export default function ChessBoard({ 
+  bestMoveArrow, 
+  analysisResults, 
+  currentReviewIndex,
+  customState,
+  customHandleSquareClick,
+  customHandlePromotion
+}: ChessBoardProps) {
+  const context = useGame();
+  const state = customState || context.state;
+  const handleSquareClick = customHandleSquareClick || context.handleSquareClick;
   const {
     fen, selectedSquare, validMoves, lastMove,
     checkSquare, showCoords, playerColor, promotionPending,
@@ -473,6 +485,7 @@ export default function ChessBoard({ bestMoveArrow, analysisResults, currentRevi
           file={promotionPending.to[0]}
           rank={promotionPending.to[1]}
           flipped={isFlipped}
+          customHandlePromotion={customHandlePromotion}
         />
       )}
     </div>

@@ -32,6 +32,7 @@
     "chessground": "^9.2.1",
     "firebase": "^12.13.0",
     "framer-motion": "^12.38.0",
+    "glicko2-lite": "^6.0.0",
     "lucide-react": "^1.14.0",
     "react": "^19.2.5",
     "react-confetti": "^6.4.0",

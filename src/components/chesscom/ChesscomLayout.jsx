@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Gamepad2,
@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { CHESSCOM_NAV } from '../../data/chesscomNav';
 import { SignUpModal, LoginModal } from '../Modals';
+import { supabase } from '../../services/supabase';
 import './ChesscomLayout.css';
 
 const NAV_ICONS = {
@@ -62,6 +63,38 @@ export default function ChesscomLayout({ children }) {
   const [showSignUp, setShowSignUp] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [toast, setToast] = useState('');
+  const [dailyStreak, setDailyStreak] = useState(0);
+
+  useEffect(() => {
+    const fetchStreak = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data, error } = await supabase
+            .from('puzzle_ratings')
+            .select('daily_streak_days')
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+          if (data && !error) {
+            setDailyStreak(data.daily_streak_days || 0);
+          }
+        } else {
+          const guestStreak = parseInt(localStorage.getItem('guest_daily_streak') || '0', 10);
+          setDailyStreak(guestStreak);
+        }
+      } catch (err) {
+        console.error('Error fetching layout daily streak:', err);
+      }
+    };
+
+    fetchStreak();
+
+    // Re-fetch when the window gets focus (e.g. after user solves a puzzle in another tab/view)
+    const onFocus = () => fetchStreak();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, []);
 
   const showToast = (msg) => setToast(msg);
 
@@ -94,7 +127,7 @@ export default function ChesscomLayout({ children }) {
           onClick={() => handleNavItem({ path: section.path, soon: false })}
         >
           <Icon size={18} strokeWidth={2} />
-          {section.label}
+          {section.id === 'puzzles' && dailyStreak > 0 ? `${section.label} 🔥 ${dailyStreak}` : section.label}
         </div>
         {section.items?.length > 0 && isHovered && (
           <FlyoutMenu
@@ -169,7 +202,7 @@ export default function ChesscomLayout({ children }) {
                     className="cc-mobile-nav-parent"
                     onClick={() => setMobileExpanded(mobileExpanded === section.id ? null : section.id)}
                   >
-                    <span>{section.label}</span>
+                    <span>{section.id === 'puzzles' && dailyStreak > 0 ? `${section.label} 🔥 ${dailyStreak}` : section.label}</span>
                     <span>{mobileExpanded === section.id ? '▾' : '▸'}</span>
                   </div>
                   {mobileExpanded === section.id && section.items?.map((item) => (

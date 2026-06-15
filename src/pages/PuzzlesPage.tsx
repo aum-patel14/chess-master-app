@@ -601,10 +601,7 @@ export default function PuzzlesPage() {
                     </div>
                     <button
                       onClick={() => {
-                        setCurrentMode('rated');
-                        setPuzzleList(puzzlesData);
-                        loadPuzzle(puzzlesData[1]);
-                        setScreen('solving');
+                        navigate('/puzzles/rated');
                       }}
                       className="btn-chess-green"
                     >

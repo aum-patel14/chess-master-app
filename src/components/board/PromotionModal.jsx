@@ -9,8 +9,9 @@ const PIECE_SYMBOLS = {
   b: { q: '♛', r: '♜', b: '♝', n: '♞' },
 };
 
-export default function PromotionModal({ color, file, rank, flipped }) {
+export default function PromotionModal({ color, file, rank, flipped, customHandlePromotion }) {
   const { handlePromotion } = useGame();
+  const onPromote = customHandlePromotion || handlePromotion;
   
   // Calculate position based on file/rank index
   const FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
@@ -53,7 +54,7 @@ export default function PromotionModal({ color, file, rank, flipped }) {
               className="promotion-modal-btn"
               onClick={(e) => {
                 e.stopPropagation();
-                handlePromotion(type);
+                onPromote(type);
               }}
             >
               <img src={src} alt={type} style={{ width: '100%', height: '100%', pointerEvents: 'none' }} />
