@@ -16,6 +16,7 @@ interface Puzzle {
   rating: number;
   themes: string[];
   title: string;
+  opponentPlaysFirst?: boolean;
 }
 
 const PIECE_SYMBOLS: Record<string, string> = {
@@ -62,13 +63,38 @@ export default function PuzzlesPage() {
 
   const board = chess.board();
 
-  // Auto-flip board based on active player's turn color
-  const autoFlipBoard = (puz: Puzzle) => {
+  // Load a new puzzle to solve
+  const loadPuzzle = (puz: Puzzle) => {
+    setCurrentPuzzle(puz);
+    setSelectedSquare(null);
+    setIsSolved(false);
+    setFlashClass('none');
+    setHintsUsed(0);
+    setShowHintDetail(false);
+
     try {
       const pChess = new Chess(puz.fen);
+      if (puz.opponentPlaysFirst && puz.moves && puz.moves.length > 0) {
+        const firstMove = puz.moves[0];
+        const fromSq = firstMove.slice(0, 2);
+        const toSq = firstMove.slice(2, 4);
+        const prom = firstMove.slice(4, 5) || undefined;
+        
+        pChess.move({ from: fromSq, to: toSq, promotion: prom });
+        setFen(pChess.fen());
+        setMoveIndex(1);
+      } else {
+        setFen(puz.fen);
+        setMoveIndex(0);
+      }
+      
+      // Auto-flip board based on active player's turn color
       const playerColor = pChess.turn();
       setBoardFlipped(playerColor === 'b');
     } catch (e) {
+      console.error('Error loading puzzle:', e);
+      setFen(puz.fen);
+      setMoveIndex(0);
       setBoardFlipped(false);
     }
   };
@@ -92,32 +118,17 @@ export default function PuzzlesPage() {
               themes: data.puzzle.themes || [],
               title: data.game?.perf?.name 
                 ? `${data.game.perf.name.charAt(0).toUpperCase() + data.game.perf.name.slice(1)} Tactical Puzzle` 
-                : 'Lichess Daily Puzzle'
+                : 'Lichess Daily Puzzle',
+              opponentPlaysFirst: true
             };
-            setCurrentPuzzle(mappedPuzzle);
-            setFen(mappedPuzzle.fen);
-            setSelectedSquare(null);
-            setMoveIndex(0);
-            setIsSolved(false);
-            setFlashClass('none');
-            setHintsUsed(0);
-            setShowHintDetail(false);
-            autoFlipBoard(mappedPuzzle);
+            loadPuzzle(mappedPuzzle);
           }
           setLoadingPuzzle(false);
         })
         .catch((err) => {
           console.warn('Lichess daily puzzle API error (CORS or offline), falling back to offline db:', err);
           const fallback = puzzlesData[0];
-          setCurrentPuzzle(fallback);
-          setFen(fallback.fen);
-          setSelectedSquare(null);
-          setMoveIndex(0);
-          setIsSolved(false);
-          setFlashClass('none');
-          setHintsUsed(0);
-          setShowHintDetail(false);
-          autoFlipBoard(fallback);
+          loadPuzzle(fallback);
           setLoadingPuzzle(false);
         });
     }
@@ -143,19 +154,6 @@ export default function PuzzlesPage() {
       if (timer) clearInterval(timer);
     };
   }, [screen, rushActive, rushScore, rushTime, rushModeType]);
-
-  // Load a new puzzle to solve
-  const loadPuzzle = (puz: Puzzle) => {
-    setCurrentPuzzle(puz);
-    setFen(puz.fen);
-    setSelectedSquare(null);
-    setMoveIndex(0);
-    setIsSolved(false);
-    setFlashClass('none');
-    setHintsUsed(0);
-    setShowHintDetail(false);
-    autoFlipBoard(puz);
-  };
 
   // Piece theme selector setup
   const pieceTheme = typeof localStorage !== 'undefined' ? (localStorage.getItem('chess_pieces') || 'cburnett') : 'cburnett';

@@ -23,7 +23,12 @@ export class ErrorBoundary extends Component<Props, State> {
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#0a0a14', color: '#fff', fontFamily: 'system-ui, sans-serif' }}>
           <div style={{ fontSize: '48px', color: '#D4AF37' }}>♛</div>
           <h1 style={{ fontFamily: 'Cinzel, serif', fontSize: '1.8rem', letterSpacing: '2px', color: '#D4AF37', margin: '8px 0 16px' }}>ChessMaster Pro</h1>
-          <p style={{ color: '#aaa', marginBottom: '24px' }}>Something went wrong. Please refresh the page.</p>
+          <p style={{ color: '#aaa', marginBottom: '8px' }}>Something went wrong. Please refresh the page.</p>
+          {this.state.error?.message && (
+            <p style={{ color: '#ef4444', fontSize: '13px', marginBottom: '24px', maxWidth: '90%' }}>
+              {this.state.error.message}
+            </p>
+          )}
           <button onClick={() => window.location.reload()} style={{ padding: '10px 24px', background: '#4ade80', color: '#000', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}>
             Refresh
           </button>

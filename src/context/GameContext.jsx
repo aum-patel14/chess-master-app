@@ -17,6 +17,10 @@ import AchievementToast from '../components/AchievementToast';
 import UpgradeModal from '../components/modals/UpgradeModal';
 import { getSocket } from '../hooks/useSocket';
 import { useAuth } from './AuthContext';
+import { supabase } from '../services/supabase';
+import { generatePgnString } from '../utils/pgnExporter';
+import { BOTS } from '../config/bots';
+
 
 const initGame = (fen) => {
   try {
@@ -25,6 +29,15 @@ const initGame = (fen) => {
     console.error('Chess init failed:', e);
     return new Chess(); // fallback to start position
   }
+};
+
+const mapDifficultyToStockfishLevel = (difficulty) => {
+  const n = Number(difficulty) || 3;
+  if (n <= 1) return 1;
+  if (n <= 2) return 2;
+  if (n <= 5) return 3;
+  if (n <= 8) return 4;
+  return 5;
 };
 
 const GameContext = createContext(null);
@@ -98,6 +111,7 @@ const initialState = {
   opponentDisconnected: false,
   opponentDisconnectedSeconds: null,
   drawOfferedByOpponent: false,
+  evalTick: 0,
 };
 
 function gameReducer(state, action) {
@@ -289,6 +303,7 @@ function gameReducer(state, action) {
         whiteTime,
         blackTime,
         drawOfferedByOpponent: false,
+        evalTick: (state.evalTick || 0) + 1,
       };
     }
     case 'NEW_GAME': {
@@ -394,7 +409,8 @@ function computeCaptured(history) {
 export function GameProvider({ children }) {
   const [state, dispatch] = useReducer(gameReducer, initialState);
   const [playerElo, setPlayerElo] = useState(readElo());
-  const { updateEloInCloud } = useAuth();
+  const auth = useAuth();
+  const updateEloInCloud = auth?.updateEloInCloud;
   const [eloChange, setEloChange] = useState(0);
   const [unlockedAchievements, setUnlockedAchievements] = useState([]);
   const [aiStatus, setAiStatus] = useState('loading'); // 'loading', 'ready', 'fallback'
@@ -643,6 +659,55 @@ async function saveGameToCloud(state, finalStatus, history, fen) {
   }
 }
 
+async function saveBotGameToSupabase(state, finalStatus, history, fen) {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id || auth?.currentUser?.uid;
+    if (!userId) {
+      console.warn("No authenticated user found for saving game stats to Supabase.");
+      return;
+    }
+
+    let outcome = 'draw';
+    if (finalStatus.winner === 'White') {
+      outcome = state.playerColor === 'w' ? 'win' : 'loss';
+    } else if (finalStatus.winner === 'Black') {
+      outcome = state.playerColor === 'b' ? 'win' : 'loss';
+    }
+
+    const bot = BOTS.find(b => b.id === state.aiBotId) || BOTS[0];
+    const pgnString = generatePgnString(history, state.playerColor, 'vsAI', bot.name, finalStatus);
+
+    // Insert to games table
+    const { error: insertError } = await supabase.from('games').insert({
+      user_id: userId,
+      result: outcome,
+      pgn: pgnString,
+      bot_id: bot.id,
+      bot_elo: bot.elo,
+      player_color: state.playerColor === 'w' ? 'white' : 'black',
+      created_at: new Date().toISOString()
+    });
+
+    if (insertError) {
+      console.error('Failed to save game to Supabase:', insertError);
+      return;
+    }
+
+    // Call RPC function to atomically increment ai stats
+    const { error: rpcError } = await supabase.rpc('increment_ai_stats', {
+      p_user_id: userId,
+      p_outcome: outcome
+    });
+
+    if (rpcError) {
+      console.error('Failed to update profiles stats in Supabase via RPC:', rpcError);
+    }
+  } catch (err) {
+    console.error('Error in saveBotGameToSupabase:', err);
+  }
+}
+
   const applyMove = useCallback((moveObj, chessInstance) => {
     const chess = chessInstance;
     const status = getGameStatus(chess);
@@ -686,6 +751,9 @@ async function saveGameToCloud(state, finalStatus, history, fen) {
 
         // Sync ELO update to cloud
         updateEloInCloud(newElo);
+
+        // Save bot game statistics to Supabase
+        saveBotGameToSupabase(state, status, chess.history({ verbose: true }), chess.fen());
       } else {
         const s = readStats();
         s.gamesPlayed = (s.gamesPlayed || 0) + 1;
@@ -758,7 +826,8 @@ async function saveGameToCloud(state, finalStatus, history, fen) {
             };
           }
         } else if (aiStatus === 'ready') {
-          const uciMove = await stockfishGetBestMove(fen, botId);
+          const stockfishLevel = mapDifficultyToStockfishLevel(difficulty);
+          const uciMove = await stockfishGetBestMove(fen, stockfishLevel);
           if (uciMove && uciMove !== '(none)') {
             bestMoveObj = {
               from: uciMove.substring(0, 2),
@@ -779,7 +848,8 @@ async function saveGameToCloud(state, finalStatus, history, fen) {
             };
           }
         } else if (aiStatus === 'ready') {
-          const uciMove = await stockfishGetBestMove(fen, numDifficulty);
+          const stockfishLevel = mapDifficultyToStockfishLevel(numDifficulty);
+          const uciMove = await stockfishGetBestMove(fen, stockfishLevel);
           if (uciMove && uciMove !== '(none)') {
             bestMoveObj = {
               from: uciMove.substring(0, 2),
@@ -823,6 +893,8 @@ async function saveGameToCloud(state, finalStatus, history, fen) {
     }
   }, [aiStatus, state.playerColor]);
 
+  // Old background AI loop disabled. Handled via useStockfish hook in GamePage.tsx.
+  /*
   useEffect(() => {
     try {
       if (state.gameMode !== 'vsAI' || state.isAIThinking) return;
@@ -850,6 +922,7 @@ async function saveGameToCloud(state, finalStatus, history, fen) {
     state.aiBotId,
     requestAIMoveStockfish,
   ]);
+  */
 
   const handleSquareClick = useCallback((square) => {
     if (state.reviewFen) return;
@@ -884,6 +957,12 @@ async function saveGameToCloud(state, finalStatus, history, fen) {
       if (targetMove) {
         // Check for pawn promotion
         if (targetMove.flags.includes('p')) {
+          const autoPromote = localStorage.getItem('chess_autopromote') === 'true';
+          if (autoPromote) {
+            const moveResult = chess.move({ from: state.selectedSquare, to: square, promotion: 'q' });
+            if (moveResult) applyMove(moveResult, chess);
+            return;
+          }
           dispatch({ type: 'SET_PROMOTION_PENDING', payload: { from: state.selectedSquare, to: square } });
           return;
         }
@@ -1022,6 +1101,7 @@ async function saveGameToCloud(state, finalStatus, history, fen) {
 
   const undoMove = useCallback(() => {
     if (state.history.length === 0) return;
+    if (state.gameMode === 'vsAI' && state.history.length < 2) return;
     let historySlice = [...state.history];
     if (state.gameMode === 'vsAI') {
       if (historySlice.length < 2) return;
@@ -1129,6 +1209,7 @@ async function saveGameToCloud(state, finalStatus, history, fen) {
       getUsage,
       setShowUpgradeModal,
       setUpgradeReason,
+      applyMove,
     }}>
       {children}
       <AchievementToast unlockedIds={unlockedAchievements} />

@@ -244,9 +244,9 @@ export default function ChessBoard({ bestMoveArrow, analysisResults, currentRevi
         
         // Decide coordinate label visibility: ranks on left edge, files on bottom edge
         // Left edge: col === 0 (when not flipped) or col === 7 (when flipped)
-        const showRank = showCoords && (col === (isFlipped ? 7 : 0));
-        // Bottom edge: row === 0 (when not flipped) or row === 7 (when flipped)
-        const showFile = showCoords && (row === (isFlipped ? 7 : 0));
+        const coordsOn = showCoords !== false;
+        const showRank = coordsOn && (col === (isFlipped ? 7 : 0));
+        const showFile = coordsOn && (row === (isFlipped ? 7 : 0));
 
         // Placement indices in CSS Grid (invert if flipped)
         const gridRow = isFlipped ? row + 1 : 8 - row;

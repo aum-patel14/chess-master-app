@@ -7,8 +7,6 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import AppShell from './components/layout/AppShell';
 import SplashScreen from './components/SplashScreen';
 import Onboarding from './components/Onboarding';
-import BottomNav from './components/BottomNav';
-import QuickPlayFAB from './components/QuickPlayFAB';
 import ShortcutsModal from './components/ShortcutsModal';
 import ErrorBoundary from './components/ErrorBoundary';
 import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
@@ -36,7 +34,7 @@ const PremiumPage = lazy(() => import('./pages/PremiumPage'));
 const ShopPage = lazy(() => import('./pages/ShopPage'));
 
 const suspenseFallback = (
-  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#0a0a14', color: '#d4af37', fontSize: '2rem' }}>♛</div>
+  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#302e2b', color: '#81b64c', fontSize: '2rem' }}>♞</div>
 );
 
 function AuthConsumerBanner() {
@@ -103,8 +101,7 @@ function RouteSwitch() {
           </Routes>
         </Suspense>
       </AnimatePresence>
-      <BottomNav />
-      <QuickPlayFAB />
+      {/* Chess.com layout uses sidebar nav — no bottom tab bar */}
       <ShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} isMobile={isMobile} />
       {!isMobile && (
         <button
@@ -119,8 +116,8 @@ function RouteSwitch() {
             height: 44,
             borderRadius: '50%',
             border: '1px solid rgba(212,175,55,0.35)',
-            background: '#1a1a2e',
-            color: '#d4af37',
+            background: '#262421',
+            color: '#81b64c',
             fontWeight: 800,
             cursor: 'pointer',
           }}
@@ -138,7 +135,7 @@ export default function App() {
   const [showOnboarding, setShowOnboarding] = useState(!localStorage.getItem('chess_onboarded'));
 
   useEffect(() => {
-    const t = setTimeout(() => setShowSplash(false), 2200);
+    const t = setTimeout(() => setShowSplash(false), 600);
     return () => clearTimeout(t);
   }, []);
 

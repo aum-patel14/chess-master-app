@@ -35,11 +35,13 @@ class ChessMasterAI {
 
     this.chess  = null; // chess.js instance
     this.engine = null; // StockfishEngine instance
-    this.moveHistory = [];
+    this.moveHistory = []; // UCI strings e.g. e2e4
+    this.lastEval = null;
     this.isThinking  = false;
     this.gameOver    = false;
 
     this._selectedSquare = null;
+    this._promoOverlay = null;
     this._boardEl        = null;
     this._squares        = {}; // { 'e4': HTMLElement, ... }
   }
@@ -69,6 +71,21 @@ class ChessMasterAI {
   setDifficulty(level) {
     this.options.difficulty = level;
     this.engine.setDifficulty(level);
+  }
+
+  /** Wire difficulty buttons using data-diff attributes */
+  bindDifficultyButtons(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    container.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-diff]');
+      if (!btn) return;
+      const level = btn.dataset.diff;
+      this.setDifficulty(level);
+      container.querySelectorAll('[data-diff]').forEach((b) => {
+        b.classList.toggle('active', b.dataset.diff === level);
+      });
+    });
   }
 
   /** Start a new game */
@@ -149,9 +166,32 @@ class ChessMasterAI {
           justify-content: center;
           cursor: pointer;
           font-size: clamp(20px, 5vw, 48px);
-          background: ${isLight ? '#F0D9B5' : '#B58863'};
+          background: ${isLight ? '#eeeed2' : '#769656'};
           transition: background 0.15s;
         `;
+
+        const fileIdx = files.indexOf(file);
+        const rankNum = parseInt(rank, 10);
+        const showRank = fileIdx === 0;
+        const showFile = rankNum === 1;
+        if (showRank) {
+          const rankLabel = document.createElement('span');
+          rankLabel.textContent = rank;
+          rankLabel.style.cssText = `
+            position: absolute; top: 2px; left: 4px; font-size: 10px; font-weight: 700;
+            color: ${isLight ? '#769656' : '#eeeed2'}; opacity: 0.55; pointer-events: none;
+          `;
+          el.appendChild(rankLabel);
+        }
+        if (showFile) {
+          const fileLabel = document.createElement('span');
+          fileLabel.textContent = file;
+          fileLabel.style.cssText = `
+            position: absolute; bottom: 2px; right: 4px; font-size: 10px; font-weight: 700;
+            color: ${isLight ? '#769656' : '#eeeed2'}; opacity: 0.55; pointer-events: none;
+          `;
+          el.appendChild(fileLabel);
+        }
 
         el.addEventListener('click', () => this._handleSquareClick(square));
         this._squares[square] = el;
@@ -259,14 +299,14 @@ class ChessMasterAI {
         return;
       }
 
-      // Try to make a move
-      const moved = this._tryMove(this._selectedSquare, square);
+      this._tryMove(this._selectedSquare, square).then((moved) => {
       if (!moved && piece && piece.color === this.chess.turn()[0]) {
         // Clicked another own piece → reselect
         this._selectSquare(square);
       } else if (!moved) {
         this._clearSelection();
       }
+      });
       return;
     }
 
@@ -276,24 +316,29 @@ class ChessMasterAI {
     }
   }
 
-  _tryMove(from, to) {
-    // Check if promotion is needed
+  async _tryMove(from, to) {
     const piece     = this.chess.get(from);
     const isPromo   = piece?.type === 'p' && (to[1] === '8' || to[1] === '1');
-    const promotion = isPromo ? this._askPromotion() : undefined;
+    const promotion = isPromo ? await this._askPromotion() : undefined;
 
     const move = this.chess.move({ from, to, promotion });
-    if (!move) return false; // illegal move
+    if (!move) return false;
 
-    this.moveHistory.push(move.lan);
+    this.moveHistory.push(move.from + move.to + (move.promotion || ''));
     this._clearSelection();
     this._renderBoard();
 
     this.options.onMoveMade?.(move, this.chess.fen(), this._getGameStatus());
 
+    this.engine.evaluate(this.chess.fen())
+      .then((ev) => {
+        this.lastEval = ev;
+        this.options.onEvalUpdate?.(ev, this.chess.fen());
+      })
+      .catch(() => {});
+
     if (this._checkGameOver()) return true;
 
-    // Trigger engine response
     setTimeout(() => this._engineMove(), 100);
     return true;
   }
@@ -305,7 +350,7 @@ class ChessMasterAI {
     this.options.onEngineThink?.(true);
 
     try {
-      const result = await this.engine.getBestMove(this.chess.fen(), this.moveHistory);
+      const result = await this.engine.getBestMove(this.chess.fen(), []);
 
       // Apply the engine's move
       const move = this.chess.move({
@@ -315,9 +360,15 @@ class ChessMasterAI {
       });
 
       if (move) {
-        this.moveHistory.push(move.lan);
+        this.moveHistory.push(move.from + move.to + (move.promotion || ''));
         this._renderBoard();
         this.options.onMoveMade?.(move, this.chess.fen(), this._getGameStatus());
+        this.engine.evaluate(this.chess.fen())
+          .then((ev) => {
+            this.lastEval = ev;
+            this.options.onEvalUpdate?.(ev, this.chess.fen());
+          })
+          .catch(() => {});
         this._checkGameOver();
       }
     } catch (err) {
@@ -388,9 +439,56 @@ class ChessMasterAI {
   }
 
   _askPromotion() {
-    // Simple prompt — replace with your own modal UI
-    const choice = prompt('Promote to? (q=Queen, r=Rook, b=Bishop, n=Knight)', 'q');
-    return ['q','r','b','n'].includes(choice) ? choice : 'q';
+    return new Promise((resolve) => {
+      if (this._promoOverlay) this._promoOverlay.remove();
+
+      const overlay = document.createElement('div');
+      overlay.style.cssText = `
+        position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+        display: flex; align-items: center; justify-content: center; z-index: 9999;
+      `;
+      const dialog = document.createElement('div');
+      dialog.style.cssText = `
+        background: #2b2b2b; border-radius: 10px; padding: 16px;
+        display: flex; gap: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      `;
+      const title = document.createElement('p');
+      title.textContent = 'Promote pawn to:';
+      title.style.cssText = 'color: #fff; margin: 0 0 8px; width: 100%; text-align: center; font-weight: 600;';
+      const row = document.createElement('div');
+      row.style.cssText = 'display: flex; gap: 10px; width: 100%; justify-content: center;';
+
+      const pieces = [
+        { p: 'q', label: '♕' },
+        { p: 'r', label: '♖' },
+        { p: 'b', label: '♗' },
+        { p: 'n', label: '♘' },
+      ];
+
+      pieces.forEach(({ p, label }) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = label;
+        btn.style.cssText = `
+          width: 52px; height: 52px; font-size: 28px; border-radius: 8px;
+          border: 2px solid #81b64c; background: #1a1a1a; color: #fff; cursor: pointer;
+        `;
+        btn.onclick = () => {
+          overlay.remove();
+          this._promoOverlay = null;
+          resolve(p);
+        };
+        row.appendChild(btn);
+      });
+
+      const wrap = document.createElement('div');
+      wrap.appendChild(title);
+      wrap.appendChild(row);
+      dialog.appendChild(wrap);
+      overlay.appendChild(dialog);
+      document.body.appendChild(overlay);
+      this._promoOverlay = overlay;
+    });
   }
 }
 

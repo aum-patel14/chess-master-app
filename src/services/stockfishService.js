@@ -1,4 +1,16 @@
-const BASE_URL = import.meta.env.BASE_URL ?? '/chess-master-app/';
+const resolveStockfishBaseUrl = () => {
+  const envBase = import.meta.env.BASE_URL;
+  if (envBase && envBase !== '/') return envBase;
+  if (typeof window !== 'undefined') {
+    const path = window.location.pathname || '';
+    const match = path.match(/^(.*\/chess-master-app\/)/);
+    if (match) return match[1];
+    if (path.includes('/chess-master-app')) return '/chess-master-app/';
+  }
+  return '/chess-master-app/';
+};
+
+const BASE_URL = resolveStockfishBaseUrl();
 
 export const DIFFICULTY_CONFIG = {
   1: { label: 'Beginner', elo: '400', skill: 0, depth: 1, movetime: 100, description: 'Makes random blunders' },

@@ -1,32 +1,44 @@
 import { useEffect, useState } from 'react';
-import { Trophy, Award, RotateCcw, BarChart2, Home, Flag, Clock } from 'lucide-react';
+import { RotateCcw, BarChart2, Home } from 'lucide-react';
 import { useGame } from '../../context/GameContext';
+import { useNavigate } from 'react-router-dom';
 import './GameOverDialog.css';
 
 const STATUS_CONFIG = {
   checkmate: { emoji: '🏆', color: '#e2b04a', title: 'Checkmate!' },
-  resign:    { emoji: '🏳', color: '#ef4444', title: 'Resignation' },
+  win: { emoji: '🏆', color: '#81b64c', title: 'You Win!' },
+  loss: { emoji: '🏳', color: '#ef4444', title: 'You Lose' },
+  resign: { emoji: '🏳', color: '#ef4444', title: 'Resignation' },
   stalemate: { emoji: '🤝', color: '#a855f7', title: 'Stalemate' },
-  draw:      { emoji: '🤝', color: '#3b82f6', title: 'Draw' },
-  repetition:{ emoji: '🔄', color: '#3b82f6', title: 'Threefold Repetition' },
-  insufficient:{ emoji: '⚡', color: '#a855f7', title: 'Insufficient Material' },
-  timeout:   { emoji: '⏱', color: '#ff7a00', title: 'Time Out!' },
+  draw: { emoji: '🤝', color: '#3b82f6', title: 'Draw' },
+  repetition: { emoji: '🔄', color: '#3b82f6', title: 'Threefold Repetition' },
+  insufficient: { emoji: '⚡', color: '#a855f7', title: 'Insufficient Material' },
+  timeout: { emoji: '⏱', color: '#ff7a00', title: 'Time Out!' },
 };
 
-export default function GameOverDialog({ status, onNewGame, onRematch, onMenu, moveCount, onAnalyze }) {
-  const { state, playerElo, eloChange } = useGame();
-  const config = STATUS_CONFIG[status.type] || STATUS_CONFIG.draw;
+export default function GameOverDialog({
+  status: statusProp,
+  onNewGame,
+  onRematch,
+  onMenu,
+  moveCount: moveCountProp,
+  onAnalyze,
+}) {
+  const { state, playerElo, eloChange, startNewGame } = useGame();
+  const navigate = useNavigate();
+  const status = statusProp || state.status;
+  const isVisible = status && status.type !== 'playing' && status.type !== 'check';
 
-  // Generate simulated accuracy scores once on mount
   const [playerAccuracy, setPlayerAccuracy] = useState(0);
   const [opponentAccuracy, setOpponentAccuracy] = useState(0);
 
   useEffect(() => {
-    // Basic logic to generate organic accuracy scores based on game result
+    if (!isVisible) return;
     const isWin = status.winner === (state.playerColor === 'w' ? 'White' : 'Black');
     const isDraw = !status.winner;
-    
-    let pAcc, oAcc;
+
+    let pAcc;
+    let oAcc;
     if (isDraw) {
       pAcc = Math.floor(74 + Math.random() * 12);
       oAcc = Math.floor(74 + Math.random() * 12);
@@ -37,29 +49,64 @@ export default function GameOverDialog({ status, onNewGame, onRematch, onMenu, m
       pAcc = Math.min(92, Math.floor(65 + Math.random() * 15));
       oAcc = Math.floor(84 + Math.random() * 12);
     }
-    
+
     setPlayerAccuracy(pAcc);
     setOpponentAccuracy(oAcc);
-  }, [status.winner, state.playerColor]);
+  }, [isVisible, status?.winner, state.playerColor]);
+
+  if (!isVisible) {
+    return null;
+  }
+
+  const config = STATUS_CONFIG[status.type] || STATUS_CONFIG.draw;
+  const moveCount = moveCountProp ?? state.history.length;
 
   const getAccuracyColor = (acc) => {
-    if (acc >= 85) return '#22c55e'; // Green
-    if (acc >= 70) return '#e2b04a'; // Yellow/Gold
-    return '#ef4444'; // Red
+    if (acc >= 85) return '#22c55e';
+    if (acc >= 70) return '#e2b04a';
+    return '#ef4444';
+  };
+
+  const handleNewGame = () => {
+    if (onNewGame) {
+      onNewGame();
+      return;
+    }
+    startNewGame({
+      mode: state.gameMode,
+      playerColor: state.playerColor,
+      difficulty: state.aiDifficulty,
+      botId: state.aiBotId,
+    });
+  };
+
+  const handleRematch = () => {
+    if (onRematch) {
+      onRematch();
+      return;
+    }
+    handleNewGame();
+  };
+
+  const handleMenu = () => {
+    if (onMenu) {
+      onMenu();
+      return;
+    }
+    navigate('/');
   };
 
   return (
     <div className="game-over-overlay">
       <div className="game-over-dialog revamped-game-over animate-scaleIn">
-        {/* Glow behind container */}
         <div className="dialog-glow" style={{ '--color': config.color }} />
 
-        {/* Header Icon */}
         <div className="result-emoji animate-scaleIn" style={{ color: config.color }}>
-          {status.winner && status.winner === (state.playerColor === 'w' ? 'White' : 'Black') ? '👑' : config.emoji}
+          {status.winner && status.winner === (state.playerColor === 'w' ? 'White' : 'Black')
+            ? '👑'
+            : config.emoji}
         </div>
 
-        {/* Main Header */}
         <div className="result-content">
           <h2 className="result-title" style={{ color: config.color }}>
             {config.title}
@@ -67,24 +114,29 @@ export default function GameOverDialog({ status, onNewGame, onRematch, onMenu, m
           <p className="result-message">{status.message}</p>
         </div>
 
-        {/* ACCURACY SECTION */}
         <div className="accuracy-section">
           <h3 className="section-title font-cinzel">ACCURACY</h3>
           <div className="accuracy-scores-row">
             <div className="accuracy-box">
-              <span className="acc-label">You (White)</span>
-              <div 
-                className="acc-ring" 
-                style={{ borderColor: getAccuracyColor(playerAccuracy), color: getAccuracyColor(playerAccuracy) }}
+              <span className="acc-label">You</span>
+              <div
+                className="acc-ring"
+                style={{
+                  borderColor: getAccuracyColor(playerAccuracy),
+                  color: getAccuracyColor(playerAccuracy),
+                }}
               >
                 <span className="acc-percentage">{playerAccuracy}%</span>
               </div>
             </div>
             <div className="accuracy-box">
-              <span className="acc-label">Opponent (Black)</span>
-              <div 
-                className="acc-ring" 
-                style={{ borderColor: getAccuracyColor(opponentAccuracy), color: getAccuracyColor(opponentAccuracy) }}
+              <span className="acc-label">Opponent</span>
+              <div
+                className="acc-ring"
+                style={{
+                  borderColor: getAccuracyColor(opponentAccuracy),
+                  color: getAccuracyColor(opponentAccuracy),
+                }}
               >
                 <span className="acc-percentage">{opponentAccuracy}%</span>
               </div>
@@ -92,7 +144,6 @@ export default function GameOverDialog({ status, onNewGame, onRematch, onMenu, m
           </div>
         </div>
 
-        {/* STATS SUMMARY */}
         <div className="result-stats">
           <div className="result-stat">
             <span className="rs-label">Moves</span>
@@ -101,11 +152,18 @@ export default function GameOverDialog({ status, onNewGame, onRematch, onMenu, m
           {state.gameMode === 'vsAI' && (
             <div className="result-stat">
               <span className="rs-label">ELO</span>
-              <span className="rs-value" style={{ color: '#d4af37', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span className="rs-value" style={{ color: '#d4af37' }}>
                 {playerElo}
                 {eloChange !== 0 && (
-                  <span style={{ fontSize: '11px', color: eloChange > 0 ? '#22c55e' : '#ef4444', marginLeft: '3px' }}>
-                    ({eloChange > 0 ? '+' : ''}{eloChange})
+                  <span
+                    style={{
+                      fontSize: '11px',
+                      color: eloChange > 0 ? '#22c55e' : '#ef4444',
+                      marginLeft: '3px',
+                    }}
+                  >
+                    ({eloChange > 0 ? '+' : ''}
+                    {eloChange})
                   </span>
                 )}
               </span>
@@ -119,24 +177,28 @@ export default function GameOverDialog({ status, onNewGame, onRematch, onMenu, m
           </div>
         </div>
 
-        {/* BUTTON ACTIONS */}
         <div className="result-actions">
-          <button id="btn-rematch" className="btn btn-primary result-btn" onClick={onRematch}>
+          <button type="button" className="btn btn-primary result-btn" onClick={handleRematch}>
             <RotateCcw size={16} style={{ marginRight: '6px' }} />
-            Rematch
+            Play Again
           </button>
-          <button id="btn-play-again" className="btn btn-secondary result-btn" onClick={onNewGame}>
+          <button type="button" className="btn btn-secondary result-btn" onClick={handleNewGame}>
             ♛ New Game
           </button>
           {onAnalyze && (
-            <button id="btn-analyze" className="btn btn-secondary result-btn" onClick={onAnalyze} style={{ border: '1px solid #e2b04a', color: '#e2b04a' }}>
+            <button
+              type="button"
+              className="btn btn-secondary result-btn"
+              onClick={onAnalyze}
+              style={{ border: '1px solid #e2b04a', color: '#e2b04a' }}
+            >
               <BarChart2 size={16} style={{ marginRight: '6px' }} />
               Analyze Game
             </button>
           )}
-          <button id="btn-go-menu" className="btn btn-secondary result-btn" onClick={onMenu}>
+          <button type="button" className="btn btn-secondary result-btn" onClick={handleMenu}>
             <Home size={16} style={{ marginRight: '6px' }} />
-            Main Menu
+            Go Home
           </button>
         </div>
       </div>

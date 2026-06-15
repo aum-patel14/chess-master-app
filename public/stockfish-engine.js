@@ -2,11 +2,9 @@ class StockfishEngine {
   constructor() {
     this.worker = null;
     this.isReady = false;
-    this.resolvers = new Map(); // pending promise resolvers
+    this.resolvers = new Map();
     this.currentEvalResolver = null;
 
-    // Difficulty presets — depth controls how many moves ahead Stockfish thinks.
-    // skillLevel (0–20) controls Stockfish's internal randomness (lower = more mistakes).
     this.DIFFICULTY = {
       beginner: { depth: 1,  skillLevel: 0,  moveTime: 100,  label: 'Beginner'  },
       easy:     { depth: 3,  skillLevel: 5,  moveTime: 200,  label: 'Easy'      },
@@ -20,15 +18,9 @@ class StockfishEngine {
     this.pendingEval = null;
   }
 
-  /**
-   * Initialize the Stockfish worker.
-   * Call this once before using the engine.
-   */
   async init() {
     return new Promise((resolve, reject) => {
       try {
-        // Try to load Stockfish from CDN or local path
-        // Option 1: Use the Stockfish WASM build (recommended)
         this.worker = new Worker(this._getStockfishPath());
       } catch (err) {
         reject(new Error('Failed to load Stockfish worker: ' + err.message));
@@ -41,10 +33,8 @@ class StockfishEngine {
         reject(err);
       };
 
-      // Wait for "readyok" before resolving
       this._waitForReady().then(() => {
         this.isReady = true;
-        // Configure UCI options
         this._send('uci');
         this._send('setoption name Threads value 1');
         this._send('setoption name Hash value 32');
@@ -52,15 +42,10 @@ class StockfishEngine {
         resolve(this);
       });
 
-      // Send isready to trigger initialization
       this._send('isready');
     });
   }
 
-  /**
-   * Set difficulty level.
-   * @param {'beginner'|'easy'|'medium'|'hard'|'master'} level
-   */
   setDifficulty(level) {
     const preset = this.DIFFICULTY[level];
     if (!preset) throw new Error(`Unknown difficulty: ${level}. Use: ${Object.keys(this.DIFFICULTY).join(', ')}`);
@@ -68,19 +53,12 @@ class StockfishEngine {
     if (this.isReady) this._applyDifficultyOptions();
   }
 
-  /**
-   * Get the best move for a given position.
-   * @param {string} fen - FEN string of the current position
-   * @param {string[]} [moves=[]] - Optional move history in UCI format (e.g. ['e2e4', 'e7e5'])
-   * @returns {Promise<{move: string, from: string, to: string, promotion?: string}>}
-   */
   async getBestMove(fen, moves = []) {
     if (!this.isReady) throw new Error('Engine not initialized. Call init() first.');
 
     return new Promise((resolve, reject) => {
       this.pendingMove = { resolve, reject };
 
-      // Set position
       const posCmd = moves.length > 0
         ? `position fen ${fen} moves ${moves.join(' ')}`
         : `position fen ${fen}`;
@@ -89,7 +67,6 @@ class StockfishEngine {
       const { depth, moveTime } = this.currentDifficulty;
       this._send(`go depth ${depth} movetime ${moveTime}`);
 
-      // Safety timeout (2× the expected move time)
       setTimeout(() => {
         if (this.pendingMove) {
           this.pendingMove.reject(new Error('Engine timeout'));
@@ -99,12 +76,6 @@ class StockfishEngine {
     });
   }
 
-  /**
-   * Evaluate the current position (get a score in centipawns).
-   * Positive = white advantage, negative = black advantage.
-   * @param {string} fen - FEN string
-   * @returns {Promise<{score: number, mate: number|null, depth: number}>}
-   */
   async evaluate(fen) {
     if (!this.isReady) throw new Error('Engine not initialized. Call init() first.');
 
@@ -116,23 +87,14 @@ class StockfishEngine {
     });
   }
 
-  /**
-   * Stop the current calculation.
-   */
   stop() {
     this._send('stop');
   }
 
-  /**
-   * Reset the engine (new game).
-   */
   newGame() {
     this._send('ucinewgame');
   }
 
-  /**
-   * Terminate the worker and free resources.
-   */
   destroy() {
     if (this.worker) {
       this._send('quit');
@@ -142,8 +104,6 @@ class StockfishEngine {
     }
   }
 
-  // ─── Private Methods ───────────────────────────────────────────────────────
-
   _send(cmd) {
     if (this.worker) {
       this.worker.postMessage(cmd);
@@ -151,7 +111,13 @@ class StockfishEngine {
   }
 
   _getStockfishPath() {
-    return '/stockfish.js';
+    let baseUrl = '/chess-master-app/';
+    if (typeof window !== 'undefined') {
+      const match = window.location.pathname.match(/^(.*\/chess-master-app\/)/);
+      if (match) baseUrl = match[1];
+      else if (!window.location.pathname.includes('chess-master-app')) baseUrl = '/';
+    }
+    return `${baseUrl}stockfish.js`.replace(/\/+/g, '/');
   }
 
   _waitForReady() {
@@ -169,7 +135,6 @@ class StockfishEngine {
   _applyDifficultyOptions() {
     const { skillLevel } = this.currentDifficulty;
     this._send(`setoption name Skill Level value ${skillLevel}`);
-    // For lower skill levels, add some randomness
     if (skillLevel < 10) {
       const errorProb = Math.round((10 - skillLevel) * 50);
       this._send(`setoption name Move Overhead value ${errorProb}`);
@@ -177,10 +142,9 @@ class StockfishEngine {
   }
 
   _handleMessage(message) {
-    // "bestmove e2e4" — the engine has chosen a move
     if (message.startsWith('bestmove')) {
       const parts = message.split(' ');
-      const uciMove = parts[1]; // e.g. "e2e4" or "e7e8q" (promotion)
+      const uciMove = parts[1];
 
       if (uciMove && uciMove !== '(none)' && this.pendingMove) {
         const parsed = this._parseUCIMove(uciMove);
@@ -188,7 +152,6 @@ class StockfishEngine {
         this.pendingMove = null;
       }
 
-      // Also resolve evaluation if pending
       if (this.pendingEval) {
         this.pendingEval.resolve({
           score: this.pendingEval.bestScore,
@@ -199,7 +162,6 @@ class StockfishEngine {
       }
     }
 
-    // "info depth 8 score cp 34 ..." — evaluation info
     if (message.startsWith('info') && message.includes('score') && this.pendingEval) {
       const depthMatch = message.match(/depth (\d+)/);
       const cpMatch    = message.match(/score cp (-?\d+)/);
@@ -212,17 +174,15 @@ class StockfishEngine {
   }
 
   _parseUCIMove(uciMove) {
-    // UCI format: "e2e4" or "e7e8q" (promotion to queen)
     return {
       move:      uciMove,
-      from:      uciMove.slice(0, 2), // "e2"
-      to:        uciMove.slice(2, 4), // "e4"
-      promotion: uciMove.length === 5 ? uciMove[4] : undefined, // "q", "r", "b", "n"
+      from:      uciMove.slice(0, 2),
+      to:        uciMove.slice(2, 4),
+      promotion: uciMove.length === 5 ? uciMove[4] : undefined,
     };
   }
 }
 
-// Export for both ES modules and CommonJS
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = StockfishEngine;
 } else {

@@ -1,11 +1,11 @@
 import './chesscom.css';
 
 const LEVELS = [
-  { level: 1, key: 'beginner', label: 'Beginner', elo: 400 },
-  { level: 2, key: 'easy', label: 'Easy', elo: 800 },
-  { level: 3, key: 'medium', label: 'Medium', elo: 1200 },
-  { level: 4, key: 'hard', label: 'Hard', elo: 1800 },
-  { level: 5, key: 'master', label: 'Master', elo: '2500+' },
+  { level: 1, diff: 'beginner', label: 'Beginner', elo: 400 },
+  { level: 2, diff: 'easy', label: 'Easy', elo: 800 },
+  { level: 3, diff: 'medium', label: 'Medium', elo: 1200 },
+  { level: 4, diff: 'hard', label: 'Hard', elo: 1800 },
+  { level: 5, diff: 'master', label: 'Master', elo: '2500+' },
 ];
 
 export default function EngineDifficultyBar({ value, onChange, disabled = false }) {
@@ -17,6 +17,7 @@ export default function EngineDifficultyBar({ value, onChange, disabled = false 
         <button
           key={lvl.level}
           type="button"
+          data-diff={lvl.diff}
           className={`cc-engine-btn${selected === lvl.level ? ' active' : ''}`}
           disabled={disabled}
           onClick={() => onChange(lvl.level)}

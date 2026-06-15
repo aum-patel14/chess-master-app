@@ -33,7 +33,7 @@ export default function CapturedPieces({ pieces, color }) {
         const type = getType(p);
         // captured pieces are the opponent's color
         const pieceColor = color === 'w' ? 'b' : 'w'; // captured piece color
-        const src = `/chess-master-app/pieces/cburnett/${pieceColor}${type.toUpperCase()}.svg`;
+        const src = `${import.meta.env.BASE_URL}pieces/cburnett/${pieceColor}${type.toUpperCase()}.svg`;
         return (
           <img
             key={i}

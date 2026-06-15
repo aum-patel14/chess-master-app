@@ -38,6 +38,7 @@ export function DifficultySelector({
           <button
             key={lvl}
             type="button"
+            data-diff={cfg.label.toLowerCase()}
             className={[
               'difficulty-selector__card',
               active ? 'difficulty-selector__card--active' : '',

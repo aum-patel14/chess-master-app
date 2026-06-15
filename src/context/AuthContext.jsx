@@ -452,6 +452,12 @@ export function AuthProvider({ children }) {
     }
   }, [currentUser]);
 
+  // Never block the app indefinitely waiting for auth
+  useEffect(() => {
+    const fallback = setTimeout(() => setLoading(false), 2500);
+    return () => clearTimeout(fallback);
+  }, []);
+
   // Auth State Listener
   useEffect(() => {
     if (!isFirebaseEnabled) {
@@ -551,7 +557,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 }

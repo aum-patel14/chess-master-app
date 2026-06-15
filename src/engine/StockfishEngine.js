@@ -164,16 +164,17 @@ class StockfishEngine {
   }
 
   _getStockfishPath() {
-    // Try to use a locally bundled version first, then CDN fallback.
-    // For your project, download stockfish.js from:
-    // https://github.com/nmrugg/stockfish.js/blob/master/stockfish.js
-    // and place it at: /public/stockfish.js
-    let baseUrl = '/';
+    let baseUrl = '/chess-master-app/';
     try {
-      if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.BASE_URL) {
+      if (typeof import.meta !== 'undefined' && import.meta.env?.BASE_URL && import.meta.env.BASE_URL !== '/') {
         baseUrl = import.meta.env.BASE_URL;
+      } else if (typeof window !== 'undefined') {
+        const match = window.location.pathname.match(/^(.*\/chess-master-app\/)/);
+        if (match) baseUrl = match[1];
       }
-    } catch (e) {}
+    } catch (e) {
+      /* use default */
+    }
     return `${baseUrl}stockfish.js`.replace(/\/+/g, '/');
   }
 

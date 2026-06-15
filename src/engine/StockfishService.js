@@ -61,6 +61,10 @@ class CompatibleStockfishEngine extends StockfishEngine {
       this.setDifficulty(movesOrDifficulty);
     } else if (Array.isArray(movesOrDifficulty)) {
       moves = movesOrDifficulty;
+    } else if (movesOrDifficulty && typeof movesOrDifficulty.history === 'function') {
+      moves = movesOrDifficulty.history({ verbose: true }).map(
+        (m) => m.from + m.to + (m.promotion || '')
+      );
     }
 
     this.isThinking = true;

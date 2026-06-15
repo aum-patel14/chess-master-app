@@ -14,35 +14,10 @@ import { downloadPgn, generatePgnString } from '../utils/pgnExporter';
 import EvalBar from '../components/chesscom/EvalBar';
 import EngineDifficultyBar from '../components/chesscom/EngineDifficultyBar';
 import ThinkingIndicator from '../components/chesscom/ThinkingIndicator';
+import { BOTS, BotConfig } from '../config/bots';
+import { useStockfish } from '../hooks/useStockfish';
+import { BotSelector } from '../components/BotSelector';
 
-interface Bot {
-  id: string;
-  name: string;
-  elo: number;
-  avatar: string;
-  difficulty: number;
-  badge: 'green' | 'yellow' | 'orange' | 'red';
-  badgeLabel: string;
-  bio: string;
-}
-
-const AI_LEVELS: Bot[] = [
-  { id: 'easy_ai', name: 'Easy AI', elo: 600, avatar: '😊', difficulty: 2, badge: 'green', badgeLabel: 'Easy', bio: 'Depth 2 Stockfish. Plays casual, beginner-level moves.' },
-  { id: 'medium_ai', name: 'Medium AI', elo: 1200, avatar: '🧠', difficulty: 6, badge: 'yellow', badgeLabel: 'Medium', bio: 'Depth 6 Stockfish. A decent challenge for regular chess players.' },
-  { id: 'hard_ai', name: 'Hard AI', elo: 2000, avatar: '🔥', difficulty: 12, badge: 'red', badgeLabel: 'Hard', bio: 'Depth 12 Stockfish. Plays at master level with ruthless precision.' },
-];
-
-const BOTS: Bot[] = [
-  { id: 'rookie', name: 'Martin', elo: 250, avatar: '👶', difficulty: 1, badge: 'green', badgeLabel: 'Beginner', bio: 'Just learned how the chess pieces move. Plays entirely at random!' },
-  { id: 'beginner', name: 'Mike', elo: 600, avatar: '🤖', difficulty: 2, badge: 'green', badgeLabel: 'Easy', bio: 'Familiar with basic rules but misses simple tactical threats.' },
-  { id: 'casual', name: 'David', elo: 900, avatar: '☕', difficulty: 3, badge: 'yellow', badgeLabel: 'Moderate', bio: 'Plays casual games in the park. Decent, but falls for easy tactics.' },
-  { id: 'club', name: 'Sarah', elo: 1200, avatar: '🧔', difficulty: 5, badge: 'yellow', badgeLabel: 'Intermediate', bio: 'A regular at local chess clubs. Knows standard openings.' },
-  { id: 'intermediate', name: 'Lisa', elo: 1500, avatar: '🦊', difficulty: 6, badge: 'orange', badgeLabel: 'Advanced', bio: 'Enjoys sharp tactical lines and actively searches for forks and pins.' },
-  { id: 'advanced', name: 'Anna', elo: 1800, avatar: '🧙‍♂️', difficulty: 8, badge: 'orange', badgeLabel: 'Expert', bio: 'Calculates several moves ahead and rarely blunders. A tough opponent.' },
-  { id: 'expert', name: 'Carlos', elo: 2100, avatar: '🧠', difficulty: 9, badge: 'red', badgeLabel: 'Master', bio: 'Mastered positional play and endgames. Punishes mistakes instantly.' },
-  { id: 'master', name: 'Wei', elo: 2400, avatar: '👑', difficulty: 10, badge: 'red', badgeLabel: 'Grandmaster', bio: 'Plays at grandmaster strength with flawless precision.' },
-  { id: 'master', name: 'Magnus', elo: 2800, avatar: '🐐', difficulty: 10, badge: 'red', badgeLabel: 'Champion', bio: 'The legendary World Champion. Plays near perfect moves!' },
-];
 
 const TIME_OPTIONS = [
   { base: 1, increment: 0, label: '1 min (Bullet)' },
@@ -59,7 +34,8 @@ const CAPTURED_SYMBOLS: Record<string, string> = {
 };
 
 export default function GamePage() {
-  const { state, dispatch, resign, undoMove, startNewGame } = useGame();
+  const { state, dispatch, resign, undoMove, startNewGame, applyMove } = useGame();
+  const { isThinking: isStockfishThinking, getBestMove } = useStockfish();
   const { showToast } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
@@ -86,7 +62,7 @@ export default function GamePage() {
 
   const [gameState, setGameState] = useState<'selection' | 'timepicker' | 'playing'>('selection');
   const [activeTab, setActiveTab] = useState<'levels' | 'bots'>('levels');
-  const [selectedBot, setSelectedBot] = useState<Bot | null>(null);
+  const [selectedBot, setSelectedBot] = useState<BotConfig | null>(null);
   const [selectedTc, setSelectedTc] = useState<{ base: number; increment: number } | null>({ base: 10, increment: 0 });
   const [isPlaying, setIsPlaying] = useState(false);
   const [historyExpanded, setHistoryExpanded] = useState(false);
@@ -145,7 +121,7 @@ export default function GamePage() {
       startNewGame({
         mode: 'vsAI',
         playerColor: paramColor,
-        difficulty: activeBot.difficulty,
+        difficulty: (activeBot.id === 'rookie' ? 1 : activeBot.id === 'beginner' ? 2 : activeBot.id === 'casual' ? 3 : activeBot.id === 'club' ? 5 : activeBot.id === 'intermediate' ? 6 : activeBot.id === 'advanced' ? 8 : activeBot.id === 'expert' ? 9 : 10),
         botId: activeBot.id,
         timeControl: tc.base > 0 ? tc : null,
       });
@@ -160,6 +136,72 @@ export default function GamePage() {
       setGameState('playing');
     }
   }, [paramMode, paramDiff, paramColor, paramBotId, paramTimeControl, resume, startNewGame]);
+
+  // Trigger Stockfish AI moves in vsAI mode
+  useEffect(() => {
+    if (state.gameMode !== 'vsAI' || isStockfishThinking) return;
+    if (state.status.type !== 'playing' && state.status.type !== 'check') return;
+
+    const activeChess = new Chess(state.fen);
+    if (activeChess.isGameOver()) return;
+
+    const isPlayerTurn = activeChess.turn() === state.playerColor;
+    if (!isPlayerTurn) {
+      const activeBot = BOTS.find(b => b.id === state.aiBotId) || BOTS[0];
+
+      const triggerAiMove = async () => {
+        dispatch({ type: 'SET_AI_THINKING', payload: true });
+        const startTime = Date.now();
+
+        try {
+          const uciMove = await getBestMove(state.fen, activeBot);
+          
+          // Enforce minimum 400ms delay for bots with moveTimeMs < 1000ms
+          const elapsed = Date.now() - startTime;
+          const minDelay = activeBot.moveTimeMs < 1000 ? 400 : 0;
+          if (elapsed < minDelay) {
+            await new Promise(r => setTimeout(r, minDelay - elapsed));
+          }
+
+          if (uciMove && uciMove !== '(none)') {
+            const aiChess = new Chess(state.fen);
+            const moveResult = aiChess.move({
+              from: uciMove.substring(0, 2),
+              to: uciMove.substring(2, 4),
+              promotion: uciMove.length > 4 ? uciMove[4] : undefined
+            });
+
+            if (moveResult) {
+              applyMove(moveResult, aiChess);
+            } else {
+              throw new Error('Stockfish returned illegal move: ' + uciMove);
+            }
+          } else {
+            throw new Error('Stockfish returned empty move');
+          }
+        } catch (e) {
+          console.error('Stockfish error, playing random fallback move:', e);
+          showToast('AI error — playing random move', 'error');
+
+          const aiChess = new Chess(state.fen);
+          const moves = aiChess.moves({ verbose: true });
+          if (moves.length > 0) {
+            const randomMove = moves[Math.floor(Math.random() * moves.length)];
+            const moveResult = aiChess.move(randomMove);
+            if (moveResult) {
+              applyMove(moveResult, aiChess);
+            }
+          }
+        } finally {
+          dispatch({ type: 'SET_AI_THINKING', payload: false });
+        }
+      };
+
+      const timer = setTimeout(triggerAiMove, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [state.fen, state.gameMode, state.playerColor, state.aiBotId, isStockfishThinking, getBestMove, dispatch, applyMove, showToast]);
+
 
   // Handle active ticking clock warnings
   const formatTime = (timeInSeconds: number) => {
@@ -286,171 +328,51 @@ export default function GamePage() {
     setGameState('timepicker');
   };
 
-  const handleStartGame = () => {
-    if (!selectedBot) return;
-    startNewGame({
-      mode: 'vsAI',
-      playerColor: 'w',
-      difficulty: selectedBot.difficulty,
-      botId: selectedBot.id,
-      timeControl: selectedTc && selectedTc.base > 0 ? selectedTc : null,
-    });
-    setIsPlaying(true);
-    setGameState('playing');
-  };
-
   // Bot selector card grid UI
   if (paramMode === 'ai' && !isPlaying) {
     return (
       <PageShell>
-        <div style={{ background: '#161513', minHeight: '100vh', padding: '24px 16px', display: 'flex', justifyContent: 'center' }}>
-          <div style={{ width: '100%', maxWidth: '430px', background: '#2b2b2b', borderRadius: '12px', padding: '20px', color: '#ffffff', boxShadow: '0 4px 15px rgba(0,0,0,0.5)' }}>
+        <BotSelector
+          show={true}
+          onBotSelected={(bot, color) => {
+            setSelectedBot(bot);
+            const mapping: Record<string, number> = {
+              rookie: 1,
+              beginner: 2,
+              casual: 3,
+              club: 5,
+              intermediate: 6,
+              advanced: 8,
+              expert: 9,
+              master: 10,
+            };
+            const diff = mapping[bot.id] || 3;
+            const tc = selectedTc ? (selectedTc.base > 0 ? selectedTc : null) : null;
             
-            {gameState === 'selection' ? (
-              <>
-                <h2 style={{ fontSize: '24px', fontWeight: 700, textAlign: 'center', marginBottom: '8px' }}>Play vs Computer</h2>
-                <p style={{ fontSize: '14px', color: '#aaaaaa', textAlign: 'center', marginBottom: '20px' }}>Select an opponent to start playing</p>
-
-                {/* Tab selector */}
-                <div style={{ display: 'flex', background: '#1a1a1a', borderRadius: '8px', padding: '4px', marginBottom: '20px', gap: '4px' }}>
-                  <button
-                    onClick={() => setActiveTab('levels')}
-                    style={{
-                      flex: 1,
-                      height: '36px',
-                      borderRadius: '6px',
-                      background: activeTab === 'levels' ? '#6bbd44' : 'transparent',
-                      color: activeTab === 'levels' ? '#ffffff' : '#aaaaaa',
-                      border: 'none',
-                      fontWeight: 700,
-                      fontSize: '13px',
-                      cursor: 'pointer',
-                      transition: 'background 0.2s, color 0.2s',
-                    }}
-                  >
-                    AI Levels
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('bots')}
-                    style={{
-                      flex: 1,
-                      height: '36px',
-                      borderRadius: '6px',
-                      background: activeTab === 'bots' ? '#6bbd44' : 'transparent',
-                      color: activeTab === 'bots' ? '#ffffff' : '#aaaaaa',
-                      border: 'none',
-                      fontWeight: 700,
-                      fontSize: '13px',
-                      cursor: 'pointer',
-                      transition: 'background 0.2s, color 0.2s',
-                    }}
-                  >
-                    Chess Bots
-                  </button>
-                </div>
-                
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px', maxHeight: '55vh', overflowY: 'auto', paddingRight: '4px' }}>
-                  {(activeTab === 'levels' ? AI_LEVELS : BOTS).map((bot) => {
-                    const badgeColors: Record<string, string> = { green: '#4ade80', yellow: '#facc15', orange: '#fb923c', red: '#f87171' };
-                    return (
-                      <div
-                        key={bot.id}
-                        onClick={() => handleSelectBot(bot)}
-                        style={{
-                          background: '#1a1a1a',
-                          borderRadius: '8px',
-                          padding: '12px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '14px',
-                          cursor: 'pointer',
-                          border: '1px solid #333',
-                          transition: 'transform 0.15s, border-color 0.15s',
-                          textAlign: 'left',
-                        }}
-                        onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#6bbd44')}
-                        onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#333')}
-                      >
-                        <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#2b2b2b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', border: `2px solid ${badgeColors[bot.badge] || '#999'}`, overflow: 'hidden', flexShrink: 0 }}>
-                          {bot.avatar}
-                        </div>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ fontWeight: 700, fontSize: '16px' }}>{bot.name}</span>
-                            <span style={{ fontSize: '11px', background: badgeColors[bot.badge], color: '#000000', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
-                              {bot.badgeLabel}
-                            </span>
-                          </div>
-                          <div style={{ fontSize: '12px', color: '#aaaaaa', marginTop: '2px' }}>ELO: {bot.elo}</div>
-                          <div style={{ fontSize: '11px', color: '#888888', marginTop: '4px', lineHeight: '1.3' }}>{bot.bio}</div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </>
-            ) : (
-              // Time picker overlay
-              <div style={{ textAlign: 'center', padding: '10px 0' }}>
-                <h3 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '8px' }}>Choose Time Control</h3>
-                <p style={{ fontSize: '14px', color: '#aaaaaa', marginBottom: '24px' }}>Playing vs {selectedBot?.name}</p>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '28px' }}>
-                  {TIME_OPTIONS.map((opt) => {
-                    const isSelected = selectedTc ? (selectedTc.base === opt.base) : (opt.base === 0);
-                    return (
-                      <button
-                        key={opt.label}
-                        onClick={() => setSelectedTc(opt.base > 0 ? { base: opt.base, increment: 0 } : null)}
-                        style={{
-                          height: '48px',
-                          borderRadius: '8px',
-                          border: isSelected ? '2px solid #6bbd44' : '1px solid #444',
-                          background: isSelected ? 'rgba(107, 189, 68, 0.15)' : '#1a1a1a',
-                          color: '#ffffff',
-                          fontWeight: 600,
-                          fontSize: '14px',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        {opt.label}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <button
-                    onClick={() => setGameState('selection')}
-                    style={{ flex: 1, height: '48px', background: '#3a3a3a', border: 'none', borderRadius: '8px', color: '#fff', fontWeight: 600, cursor: 'pointer' }}
-                  >
-                    Back
-                  </button>
-                  <button
-                    onClick={handleStartGame}
-                    style={{ flex: 1, height: '48px', background: '#6bbd44', border: 'none', borderRadius: '8px', color: '#fff', fontWeight: 600, cursor: 'pointer' }}
-                  >
-                    Play Game
-                  </button>
-                </div>
-              </div>
-            )}
-            
-          </div>
-        </div>
+            startNewGame({
+              mode: 'vsAI',
+              playerColor: color === 'white' ? 'w' : 'b',
+              difficulty: diff,
+              botId: bot.id,
+              timeControl: tc,
+            });
+            setIsPlaying(true);
+            setGameState('playing');
+          }}
+        />
       </PageShell>
     );
   }
 
   // Active playing view matching Chess.com Clean Mobile UI
-  const activeBot = AI_LEVELS.find(b => b.id === state.aiBotId) || BOTS.find(b => b.id === state.aiBotId) || BOTS[0];
+  const activeBot = BOTS.find(b => b.id === state.aiBotId) || BOTS[0];
   const isOpponentTurn = state.playerColor === 'w' ? (chess.turn() === 'b') : (chess.turn() === 'w'); // simplified ticking
 
   return (
     <PageShell>
       <div
         style={{
-          background: '#161513',
+          background: '#302e2b',
           minHeight: '100vh',
           display: 'flex',
           justifyContent: 'center',
@@ -526,15 +448,25 @@ export default function GamePage() {
                       width: '40px',
                       height: '40px',
                       borderRadius: '50%',
-                      background: '#3a3a3a',
+                      background: state.gameMode === 'vsAI' ? 
+                        ((activeBot.colorClass === 'gray' && 'linear-gradient(135deg, #707070, #4a4a4a)') ||
+                         (activeBot.colorClass === 'teal' && 'linear-gradient(135deg, #0d9488, #0f766e)') ||
+                         (activeBot.colorClass === 'blue' && 'linear-gradient(135deg, #2563eb, #1d4ed8)') ||
+                         (activeBot.colorClass === 'purple' && 'linear-gradient(135deg, #7c3aed, #6d28d9)') ||
+                         (activeBot.colorClass === 'amber' && 'linear-gradient(135deg, #d97706, #b45309)') ||
+                         (activeBot.colorClass === 'coral' && 'linear-gradient(135deg, #ff7f50, #e05c3c)') ||
+                         (activeBot.colorClass === 'pink' && 'linear-gradient(135deg, #db2777, #be185d)') ||
+                         (activeBot.colorClass === 'red' && 'linear-gradient(135deg, #dc2626, #b91c1c)') || '#3a3a3a') : '#3a3a3a',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      fontSize: '22px',
+                      fontSize: state.gameMode === 'vsAI' ? '14px' : '22px',
+                      fontWeight: state.gameMode === 'vsAI' ? 'bold' : 'normal',
+                      color: '#ffffff',
                       border: '2px solid #555',
                     }}
                   >
-                    {state.gameMode === 'vsAI' ? activeBot.avatar : '👤'}
+                    {state.gameMode === 'vsAI' ? activeBot.avatarInitials : '👤'}
                   </div>
                   <div>
                     {/* Bot name & ELO */}
@@ -544,6 +476,17 @@ export default function GamePage() {
                         ({state.gameMode === 'vsAI' ? activeBot.elo : state.gameMode === 'online' ? state.opponentRating : '1200'})
                       </span>
                     </div>
+                    {/* Pulsing dots under name */}
+                    {state.gameMode === 'vsAI' && state.isAIThinking && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                        <span style={{ fontSize: '11px', color: '#81b64c', fontWeight: 600 }}>Thinking</span>
+                        <span className="cc-thinking-dots">
+                          <span className="cc-dot" />
+                          <span className="cc-dot" />
+                          <span className="cc-dot" />
+                        </span>
+                      </div>
+                    )}
                     {/* Captured pieces + material diff */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
                       <span style={{ fontSize: '13px', color: '#ffffff', letterSpacing: '1px' }}>
@@ -559,7 +502,7 @@ export default function GamePage() {
                     </div>
                   </div>
                 </div>
-
+ 
                 {/* Opponent Clock Display */}
                 {state.timeControl && (
                   <div
@@ -581,13 +524,13 @@ export default function GamePage() {
                   </div>
                 )}
               </div>
-
+ 
               {/* 2. CHESS BOARD + EVAL BAR */}
               <div style={{ width: '100%', position: 'relative', display: 'flex', alignItems: 'stretch', gap: '6px' }}>
                 {state.gameMode === 'vsAI' && (
-                  <EvalBar fen={state.reviewFen || state.fen} flipped={state.boardFlipped} />
+                  <EvalBar fen={state.reviewFen || state.fen} flipped={state.boardFlipped} refreshKey={state.evalTick} />
                 )}
-                <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ flex: 1, minWidth: 0, pointerEvents: state.isAIThinking || isStockfishThinking ? 'none' : 'auto' }}>
                   <ChessBoard
                     currentReviewIndex={reviewIndex}
                     analysisResults={analysisResults}
@@ -715,7 +658,7 @@ export default function GamePage() {
                         {state.gameMode === 'vsAI' ? `🤖 vs ${activeBot.name}` : state.gameMode === 'online' ? `⚔️ vs ${state.opponentName || 'Online'}` : '👥 Local Game'}
                       </h3>
                       <p style={{ fontSize: '12px', color: '#aaaaaa', marginTop: '4px', margin: '4px 0 0 0', lineHeight: '1.4' }}>
-                        {state.gameMode === 'vsAI' ? activeBot.bio : 'Analyze positions, review mistakes and play in real time.'}
+                        {state.gameMode === 'vsAI' ? activeBot.description : 'Analyze positions, review mistakes and play in real time.'}
                       </p>
                     </div>
 

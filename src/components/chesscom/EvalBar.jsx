@@ -2,29 +2,37 @@ import { useEffect, useState } from 'react';
 import { evaluatePosition } from '../../services/stockfishService';
 import './chesscom.css';
 
-export default function EvalBar({ fen, flipped = false }) {
+export default function EvalBar({ fen, flipped = false, refreshKey = 0 }) {
   const [pct, setPct] = useState(50);
   const [label, setLabel] = useState('0.0');
 
   useEffect(() => {
+    if (!fen) return;
     let cancelled = false;
-    evaluatePosition(fen, 10).then((ev) => {
-      if (cancelled) return;
-      const score = ev.score ?? 0;
-      if (Math.abs(score) >= 99) {
-        setPct(score > 0 ? 92 : 8);
-        setLabel(`M${Math.abs(Math.round(score))}`);
-        return;
-      }
-      const clamped = Math.max(-5, Math.min(5, score));
-      const whitePct = 50 + clamped * 9;
-      setPct(Math.min(95, Math.max(5, whitePct)));
-      setLabel(score > 0 ? `+${score.toFixed(1)}` : score.toFixed(1));
-    });
+    evaluatePosition(fen, 8)
+      .then((ev) => {
+        if (cancelled) return;
+        const score = ev?.score ?? 0;
+        if (Math.abs(score) >= 99) {
+          setPct(score > 0 ? 92 : 8);
+          setLabel(`M${Math.abs(Math.round(score))}`);
+          return;
+        }
+        const clamped = Math.max(-5, Math.min(5, score));
+        const whitePct = 50 + clamped * 9;
+        setPct(Math.min(95, Math.max(5, whitePct)));
+        setLabel(score > 0 ? `+${score.toFixed(1)}` : score.toFixed(1));
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPct(50);
+          setLabel('0.0');
+        }
+      });
     return () => {
       cancelled = true;
     };
-  }, [fen]);
+  }, [fen, refreshKey]);
 
   const displayPct = flipped ? 100 - pct : pct;
 

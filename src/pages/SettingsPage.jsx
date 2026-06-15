@@ -47,6 +47,18 @@ export default function SettingsPage() {
     dispatch({ type: 'SET_TIME_CONTROL', payload: mins })
   }, [timeControl, dispatch])
 
+  const setDiff = (level) => {
+    if (!['easy', 'medium', 'hard'].includes(level)) return
+    setDifficulty(level)
+    showToast('Difficulty saved', 'success')
+  }
+
+  const handleDifficultyClick = (e) => {
+    const btn = e.target.closest('[data-diff]')
+    if (!btn) return
+    setDiff(btn.dataset.diff)
+  }
+
   const toggle = (val, set) => set(!val)
 
   const pill = (active) => ({
@@ -161,9 +173,19 @@ export default function SettingsPage() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20 }}>
           <section style={{ background: '#1a1a2e', borderRadius: 14, padding: 18, border: '1px solid rgba(212,175,55,0.12)' }}>
             <h2 style={{ fontFamily: 'Cinzel, serif', color: '#d4af37', marginBottom: 14, fontSize: '1.05rem' }}>Gameplay</h2>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+            <div
+              style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}
+              onClick={handleDifficultyClick}
+              role="group"
+              aria-label="Difficulty"
+            >
               {['easy', 'medium', 'hard'].map((d) => (
-                <button key={d} type="button" style={pill(difficulty === d)} onClick={() => { setDifficulty(d); showToast('Difficulty saved', 'success') }}>
+                <button
+                  key={d}
+                  type="button"
+                  data-diff={d}
+                  style={pill(difficulty === d)}
+                >
                   {d}
                 </button>
               ))}

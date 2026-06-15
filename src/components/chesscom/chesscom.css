@@ -1,14 +1,14 @@
 /* Chess.com-style game UI components */
 
 .cc-eval-bar {
-  width: 12px;
-  min-width: 12px;
+  width: 14px;
+  min-width: 14px;
   align-self: stretch;
-  border-radius: 4px;
+  border-radius: 3px;
   overflow: hidden;
   position: relative;
-  background: #1a1a2e;
-  border: 1px solid #3a3a3a;
+  background: #262421;
+  border: 1px solid #403e3b;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
@@ -19,7 +19,7 @@
   top: 0;
   left: 0;
   right: 0;
-  background: #1a1a2e;
+  background: #262421;
   transition: height 0.4s ease;
 }
 

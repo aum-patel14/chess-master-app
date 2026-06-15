@@ -6,12 +6,14 @@ import PageShell from '../components/PageShell';
 import { useToast } from '../hooks/useToast';
 import { 
   User, Award, Calendar, Compass, ShieldAlert,
-  ArrowUpRight, ArrowDownRight, Award as Trophy, Users
+  ArrowUpRight, ArrowDownRight, Award as Trophy, Users, Crown
 } from 'lucide-react';
 import { 
   ResponsiveContainer, LineChart, Line, XAxis, 
   YAxis, CartesianGrid, Tooltip 
 } from 'recharts';
+import { supabase } from '../services/supabase';
+import { BOTS } from '../config/bots';
 import './PlayerProfile.css';
 
 export default function PlayerProfile() {
@@ -22,6 +24,7 @@ export default function PlayerProfile() {
   const [profile, setProfile] = useState(null);
   const [ratings, setRatings] = useState([]);
   const [games, setGames] = useState([]);
+  const [highestBotBeaten, setHighestBotBeaten] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // 1. FETCH USER PROFILE & GRAPH DATA FROM FIRESTORE
@@ -69,6 +72,27 @@ export default function PlayerProfile() {
         gameRecords = gameRecords.slice(0, 20);
 
         setGames(gameRecords);
+
+        // Query Supabase for highest bot beaten
+        try {
+          const { data, error } = await supabase
+            .from('games')
+            .select('bot_elo, bot_id')
+            .eq('user_id', userProfile.id)
+            .eq('result', 'win')
+            .order('bot_elo', { ascending: false })
+            .limit(1);
+
+          if (error) {
+            console.error('Error fetching highest bot beaten from Supabase:', error);
+          } else if (data && data.length > 0) {
+            setHighestBotBeaten(data[0]);
+          } else {
+            setHighestBotBeaten(null);
+          }
+        } catch (supabaseErr) {
+          console.warn('Supabase query for bot stats failed:', supabaseErr);
+        }
 
       } catch (err) {
         console.error('Error fetching player profile details:', err);
@@ -243,6 +267,25 @@ export default function PlayerProfile() {
                 </div>
               );
             })}
+            
+            {/* Highest Bot Beaten Badge */}
+            {(() => {
+              const botConfig = BOTS.find(b => b.id === highestBotBeaten?.bot_id);
+              const botDisplayName = botConfig ? botConfig.name : (highestBotBeaten?.bot_id ? (highestBotBeaten.bot_id.charAt(0).toUpperCase() + highestBotBeaten.bot_id.slice(1)) : '');
+              return (
+                <div className="rating-badge-card bot-beaten-card">
+                  <span className="badge-emoji" style={{ display: 'flex', alignItems: 'center' }}>
+                    <Crown size={28} style={{ color: '#ffd700' }} />
+                  </span>
+                  <div className="badge-info">
+                    <span className="badge-name font-cinzel">Highest Bot Beaten</span>
+                    <span className="badge-rating" style={{ fontSize: highestBotBeaten ? '14px' : '16px' }}>
+                      {highestBotBeaten ? `${botDisplayName} · ${highestBotBeaten.bot_elo}` : 'No wins yet'}
+                    </span>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </div>
 

@@ -1,8 +1,8 @@
 [
   {
     "id": "puz001",
-    "fen": "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4",
-    "moves": ["f3e5", "d8g5", "e5f7"],
+    "fen": "q3k3/8/8/3N4/8/8/8/4K3 w - - 0 1",
+    "moves": ["d5c7", "e8d8", "c7a8"],
     "rating": 1200,
     "themes": ["fork", "winning material"],
     "title": "Knight Fork"
@@ -25,8 +25,8 @@
   },
   {
     "id": "puz004",
-    "fen": "2k5/8/8/8/8/q7/2R5/2K5 w - - 0 1",
-    "moves": ["c2a2"],
+    "fen": "2k4r/8/8/8/8/8/8/Q3K3 w - - 0 1",
+    "moves": ["a1a8", "c8c7", "a8h8"],
     "rating": 1100,
     "themes": ["skewer"],
     "title": "Queen Skewer"
@@ -57,9 +57,9 @@
   },
   {
     "id": "puz008",
-    "fen": "6rk/5Qpp/8/8/5N2/8/8/6K1 w - - 0 1",
-    "moves": ["f7g8", "g8g8", "f4g6"],
-    "rating": 1400,
+    "fen": "5r1k/5Qpp/7N/8/8/8/8/6K1 w - - 0 1",
+    "moves": ["f7g8", "f8g8", "h6f7"],
+    "rating": 1300,
     "themes": ["mate", "smothered mate", "mate in 2"],
     "title": "Smothered Legacy"
   },
@@ -137,10 +137,10 @@
   },
   {
     "id": "puz018",
-    "fen": "5k2/5ppp/8/8/8/2q5/3R4/4K3 w - - 0 1",
-    "moves": ["d2e2", "c3g3", "e1d2"],
-    "rating": 1600,
-    "themes": ["pin"],
+    "fen": "3r2k1/4qppp/8/8/8/8/3Q1PPP/3R2K1 w - - 0 1",
+    "moves": ["d2d8", "e7d8", "d1d8"],
+    "rating": 1150,
+    "themes": ["deflection", "mate"],
     "title": "Deflection Block"
   },
   {

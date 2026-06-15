@@ -487,7 +487,8 @@ export default function GameScreen() {
     showToast('Stockfish finding best move...', 'info', 1000);
     let bestMove = null;
     if (stockfishEngine.isReady) {
-      const uciMove = await stockfishEngine.getBestMove(fen, aiDifficulty);
+      stockfishEngine.setDifficulty(aiDifficulty);
+      const uciMove = await stockfishEngine.getBestMove(fen, []);
       if (uciMove && uciMove !== '(none)') {
         bestMove = {
           from: uciMove.substring(0, 2),

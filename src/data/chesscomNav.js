@@ -7,7 +7,7 @@ export const CHESSCOM_NAV = [
     items: [
       { icon: '🌐', label: 'Play Online', path: '/game', state: { mode: 'online' } },
       { icon: '🤖', label: 'Play Bots', path: '/game', state: { mode: 'ai' } },
-      { icon: '👨‍🏫', label: 'Play Coach', path: '/game', soon: true },
+      { icon: '👨‍🏫', label: 'Play Coach', path: '/game', soon: true, separatorAfter: true },
       { icon: '📊', label: 'Stats', path: '/stats' },
       { icon: '🏆', label: 'Tournaments', path: '/tournaments' },
       { icon: '♟️', label: 'Variants', path: '/game', soon: true },
