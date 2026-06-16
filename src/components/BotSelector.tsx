@@ -1,17 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { BOTS, BotConfig } from '../config/bots';
-import { Crown, User, X } from 'lucide-react';
+import { Crown, User, X, Clock } from 'lucide-react';
 import './BotSelector.css';
 
 interface BotSelectorProps {
   show: boolean;
   onClose?: () => void;
-  onBotSelected: (bot: BotConfig, playerColor: 'white' | 'black') => void;
+  onBotSelected: (bot: BotConfig, playerColor: 'white' | 'black', timeControl: { base: number, increment: number } | null) => void;
 }
+
+const TIME_OPTIONS = [
+  { base: 1, increment: 0, label: '1 min' },
+  { base: 3, increment: 0, label: '3 min' },
+  { base: 5, increment: 0, label: '5 min' },
+  { base: 10, increment: 0, label: '10 min' },
+  { base: 0, increment: 0, label: 'Unlimited' },
+];
 
 export const BotSelector: React.FC<BotSelectorProps> = ({ show, onClose, onBotSelected }) => {
   const [selectedBot, setSelectedBot] = useState<BotConfig | null>(null);
   const [playerColor, setPlayerColor] = useState<'white' | 'black'>('white');
+  const [timeControl, setTimeControl] = useState<{ base: number, increment: number }>(TIME_OPTIONS[3]);
 
   // Load last selected bot from localStorage
   useEffect(() => {
@@ -28,7 +37,7 @@ export const BotSelector: React.FC<BotSelectorProps> = ({ show, onClose, onBotSe
     if (selectedBot) {
       // Remember selected bot
       localStorage.setItem('chessmaster_lastBot', selectedBot.id);
-      onBotSelected(selectedBot, playerColor);
+      onBotSelected(selectedBot, playerColor, timeControl.base > 0 ? timeControl : null);
     }
   };
 
@@ -93,6 +102,25 @@ export const BotSelector: React.FC<BotSelectorProps> = ({ show, onClose, onBotSe
               >
                 <span className="piece-symbol">♟</span> Black
               </button>
+            </div>
+          </div>
+
+          <div className="time-toggle-container">
+            <span className="control-label font-cinzel"><Clock size={16} style={{display: 'inline', verticalAlign: 'sub', marginRight: '4px'}}/>Time Control</span>
+            <div className="time-toggle-buttons">
+              <select 
+                className="time-select" 
+                value={timeControl.base} 
+                onChange={(e) => {
+                  const val = parseInt(e.target.value, 10);
+                  const option = TIME_OPTIONS.find(t => t.base === val) || TIME_OPTIONS[3];
+                  setTimeControl(option);
+                }}
+              >
+                {TIME_OPTIONS.map(opt => (
+                  <option key={opt.base} value={opt.base}>{opt.label}</option>
+                ))}
+              </select>
             </div>
           </div>
 

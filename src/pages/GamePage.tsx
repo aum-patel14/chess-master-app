@@ -501,7 +501,7 @@ export default function GamePage() {
       <PageShell>
         <BotSelector
           show={true}
-          onBotSelected={(bot, color) => {
+          onBotSelected={(bot, color, timeControl) => {
             setSelectedBot(bot);
             const mapping: Record<string, number> = {
               rookie: 1,
@@ -514,14 +514,13 @@ export default function GamePage() {
               master: 10,
             };
             const diff = mapping[bot.id] || 3;
-            const tc = selectedTc ? (selectedTc.base > 0 ? selectedTc : null) : null;
             
             startNewGame({
               mode: 'vsAI',
               playerColor: color === 'white' ? 'w' : 'b',
               difficulty: diff,
               botId: bot.id,
-              timeControl: tc,
+              timeControl: timeControl,
             });
             setIsPlaying(true);
             setGameState('playing');

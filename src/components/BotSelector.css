@@ -1,4 +1,4 @@
-/* BotSelector styling matching premium glassmorphic dark theme */
+﻿/* BotSelector styling matching premium glassmorphic dark theme */
 
 .bot-selector-overlay {
   display: flex;
@@ -338,3 +338,44 @@
     padding: 12px;
   }
 }
+
+.time-toggle-container {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.time-toggle-buttons {
+  display: flex;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 4px;
+}
+
+.time-select {
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  outline: none;
+  font-family: inherit;
+}
+
+.time-select option {
+  background: #181717;
+  color: #ffffff;
+}
+
+@media (max-width: 600px) {
+  .time-toggle-container {
+    justify-content: space-between;
+  }
+}
+
+
+
