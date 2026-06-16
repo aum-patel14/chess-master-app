@@ -41,8 +41,8 @@ async function main() {
   if (!fs.existsSync(publicDir)) fs.mkdirSync(publicDir, { recursive: true });
 
   const binDir = path.join(root, 'node_modules', 'stockfish', 'bin');
-  const jsSrc = path.join(binDir, 'stockfish-18-lite.js');
-  const wasmSrc = path.join(binDir, 'stockfish-18-lite.wasm');
+  const jsSrc = path.join(binDir, 'stockfish-18-lite-single.js');
+  const wasmSrc = path.join(binDir, 'stockfish-18-lite-single.wasm');
   const jsFallback = path.join(binDir, 'stockfish.js');
   const wasmFallback = path.join(binDir, 'stockfish.wasm');
   const jsDest = path.join(publicDir, 'stockfish.js');

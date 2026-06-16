@@ -40,26 +40,7 @@ class StockfishEngine {
   async init() {
     return new Promise((resolve, reject) => {
       try {
-        // Use Blob wrapper to bypass same-origin/CORS restrictions when loading the CDN script
-        const workerCode = `
-          try {
-            importScripts("https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js");
-            if (typeof STOCKFISH === "function") {
-              var engine = STOCKFISH();
-              engine.onmessage = function(line) {
-                self.postMessage(line);
-              };
-              self.onmessage = function(e) {
-                engine.postMessage(e.data);
-              };
-            }
-            // If STOCKFISH is not a function, stockfish.js 10.0.2 already hooked self.onmessage
-          } catch (err) {
-            console.error("Worker importScripts failed:", err);
-          }
-        `;
-        const blob = new Blob([workerCode], { type: 'application/javascript' });
-        const workerUrl = URL.createObjectURL(blob);
+        const workerUrl = `${import.meta.env.BASE_URL}stockfish.js`;
         this.worker = new Worker(workerUrl);
       } catch (err) {
         reject(new Error('Failed to load Stockfish worker: ' + err.message));
