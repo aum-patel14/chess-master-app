@@ -44,17 +44,16 @@ class StockfishEngine {
         const workerCode = `
           try {
             importScripts("https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js");
-            var engine = typeof STOCKFISH === "function" ? STOCKFISH() : null;
-            if (engine) {
+            if (typeof STOCKFISH === "function") {
+              var engine = STOCKFISH();
               engine.onmessage = function(line) {
                 self.postMessage(line);
               };
               self.onmessage = function(e) {
                 engine.postMessage(e.data);
               };
-            } else {
-              console.error("STOCKFISH function is not defined inside worker");
             }
+            // If STOCKFISH is not a function, stockfish.js 10.0.2 already hooked self.onmessage
           } catch (err) {
             console.error("Worker importScripts failed:", err);
           }
