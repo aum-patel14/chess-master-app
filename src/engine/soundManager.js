@@ -325,6 +325,40 @@ class SoundManager {
     osc2.start(t);
     osc2.stop(t + 0.28);
   }
+
+  playBrilliant() {
+    if (!this.enabled) return;
+    const theme = this._getTheme();
+    if (theme === 'silent') return;
+    this.init(); this.resume();
+    
+    const tStart = this.ctx.currentTime;
+    const freqs = [880, 1046.5, 1318.5, 1568, 2093]; // A5, C6, E6, G6, C7
+    freqs.forEach((freq, i) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this._gain(0.08);
+      const t = tStart + i * 0.05;
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t);
+      
+      // Pitch modulation vibrato
+      const vibrato = this.ctx.createOscillator();
+      const vibratoGain = this.ctx.createGain();
+      vibrato.frequency.value = 15;
+      vibratoGain.gain.value = 10;
+      vibrato.connect(vibratoGain);
+      vibratoGain.connect(osc.frequency);
+      
+      gain.gain.setValueAtTime(0.08 * this.volume, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+      osc.connect(gain);
+      
+      vibrato.start(t);
+      osc.start(t);
+      vibrato.stop(t + 0.3);
+      osc.stop(t + 0.3);
+    });
+  }
 }
 
 export const soundManager = new SoundManager();

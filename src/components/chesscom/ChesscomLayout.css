@@ -11,6 +11,7 @@
   --cc-text3: #c8c6c3;
   --cc-border: #403e3b;
   --cc-hover: #3d3b38;
+  --cc-sidebar-width: 170px;
 
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   background: var(--cc-bg);
@@ -337,10 +338,11 @@
 }
 
 .cc-main {
-  margin-left: 170px;
+  margin-left: var(--cc-sidebar-width, 170px);
   flex: 1;
   min-height: 100vh;
   overflow-x: hidden;
+  transition: margin-left 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .cc-toast {
@@ -451,7 +453,298 @@
     display: flex;
   }
   .cc-main {
-    margin-left: 0;
+    margin-left: 0 !important;
     padding-top: 56px;
   }
 }
+
+/* Collapsed sidebar additions */
+.cc-sidebar--collapsed .cc-logo {
+  justify-content: center;
+  padding: 16px 0 12px 0;
+}
+
+.cc-sidebar--collapsed .cc-nav-link {
+  justify-content: center;
+  padding: 10px 0;
+}
+
+.cc-sidebar--collapsed .cc-sidebar-bottom {
+  padding: 8px 4px;
+}
+
+.cc-sidebar-bottom-collapsed-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.cc-collapsed-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  border: 1px solid var(--cc-border);
+  background: var(--cc-hover);
+  color: var(--cc-text2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cc-collapsed-btn:hover {
+  color: #fff;
+  border-color: #666;
+  background: var(--cc-bg3);
+}
+
+.cc-btn-signup-collapsed {
+  background: var(--cc-green);
+  border: none;
+  color: #fff;
+}
+
+.cc-btn-signup-collapsed:hover {
+  background: var(--cc-green-hover);
+}
+
+.cc-sidebar-toggle-row {
+  margin-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.cc-sidebar-toggle-btn {
+  width: 100%;
+  height: 36px;
+  background: transparent;
+  border: none;
+  color: var(--cc-text2);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.15s ease;
+  padding: 0 14px;
+  box-sizing: border-box;
+  border-radius: 6px;
+}
+
+.cc-sidebar--collapsed .cc-sidebar-toggle-btn {
+  justify-content: center;
+  padding: 0;
+}
+
+.cc-sidebar-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: #fff;
+}
+
+.cc-toggle-arrows {
+  font-size: 16px;
+  font-family: monospace;
+  font-weight: bold;
+}
+
+.cc-toggle-text {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.cc-collapsed-streak {
+  animation: ccFlamePulse 1.5s infinite;
+}
+
+@keyframes ccFlamePulse {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 1px #ff9f0a); }
+  50% { transform: scale(1.2); filter: drop-shadow(0 0 4px #ff9f0a); }
+}
+
+/* ─── Chess.com Premium Sidebar Flyouts and Profile Cards ─── */
+
+/* Triangle Pointer on flyouts */
+.cc-flyout-inner::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  width: 12px;
+  height: 12px;
+  background: rgba(38, 36, 33, 0.96);
+  border-left: 1px solid rgba(212, 175, 55, 0.25);
+  border-bottom: 1px solid rgba(212, 175, 55, 0.25);
+  transform: translateY(-50%) rotate(45deg);
+  z-index: 1;
+}
+
+.cc-nav-flyout .cc-flyout-inner::before {
+  left: 0;
+  top: 20px;
+}
+
+/* Bottom flyouts align bottom and slide up */
+.cc-help-flyout,
+.cc-profile-flyout,
+.cc-search-flyout {
+  position: absolute;
+  left: 100%;
+  bottom: 0;
+  top: auto;
+  padding-left: 6px;
+}
+
+.cc-help-flyout .cc-flyout-inner::before,
+.cc-profile-flyout .cc-flyout-inner::before,
+.cc-search-flyout .cc-flyout-inner::before {
+  left: 0;
+  bottom: 14px;
+  top: auto;
+  transform: rotate(45deg);
+}
+
+.cc-bottom-nav-item {
+  position: relative;
+  width: 100%;
+}
+
+.cc-sidebar-bottom-collapsed-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  width: 100%;
+}
+
+/* Active states for collapsed buttons and triggers */
+.cc-collapsed-btn.active,
+.cc-collapsed-profile-btn.active {
+  border-color: #d4af2f !important;
+  background: var(--cc-hover) !important;
+  color: #fff !important;
+}
+
+.cc-collapsed-profile-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--cc-border);
+  background: var(--cc-hover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  overflow: hidden;
+  padding: 0;
+  transition: all 0.15s ease;
+}
+
+.cc-collapsed-profile-btn:hover {
+  border-color: #888;
+}
+
+.cc-collapsed-avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Expanded Bottom User Card */
+.cc-expanded-profile-item {
+  margin-bottom: 8px;
+}
+
+.cc-profile-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--cc-border);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.cc-profile-card:hover,
+.cc-profile-card.active {
+  background: var(--cc-hover);
+  border-color: rgba(212, 175, 55, 0.4);
+}
+
+.cc-profile-card-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--cc-bg3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.cc-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cc-avatar-initial {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--cc-green);
+  font-family: inherit;
+}
+
+.cc-profile-card-info {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  text-align: left;
+}
+
+.cc-profile-username {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cc-profile-rating {
+  font-size: 10.5px;
+  color: var(--cc-green);
+  font-weight: 600;
+}
+
+.cc-guest-bottom-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.cc-expanded-help-item {
+  width: 100%;
+}
+
+.cc-help-link.active {
+  color: #fff !important;
+}
+
+.cc-search-flyout {
+  margin-bottom: -4px;
+}
+

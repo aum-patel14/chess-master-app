@@ -10,7 +10,7 @@ declare function STOCKFISH(): StockfishEngineInstance;
 
 // Load Stockfish.js from CDN
 try {
-  importScripts('https://cdn.jsdelivr.net/npm/stockfish/src/stockfish.js');
+  importScripts('https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js');
 } catch (e) {
   console.error('Failed to load Stockfish via importScripts:', e);
 }

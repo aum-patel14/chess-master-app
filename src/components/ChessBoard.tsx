@@ -17,6 +17,7 @@ interface ChessBoardProps {
   arrows?: Array<{ from: string; to: string; color?: string }> | null;
   highlights?: Array<{ square: string; color?: string }> | null;
   onMove?: (from: string, to: string) => void;
+  boardElementRef?: React.RefObject<HTMLDivElement | null>;
 }
 
 const getHighlightColor = (colorName?: string) => {
@@ -48,7 +49,8 @@ export default function ChessBoard({
   readOnly = false,
   arrows = [],
   highlights = [],
-  onMove
+  onMove,
+  boardElementRef
 }: ChessBoardProps) {
   const context = useGame();
   const state = customState || context.state;
@@ -74,7 +76,32 @@ export default function ChessBoard({
   
   const isFlipped = (playerColor === 'b') !== !!boardFlipped;
 
-  const boardRef = useRef<HTMLDivElement>(null);
+  const localBoardRef = useRef<HTMLDivElement>(null);
+  const boardRef = boardElementRef || localBoardRef;
+
+  // Trigger Brilliant move celebration when navigated in analysis review
+  useEffect(() => {
+    if (!boardRef.current || currentReviewIndex === null || currentReviewIndex === undefined) return;
+    if (!analysisResults || !analysisResults[currentReviewIndex]) return;
+
+    const activeAnalysis = analysisResults[currentReviewIndex];
+    if (activeAnalysis.classification === 'Brilliant' || activeAnalysis.classification === 'Great') {
+      const toEl = document.getElementById(`sq-${activeAnalysis.to}`);
+      if (toEl) {
+        import('./board/ParticleCanvas').then(({ triggerBrilliantEffect }) => {
+          if (triggerBrilliantEffect && boardRef.current) {
+            triggerBrilliantEffect(boardRef as any, toEl);
+          }
+        });
+        import('../engine/soundManager').then(({ soundManager }) => {
+          if (soundManager && typeof soundManager.playBrilliant === 'function') {
+            soundManager.playBrilliant();
+          }
+        });
+      }
+    }
+  }, [currentReviewIndex, analysisResults]);
+
   const [draggedFrom, setDraggedFrom] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState<string | null>(null);
   const [movingPiece, setMovingPiece] = useState<string | null>(null);

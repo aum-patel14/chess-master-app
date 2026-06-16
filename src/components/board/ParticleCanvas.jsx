@@ -113,6 +113,32 @@ export function triggerMoveEffect(canvasRef, squareEl) {
   }
 }
 
+export function triggerBrilliantEffect(canvasRef, squareEl) {
+  if (!canvasRef.current || !squareEl) return;
+  const boardRect = canvasRef.current.getBoundingClientRect();
+  const sqRect = squareEl.getBoundingClientRect();
+  const cx = sqRect.left + sqRect.width / 2 - boardRect.left;
+  const cy = sqRect.top + sqRect.height / 2 - boardRect.top;
+
+  const colors = ['#1baca6', '#479ecb', '#a5f3fc', '#ffffff', '#ffd700'];
+
+  for (let i = 0; i < 35; i++) {
+    const p = new Particle(cx, cy, colors[Math.floor(Math.random() * colors.length)]);
+    p.size = 3 + Math.random() * 6;
+    // Brilliant moves shoot outward and upward, like a splash!
+    p.vx = (Math.random() - 0.5) * 14;
+    p.vy = (Math.random() - 0.5) * 14 - 4;
+    p.decay = 0.015 + Math.random() * 0.025;
+    particles.push(p);
+  }
+  
+  // Add multiple colorful shockwaves
+  shockWaves.push(new ShockWave(cx, cy, 'rgba(27,172,166,0.8)'));
+  setTimeout(() => {
+    shockWaves.push(new ShockWave(cx, cy, 'rgba(71,158,203,0.5)'));
+  }, 100);
+}
+
 export default function ParticleCanvas({ boardRef }) {
   const canvasRef = useRef(null);
 

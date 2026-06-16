@@ -40,9 +40,28 @@ class StockfishEngine {
   async init() {
     return new Promise((resolve, reject) => {
       try {
-        // Try to load Stockfish from CDN or local path
-        // Option 1: Use the Stockfish WASM build (recommended)
-        this.worker = new Worker(this._getStockfishPath());
+        // Use Blob wrapper to bypass same-origin/CORS restrictions when loading the CDN script
+        const workerCode = `
+          try {
+            importScripts("https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js");
+            var engine = typeof STOCKFISH === "function" ? STOCKFISH() : null;
+            if (engine) {
+              engine.onmessage = function(line) {
+                self.postMessage(line);
+              };
+              self.onmessage = function(e) {
+                engine.postMessage(e.data);
+              };
+            } else {
+              console.error("STOCKFISH function is not defined inside worker");
+            }
+          } catch (err) {
+            console.error("Worker importScripts failed:", err);
+          }
+        `;
+        const blob = new Blob([workerCode], { type: 'application/javascript' });
+        const workerUrl = URL.createObjectURL(blob);
+        this.worker = new Worker(workerUrl);
       } catch (err) {
         reject(new Error('Failed to load Stockfish worker: ' + err.message));
         return;
