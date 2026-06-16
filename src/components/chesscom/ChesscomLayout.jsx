@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Gamepad2,
@@ -40,10 +40,13 @@ function FlyoutMenu({ items, onSelect }) {
               onClick={() => onSelect(item)}
             >
               <span className="cc-flyout-icon" aria-hidden="true">{item.icon}</span>
-              <span className="cc-flyout-label">
-                {item.label}
-                {item.soon && <span className="cc-flyout-soon">Soon</span>}
-              </span>
+              <div className="cc-flyout-content">
+                <span className="cc-flyout-label">
+                  {item.label}
+                  {item.soon && <span className="cc-flyout-soon">Soon</span>}
+                </span>
+                {item.desc && <span className="cc-flyout-desc">{item.desc}</span>}
+              </div>
             </button>
             {item.separatorAfter && <div className="cc-flyout-sep" />}
           </div>
@@ -64,6 +67,33 @@ export default function ChesscomLayout({ children }) {
   const [showLogin, setShowLogin] = useState(false);
   const [toast, setToast] = useState('');
   const [dailyStreak, setDailyStreak] = useState(0);
+
+  const hoverTimeoutRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleMouseEnter = (sectionId) => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+    setHoveredNav(sectionId);
+  };
+
+  const handleMouseLeave = () => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+    }
+    hoverTimeoutRef.current = setTimeout(() => {
+      setHoveredNav(null);
+    }, 150);
+  };
 
   useEffect(() => {
     const fetchStreak = async () => {
@@ -119,8 +149,8 @@ export default function ChesscomLayout({ children }) {
       <div
         key={section.id}
         className={`cc-nav-item${isHovered ? ' cc-nav-item--open' : ''}`}
-        onMouseEnter={() => setHoveredNav(section.id)}
-        onMouseLeave={() => setHoveredNav(null)}
+        onMouseEnter={() => handleMouseEnter(section.id)}
+        onMouseLeave={handleMouseLeave}
       >
         <div
           className={`cc-nav-link${isActive || isHovered ? ' active' : ''}`}
@@ -133,6 +163,10 @@ export default function ChesscomLayout({ children }) {
           <FlyoutMenu
             items={section.items}
             onSelect={(item) => {
+              if (hoverTimeoutRef.current) {
+                clearTimeout(hoverTimeoutRef.current);
+                hoverTimeoutRef.current = null;
+              }
               setHoveredNav(null);
               handleNavItem(item);
             }}

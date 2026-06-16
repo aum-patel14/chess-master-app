@@ -14,14 +14,66 @@ export default function Sidebar({ isExpanded, onToggle, mobileOpen, setMobileOpe
 
   const navItems = [
     { label: 'Home', icon: <Home size={20} />, path: '/' },
-    { label: 'Play', icon: <span style={{ fontSize: '20px', fontWeight: 'bold', lineHeight: 1 }}>♞</span>, path: '/play' }, // changed to /play lobby
-    { label: 'Puzzles', icon: <Puzzle size={20} />, path: '/puzzles' },
-    { label: 'Learn', icon: <BookOpen size={20} />, path: '/learn' },
-    { label: 'Tournaments', icon: <Swords size={20} />, path: '/tournaments' },
-    { label: 'Leaderboard', icon: <Trophy size={20} />, path: '/leaderboard' },
-    { label: 'Stats', icon: <BarChart2 size={20} />, path: '/stats' },
+    { 
+      label: 'Play', 
+      icon: <span style={{ fontSize: '20px', fontWeight: 'bold', lineHeight: 1 }}>♞</span>, 
+      path: '/play',
+      subItems: [
+        { label: 'Play Online Lobby', desc: 'Match with players', path: '/play' },
+        { label: 'Play vs Computer', desc: 'Challenge Stockfish AI', path: '/game' },
+        { label: 'Custom Game Codes', desc: 'Join or invite friends', path: '/play' }
+      ]
+    },
+    { 
+      label: 'Puzzles', 
+      icon: <Puzzle size={20} />, 
+      path: '/puzzles',
+      subItems: [
+        { label: 'Puzzles Hub', desc: 'Lifetime tactics tracker', path: '/puzzles' },
+        { label: 'Rated Tactics', desc: 'Glicko-2 ratings solver', path: '/puzzles/rated' },
+        { label: 'Daily Puzzle', desc: 'Streaks and calendar solves', path: '/puzzles/daily' },
+        { label: 'Puzzle Streak', desc: 'Endless high score climber', path: '/puzzles/streak' }
+      ]
+    },
+    { 
+      label: 'Learn', 
+      icon: <BookOpen size={20} />, 
+      path: '/learn',
+      subItems: [
+        { label: 'Academy Hub', desc: 'Structured learning courses', path: '/learn' },
+        { label: 'Generate Lesson', desc: 'AI custom lesson builder', path: '/admin/generate' }
+      ]
+    },
+    { 
+      label: 'Tournaments', 
+      icon: <Swords size={20} />, 
+      path: '/tournaments',
+      subItems: [
+        { label: 'Tournaments Hub', desc: 'Arena and Swiss list', path: '/tournaments' },
+        { label: 'Create Arena', desc: 'Host community matches', path: '/tournaments/create' }
+      ]
+    },
+    { 
+      label: 'Leaderboard', 
+      icon: <Trophy size={20} />, 
+      path: '/leaderboard',
+      subItems: [
+        { label: 'Leaderboard', desc: 'Global rankings', path: '/leaderboard' },
+        { label: 'Rating Stats', desc: 'Track your rating history', path: '/stats' }
+      ]
+    },
     { label: 'Settings', icon: <Settings size={20} />, path: '/settings' },
-    { label: 'Other', icon: <MoreHorizontal size={20} />, path: '/other' }
+    { 
+      label: 'Other', 
+      icon: <MoreHorizontal size={20} />, 
+      path: '/other',
+      subItems: [
+        { label: 'Themes Shop', desc: 'Custom pieces and boards', path: '/shop' },
+        { label: 'Premium Tiers', desc: 'Upgrade for cloud engines', path: '/premium' },
+        { label: 'Watch Live', desc: 'Spectate live demo games', path: '/watch' },
+        { label: 'Game History', desc: 'View past chess archives', path: '/history' }
+      ]
+    }
   ];
 
   const SidebarContent = (
@@ -57,8 +109,27 @@ export default function Sidebar({ isExpanded, onToggle, mobileOpen, setMobileOpe
                 )}
               </button>
               
-              {/* Tooltip (only when collapsed) */}
-              {!isExpanded && (
+              {/* Flyout Sub-menu (Desktop-only via CSS) */}
+              {item.subItems && (
+                <div className="sidebar-flyout-menu">
+                  {item.subItems.map(sub => (
+                    <button
+                      key={sub.label}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleNav(sub.path);
+                      }}
+                      className="sidebar-flyout-item"
+                    >
+                      <span className="sidebar-flyout-item-title">{sub.label}</span>
+                      <span className="sidebar-flyout-item-desc">{sub.desc}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Tooltip (only when collapsed and no subItems show) */}
+              {!isExpanded && !item.subItems && (
                 <div className="sidebar-tooltip">
                   {item.label}
                 </div>

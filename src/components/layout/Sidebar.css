@@ -221,3 +221,80 @@
   padding-right: 3px;
   /* Mathematically offsets the 3px left border for perfect centering */
 }
+
+/* SIDEBAR FLYOUT POPUP MENU */
+.sidebar-flyout-menu {
+  position: absolute;
+  left: calc(100% - 4px);
+  top: -10px;
+  width: 230px;
+  background: radial-gradient(circle at top left, #16152a 0%, #0d0c18 100%);
+  border: 1px solid rgba(226, 176, 74, 0.25);
+  border-radius: 12px;
+  padding: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(4px);
+  transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Invisible hover bridge to prevent flickers */
+.sidebar-flyout-menu::before {
+  content: '';
+  position: absolute;
+  left: -12px;
+  top: 0;
+  bottom: 0;
+  width: 12px;
+}
+
+.sidebar-btn-container:hover .sidebar-flyout-menu {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(12px);
+}
+
+.sidebar-flyout-item {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 150ms ease;
+  text-align: left;
+  background: transparent;
+  border: none;
+  width: 100%;
+}
+
+.sidebar-flyout-item:hover {
+  background: rgba(226, 176, 74, 0.08);
+}
+
+.sidebar-flyout-item-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.sidebar-flyout-item:hover .sidebar-flyout-item-title {
+  color: #e2b04a;
+}
+
+.sidebar-flyout-item-desc {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 2px;
+  font-weight: normal;
+}
+
+@media (max-width: 900px) {
+  .sidebar-flyout-menu {
+    display: none !important;
+  }
+}
