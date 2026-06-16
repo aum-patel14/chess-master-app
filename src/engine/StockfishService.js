@@ -94,8 +94,10 @@ class CompatibleStockfishEngine extends StockfishEngine {
   async evaluatePosition(fen, depth = 10) {
     try {
       const res = await this.evaluate(fen);
+      const activeTurn = fen.split(' ')[1];
+      const normalizedScore = (activeTurn === 'w' ? res.score : -res.score) / 100.0;
       return {
-        score: res.score / 100.0, // convert centipawns to pawn units
+        score: normalizedScore,
         bestMove: res.bestMove || null
       };
     } catch (e) {

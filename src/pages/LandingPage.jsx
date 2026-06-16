@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGame } from '../context/GameContext';
 import { LANDING_BOTS } from '../data/chesscomNav';
-import { GraduationCap, Bot, Puzzle, Binoculars, Smartphone } from 'lucide-react';
+import { GraduationCap, Bot, Puzzle, Binoculars, Smartphone, Zap } from 'lucide-react';
 
 function fenToGrid(fen) {
   const rows = fen.split(' ')[0].split('/');
@@ -89,8 +89,40 @@ export default function LandingPage() {
       <section className="hero">
         <div className="hero-text">
           <h1>Play Chess Online<br />on the #1 Site!</h1>
-          <p>Join 250+ million players in the world&apos;s largest chess community</p>
-          <button type="button" className="btn-cta" onClick={handlePlayDefault}>Get Started</button>
+          
+          <div className="landing-stats">
+            <div className="stat-item">
+              <span className="stat-count">13,294,845</span>
+              <span className="stat-label">Games Today</span>
+            </div>
+            <div className="stat-divider" />
+            <div className="stat-item">
+              <span className="stat-count">1,498,321</span>
+              <span className="stat-label">Playing Now</span>
+            </div>
+          </div>
+
+          <div className="hero-cta-container">
+            <div className="hero-cta-card card-green" onClick={() => navigate('/play')}>
+              <div className="cta-icon-container">
+                <Zap size={32} fill="#ffffff" stroke="#ffffff" />
+              </div>
+              <div className="cta-text-container">
+                <div className="cta-title">Play Online</div>
+                <div className="cta-subtitle">Play against players of your skill level</div>
+              </div>
+            </div>
+
+            <div className="hero-cta-card card-dark" onClick={handlePlayDefault}>
+              <div className="cta-icon-container">
+                <Bot size={32} />
+              </div>
+              <div className="cta-text-container">
+                <div className="cta-title">Play vs Computer</div>
+                <div className="cta-subtitle">Challenge custom bots or full Stockfish</div>
+              </div>
+            </div>
+          </div>
         </div>
         <div className="board-wrap">
           {renderBoard(

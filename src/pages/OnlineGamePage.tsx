@@ -21,6 +21,7 @@ export default function OnlineGamePage() {
 
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [bestMoveArrow, setBestMoveArrow] = useState<{ from: string; to: string } | null>(null);
+  const [retryBoardProps, setRetryBoardProps] = useState<any>(null);
 
   if (!roomCode) {
     return (
@@ -223,6 +224,7 @@ export default function OnlineGamePage() {
                   customHandleSquareClick={handleSquareClick}
                   customHandlePromotion={handlePromotion}
                   bestMoveArrow={bestMoveArrow}
+                  {...retryBoardProps}
                 />
               </div>
 
@@ -313,8 +315,11 @@ export default function OnlineGamePage() {
                   setShowAnalysis(false);
                   setBestMoveArrow(null);
                   handleLastMove();
+                  setRetryBoardProps(null);
                 }}
                 onAnalysisComplete={() => {}}
+                activeReviewIndex={reviewIndex}
+                onRetryBoardPropsChange={setRetryBoardProps}
               />
             ) : (
               <>

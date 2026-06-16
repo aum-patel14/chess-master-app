@@ -38,6 +38,138 @@
   line-height: 1.5;
 }
 
+/* Real-time Stats Display */
+.lp-page .landing-stats {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 32px;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 12px 20px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  width: fit-content;
+}
+
+.lp-page .stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.lp-page .stat-count {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1;
+}
+
+.lp-page .stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--lp-text2);
+  margin-top: 4px;
+}
+
+.lp-page .stat-divider {
+  width: 1px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Hero CTA Container & Play Cards */
+.lp-page .hero-cta-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 440px;
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.lp-page .hero-cta-card {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 16px 20px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  user-select: none;
+}
+
+.lp-page .hero-cta-card.card-green {
+  background: linear-gradient(135deg, var(--lp-green), var(--lp-green2));
+  border-bottom: 4px solid #4d8024;
+}
+
+.lp-page .hero-cta-card.card-green:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.08);
+  box-shadow: 0 8px 25px rgba(129, 182, 76, 0.3);
+}
+
+.lp-page .hero-cta-card.card-green:active {
+  transform: translateY(1px);
+  border-bottom-width: 1px;
+  margin-top: 3px;
+  margin-bottom: -3px;
+}
+
+.lp-page .hero-cta-card.card-dark {
+  background: var(--lp-bg2);
+  border-bottom: 4px solid #2d2b29;
+}
+
+.lp-page .hero-cta-card.card-dark:hover {
+  transform: translateY(-2px);
+  background: var(--lp-bg3);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+}
+
+.lp-page .hero-cta-card.card-dark:active {
+  transform: translateY(1px);
+  border-bottom-width: 1px;
+  margin-top: 3px;
+  margin-bottom: -3px;
+}
+
+.lp-page .cta-icon-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.lp-page .cta-text-container {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+.lp-page .cta-title {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.2;
+}
+
+.lp-page .cta-subtitle {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-top: 2px;
+}
+
+.lp-page .card-dark .cta-subtitle {
+  color: var(--lp-text2);
+}
+
+/* Also keep btn-cta class for other pages if they reference it, but styled as a fallback */
 .lp-page .btn-cta {
   padding: 14px 32px;
   background: var(--lp-green);
@@ -53,6 +185,7 @@
 .lp-page .btn-cta:hover {
   background: var(--lp-green2);
 }
+
 
 .lp-page .board-wrap {
   position: relative;

@@ -4,6 +4,38 @@ import ReactMarkdown from 'react-markdown';
 import { supabase } from '../../services/supabase';
 import { stockfishEngine } from '../../engine/StockfishService';
 import { Award, Zap, AlertCircle, HelpCircle, Check, X, ShieldAlert, Sparkles, User, MessageCircle } from 'lucide-react';
+import { Chess } from 'chess.js';
+import { soundManager } from '../../engine/soundManager';
+
+function getMoveCommentary(res) {
+  if (!res) return null;
+  const c = res.classification;
+  switch (c) {
+    case 'Brilliant':
+      return "Spectacular! This brilliant move sacrifices material to gain a winning tactical or positional advantage. Absolutely masterclass!";
+    case 'Great':
+      return "A great move! This was a critical decision that maintains your strong grip on the game or finds a difficult defense.";
+    case 'Best':
+      return "The best move in the position. You found the optimal choice recommended by Stockfish, solidifying your strategy.";
+    case 'Excellent':
+      return "Excellent choice! You kept the position balanced and followed strong chess principles.";
+    case 'Book':
+      return "A standard book opening move. You're following established opening theory here.";
+    case 'Good':
+      return "A good move, though there were slightly more precise alternatives. Your position remains comfortable.";
+    case 'Neutral':
+      return "A solid, playable move that keeps the game steady without major changes.";
+    case 'Inaccuracy':
+      return "An inaccuracy. You missed a slightly more active plan, allowing your opponent an easy path to equality.";
+    case 'Mistake':
+      return "A mistake! This move yields some of your advantage or gives your opponent active counterplay. Slow down and calculate!";
+    case 'Blunder':
+      return "Oh no, a blunder! This move hangs material or ignores a direct tactical threat, severely hurting your position.";
+    default:
+      return null;
+  }
+}
+
 
 const BOOK_OPENINGS = [
   "e4", "e4 e5", "e4 e5 Nf3", "e4 e5 Nf3 Nc6", "e4 e5 Nf3 Nc6 Bb5", // Ruy Lopez
@@ -43,7 +75,15 @@ function getCoachCommentary(accuracies, counts, historyLength) {
   return `A tough battle, but a great learning opportunity! Focus on practicing board vision and checkmate patterns to avoid early blunders.`;
 }
 
-export default function AnalysisPanel({ history, onJumpToMove, onSelectArrow, onCloseAnalysis, onAnalysisComplete }) {
+export default function AnalysisPanel({ 
+  history, 
+  onJumpToMove, 
+  onSelectArrow, 
+  onCloseAnalysis, 
+  onAnalysisComplete,
+  activeReviewIndex,
+  onRetryBoardPropsChange
+}) {
   const [analyzingIdx, setAnalyzingIdx] = useState(0);
   const [isDone, setIsDone] = useState(false);
   const [analysisResults, setAnalysisResults] = useState([]);
@@ -54,6 +94,158 @@ export default function AnalysisPanel({ history, onJumpToMove, onSelectArrow, on
     w: { brilliant: 0, great: 0, best: 0, book: 0, excellent: 0, good: 0, neutral: 0, inaccuracy: 0, mistake: 0, blunder: 0 },
     b: { brilliant: 0, great: 0, best: 0, book: 0, excellent: 0, good: 0, neutral: 0, inaccuracy: 0, mistake: 0, blunder: 0 }
   });
+
+  const [retryState, setRetryState] = useState(null);
+
+  const startRetry = (idx) => {
+    const res = analysisResults[idx];
+    if (!res || !res.bestMove) return;
+
+    const fenBefore = idx === 0 
+      ? 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1' 
+      : history[idx - 1].fen;
+
+    setRetryState({
+      idx,
+      fen: fenBefore,
+      selectedSquare: null,
+      validMoves: [],
+      status: 'solving',
+      correctMove: res.bestMove,
+      san: res.san,
+      errorCount: 0
+    });
+  };
+
+  useEffect(() => {
+    if (!onRetryBoardPropsChange) return;
+
+    if (!retryState) {
+      onRetryBoardPropsChange(null);
+      return;
+    }
+
+    const localChess = new Chess(retryState.fen);
+    const isCheck = localChess.inCheck();
+
+    let checkSquareName = null;
+    if (isCheck) {
+      const activeColor = localChess.turn();
+      const board = localChess.board();
+      for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+          const piece = board[r][c];
+          if (piece && piece.type === 'k' && piece.color === activeColor) {
+            const file = String.fromCharCode(97 + c);
+            const rank = 8 - r;
+            checkSquareName = `${file}${rank}`;
+            break;
+          }
+        }
+      }
+    }
+
+    const handleRetryMove = (from, to) => {
+      const retryChess = new Chess(retryState.fen);
+      try {
+        const piece = retryChess.get(from);
+        const isPawn = piece && piece.type === 'p';
+        const isPromotionRow = (piece && piece.color === 'w' && to[1] === '8') || (piece && piece.color === 'b' && to[1] === '1');
+        const promotion = (isPawn && isPromotionRow) ? 'q' : undefined;
+
+        const moveResult = retryChess.move({ from, to, promotion });
+        if (!moveResult) return;
+
+        const playedUci = from + to + (promotion || '');
+        const bestMoveUci = retryState.correctMove;
+
+        const isCorrect = (playedUci === bestMoveUci) || 
+                          (from === bestMoveUci.substring(0, 2) && to === bestMoveUci.substring(2, 4));
+
+        if (isCorrect) {
+          soundManager.playSuccess();
+
+          const toEl = document.getElementById(`sq-${to}`);
+          const boardEl = document.querySelector('[aria-label="Chess board"]');
+          if (toEl && boardEl) {
+            import('../../components/board/ParticleCanvas').then(({ triggerBrilliantEffect }) => {
+              if (triggerBrilliantEffect) triggerBrilliantEffect({ current: boardEl }, toEl);
+            });
+          }
+
+          setRetryState(prev => prev ? {
+            ...prev,
+            fen: retryChess.fen(),
+            selectedSquare: null,
+            validMoves: [],
+            status: 'success'
+          } : null);
+        } else {
+          soundManager.playError();
+          setRetryState(prev => prev ? {
+            ...prev,
+            selectedSquare: null,
+            validMoves: [],
+            status: 'failed',
+            errorCount: prev.errorCount + 1
+          } : null);
+        }
+      } catch (err) {
+        console.warn("Invalid move in retry solver:", err);
+      }
+    };
+
+    const props = {
+      customState: {
+        fen: retryState.fen,
+        selectedSquare: retryState.selectedSquare,
+        validMoves: retryState.validMoves,
+        lastMove: null,
+        checkSquare: checkSquareName,
+        showCoords: true,
+        playerColor: localChess.turn(),
+        promotionPending: null,
+        gameMode: 'analysis',
+        animationsEnabled: true,
+        history: [],
+        hintSquares: null,
+        boardFlipped: false,
+        reviewFen: null,
+        isAIThinking: false,
+        errorSquare: retryState.status === 'failed' ? retryState.selectedSquare : null
+      },
+      customHandleSquareClick: (square) => {
+        const clickChess = new Chess(retryState.fen);
+
+        if (retryState.selectedSquare && retryState.validMoves.includes(square)) {
+          handleRetryMove(retryState.selectedSquare, square);
+          return;
+        }
+
+        const piece = clickChess.get(square);
+        if (piece && piece.color === clickChess.turn()) {
+          const moves = clickChess.moves({ square: square, verbose: true });
+          const targets = moves.map(m => m.to);
+          setRetryState(prev => prev ? {
+            ...prev,
+            selectedSquare: square,
+            validMoves: targets
+          } : null);
+        } else {
+          setRetryState(prev => prev ? {
+            ...prev,
+            selectedSquare: null,
+            validMoves: []
+          } : null);
+        }
+      },
+      onMove: (from, to) => {
+        handleRetryMove(from, to);
+      }
+    };
+
+    onRetryBoardPropsChange(props);
+  }, [retryState, onRetryBoardPropsChange]);
 
   const abortRef = useRef(false);
 
@@ -293,36 +485,183 @@ export default function AnalysisPanel({ history, onJumpToMove, onSelectArrow, on
     );
   }
 
+  const currentMoveAnalysis = (activeReviewIndex !== null && activeReviewIndex !== undefined && activeReviewIndex >= 0 && analysisResults && analysisResults[activeReviewIndex])
+    ? analysisResults[activeReviewIndex]
+    : null;
+
   const coachComment = getCoachCommentary(accuracies, counts, history.length);
+  const moveComment = currentMoveAnalysis ? getMoveCommentary(currentMoveAnalysis) : null;
 
   return (
     <div className="analysis-panel-container">
       {/* HEADER SECTION */}
       <div className="analysis-panel-header font-cinzel">
-        GAME REVIEW
+        {retryState ? "RETRY MISTAKE" : "GAME REVIEW"}
       </div>
 
-      {/* COACH SUMMARY BLOCK */}
-      <div className="coach-review-card">
-        <div className="coach-avatar-container">
-          <div className="coach-avatar">
-            <span style={{ fontSize: '24px' }}>🤖</span>
-            <div className="coach-avatar-badge" />
-          </div>
-          <span className="coach-name font-cinzel">Coach Danny</span>
-        </div>
-        <div className="coach-bubble">
-          {loadingAi ? (
-            <p className="coach-text" style={{ fontStyle: 'italic', opacity: 0.7 }}>Drafting thoughts with Claude...</p>
-          ) : aiCommentary ? (
-            <div className="coach-text" style={{ fontSize: '11px', lineHeight: 1.4 }}>
-              <ReactMarkdown>{aiCommentary}</ReactMarkdown>
+      {/* COACH SUMMARY / RETRY BLOCK */}
+      {retryState ? (
+        <div className="coach-review-card retry-mode-active">
+          <div className="coach-avatar-container">
+            <div className="coach-avatar">
+              <span style={{ fontSize: '24px' }}>🎓</span>
+              <div className="coach-avatar-badge" style={{ backgroundColor: '#10b981' }} />
             </div>
-          ) : (
-            <p className="coach-text">{coachComment}</p>
-          )}
+            <span className="coach-name font-cinzel" style={{ color: '#10b981' }}>RETRY</span>
+          </div>
+          <div className="coach-bubble retry-bubble" style={{ borderColor: retryState.status === 'success' ? '#10b981' : retryState.status === 'failed' ? '#ef4444' : 'var(--gold)' }}>
+            {retryState.status === 'solving' && (
+              <p className="coach-text">
+                You played <strong>{retryState.san || 'a mistake'}</strong> in this position. Can you find a better move?
+              </p>
+            )}
+            {retryState.status === 'success' && (
+              <div>
+                <p className="coach-text" style={{ color: '#10b981', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px' }}>
+                  <Check size={14} /> Solved! You found the best move!
+                </p>
+                <p className="coach-text" style={{ marginTop: '4px' }}>
+                  This is the strongest continuation.
+                </p>
+              </div>
+            )}
+            {retryState.status === 'failed' && (
+              <div>
+                <p className="coach-text" style={{ color: '#ef4444', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px' }}>
+                  <X size={14} /> Not quite the best move.
+                </p>
+                <p className="coach-text" style={{ marginTop: '4px' }}>
+                  Keep trying, or view the solution if you are stuck!
+                </p>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '8px', marginTop: '12px', flexWrap: 'wrap' }}>
+              {retryState.status !== 'success' && (
+                <button
+                  type="button"
+                  className="retry-action-btn show-solution"
+                  onClick={() => {
+                    if (onSelectArrow) {
+                      const from = retryState.correctMove.substring(0, 2);
+                      const to = retryState.correctMove.substring(2, 4);
+                      onSelectArrow({ from, to });
+                    }
+                  }}
+                  style={{
+                    background: 'rgba(255,255,255,0.06)',
+                    border: '1px solid rgba(255,255,255,0.12)',
+                    color: 'var(--text-secondary)',
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Show Solution
+                </button>
+              )}
+
+              {(retryState.status === 'failed' || retryState.status === 'success') && (
+                <button
+                  type="button"
+                  className="retry-action-btn try-again"
+                  onClick={() => startRetry(retryState.idx)}
+                  style={{
+                    background: 'var(--gold-dark)',
+                    border: 'none',
+                    color: '#111',
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    fontSize: '11px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Try Again
+                </button>
+              )}
+
+              <button
+                type="button"
+                className="retry-action-btn exit-retry"
+                onClick={() => {
+                  setRetryState(null);
+                  if (onSelectArrow) onSelectArrow(null);
+                }}
+                style={{
+                  background: 'rgba(239,68,68,0.15)',
+                  border: '1px solid rgba(239,68,68,0.3)',
+                  color: '#f87171',
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  marginLeft: 'auto'
+                }}
+              >
+                Exit Retry
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="coach-review-card">
+          <div className="coach-avatar-container">
+            <div className="coach-avatar">
+              <span style={{ fontSize: '24px' }}>🤖</span>
+              <div className="coach-avatar-badge" />
+            </div>
+            <span className="coach-name font-cinzel">Coach Danny</span>
+          </div>
+          <div className="coach-bubble">
+            {currentMoveAnalysis ? (
+              <div>
+                <p className="coach-text" style={{ fontWeight: 700, color: 'var(--gold)', marginBottom: '4px', textTransform: 'uppercase', fontSize: '9px', letterSpacing: '0.05em' }}>
+                  Move {activeReviewIndex + 1}: {currentMoveAnalysis.classification}
+                </p>
+                <p className="coach-text">{moveComment}</p>
+                {['Blunder', 'Mistake', 'Inaccuracy'].includes(currentMoveAnalysis.classification) && currentMoveAnalysis.bestMove && (
+                  <button
+                    type="button"
+                    className="btn-retry-mistake"
+                    onClick={() => startRetry(activeReviewIndex)}
+                    style={{
+                      marginTop: '8px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '5px 12px',
+                      background: 'rgba(129, 182, 76, 0.15)',
+                      border: '1px solid rgba(129, 182, 76, 0.35)',
+                      color: '#81b64c',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s'
+                    }}
+                  >
+                    <span>↻</span> Retry Move
+                  </button>
+                )}
+              </div>
+            ) : (
+              loadingAi ? (
+                <p className="coach-text" style={{ fontStyle: 'italic', opacity: 0.7 }}>Drafting thoughts with Claude...</p>
+              ) : aiCommentary ? (
+                <div className="coach-text" style={{ fontSize: '11px', lineHeight: 1.4 }}>
+                  <ReactMarkdown>{aiCommentary}</ReactMarkdown>
+                </div>
+              ) : (
+                <p className="coach-text">{coachComment}</p>
+              )
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ACCURACIES SUMMARY */}
       <div className="analysis-accuracy-card">

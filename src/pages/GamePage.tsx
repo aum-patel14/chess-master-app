@@ -238,6 +238,7 @@ export default function GamePage() {
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [analysisResults, setAnalysisResults] = useState<any[] | null>(null);
   const [bestMoveArrow, setBestMoveArrow] = useState<{ from: string; to: string } | null>(null);
+  const [retryBoardProps, setRetryBoardProps] = useState<any>(null);
 
   const handleAnalysisComplete = (results: any[]) => {
     setAnalysisResults(results);
@@ -701,6 +702,7 @@ export default function GamePage() {
                     currentReviewIndex={reviewIndex}
                     analysisResults={analysisResults}
                     bestMoveArrow={bestMoveArrow}
+                    {...retryBoardProps}
                   />
                 </div>
               </div>
@@ -813,8 +815,11 @@ export default function GamePage() {
                       setBestMoveArrow(null);
                       setReviewIndex(null);
                       dispatch({ type: 'SET_REVIEW_FEN', payload: null });
+                      setRetryBoardProps(null);
                     }}
                     onAnalysisComplete={handleAnalysisComplete}
+                    activeReviewIndex={reviewIndex}
+                    onRetryBoardPropsChange={setRetryBoardProps}
                   />
                 ) : (
                   <>
@@ -1009,8 +1014,11 @@ export default function GamePage() {
                       setBestMoveArrow(null);
                       setReviewIndex(null);
                       dispatch({ type: 'SET_REVIEW_FEN', payload: null });
+                      setRetryBoardProps(null);
                     }}
                     onAnalysisComplete={handleAnalysisComplete}
+                    activeReviewIndex={reviewIndex}
+                    onRetryBoardPropsChange={setRetryBoardProps}
                   />
                 </div>
               ) : (
