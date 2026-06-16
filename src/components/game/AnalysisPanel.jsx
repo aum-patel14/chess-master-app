@@ -1,7 +1,22 @@
 import './AnalysisPanel.css';
 import { useEffect, useState, useRef } from 'react';
+import ReactMarkdown from 'react-markdown';
+import { supabase } from '../../services/supabase';
 import { stockfishEngine } from '../../engine/StockfishService';
 import { Award, Zap, AlertCircle, HelpCircle, Check, X, ShieldAlert, Sparkles, User, MessageCircle } from 'lucide-react';
+
+const BOOK_OPENINGS = [
+  "e4", "e4 e5", "e4 e5 Nf3", "e4 e5 Nf3 Nc6", "e4 e5 Nf3 Nc6 Bb5", // Ruy Lopez
+  "e4 e5 Nf3 Nc6 Bc4", // Italian
+  "e4 e5 Nf3 Nc6 d4", // Scotch
+  "e4 c5", "e4 c5 Nf3", "e4 c5 Nf3 d6", "e4 c5 Nf3 d6 d4", "e4 c5 Nf3 d6 d4 cxd4", "e4 c5 Nf3 d6 d4 cxd4 Nxd4", // Sicilian
+  "e4 e6", "e4 e6 d4", "e4 e6 d4 d5", // French
+  "e4 c6", "e4 c6 d4", "e4 c6 d4 d5", // Caro-Kann
+  "d4", "d4 d5", "d4 d5 c4", "d4 d5 c4 e6", // Queen's Gambit Declined
+  "d4 d5 c4 c6", // Slav
+  "d4 Nf6", "d4 Nf6 c4", "d4 Nf6 c4 e6", "d4 Nf6 c4 g6", // Indian Defenses
+  "Nf3", "c4", "g3", "f4" // Reti, English, King's Fianchetto, Bird's
+];
 
 function getCoachCommentary(accuracies, counts, historyLength) {
   if (historyLength === 0) return "Play some moves to see coach analysis commentary!";
@@ -33,9 +48,11 @@ export default function AnalysisPanel({ history, onJumpToMove, onSelectArrow, on
   const [isDone, setIsDone] = useState(false);
   const [analysisResults, setAnalysisResults] = useState([]);
   const [accuracies, setAccuracies] = useState({ w: 0, b: 0 });
+  const [aiCommentary, setAiCommentary] = useState('');
+  const [loadingAi, setLoadingAi] = useState(false);
   const [counts, setCounts] = useState({
-    w: { brilliant: 0, best: 0, excellent: 0, good: 0, neutral: 0, inaccuracy: 0, mistake: 0, blunder: 0 },
-    b: { brilliant: 0, best: 0, excellent: 0, good: 0, neutral: 0, inaccuracy: 0, mistake: 0, blunder: 0 }
+    w: { brilliant: 0, great: 0, best: 0, book: 0, excellent: 0, good: 0, neutral: 0, inaccuracy: 0, mistake: 0, blunder: 0 },
+    b: { brilliant: 0, great: 0, best: 0, book: 0, excellent: 0, good: 0, neutral: 0, inaccuracy: 0, mistake: 0, blunder: 0 }
   });
 
   const abortRef = useRef(false);
@@ -74,14 +91,25 @@ export default function AnalysisPanel({ history, onJumpToMove, onSelectArrow, on
         }
 
         // Move Classifications - Aligned with Chess.com parameters
+        const playedMovesStr = history.slice(0, i + 1).map(h => h.san).join(' ');
+        const isBook = i < 8 && BOOK_OPENINGS.some(line => line.startsWith(playedMovesStr));
+
         let classification = 'Neutral';
         let badge = ' ';
         let badgeClass = 'neutral-badge';
 
-        if (loss <= -0.5) {
+        if (isBook) {
+          classification = 'Book';
+          badge = '📘';
+          badgeClass = 'book-badge';
+        } else if (loss <= -0.5) {
           classification = 'Brilliant';
           badge = '!!';
           badgeClass = 'brilliant-badge';
+        } else if (loss <= -0.15) {
+          classification = 'Great';
+          badge = '!';
+          badgeClass = 'great-badge';
         } else if (loss <= 0.01) {
           classification = 'Best';
           badge = '✓';
@@ -132,13 +160,35 @@ export default function AnalysisPanel({ history, onJumpToMove, onSelectArrow, on
       if (abortRef.current) return;
 
       // Compute final summaries & accuracies
-      calculateSummaries(results);
+      const finalSummaries = calculateSummaries(results);
       setAnalysisResults(results);
       setIsDone(true);
 
       // Bubble up the results to GameScreen so they can be rendered on the board!
       if (onAnalysisComplete) {
         onAnalysisComplete(results);
+      }
+
+      // Fetch dynamic Claude AI review summary
+      if (results.length > 0) {
+        setLoadingAi(true);
+        try {
+          const { data, error } = await supabase.functions.invoke('analyze-game', {
+            body: {
+              history: results,
+              accuracies: finalSummaries.accuracies,
+              counts: finalSummaries.counts
+            }
+          });
+
+          if (data?.commentary) {
+            setAiCommentary(data.commentary);
+          }
+        } catch (err) {
+          console.warn('Claude game analysis failed, falling back to local review:', err);
+        } finally {
+          setLoadingAi(false);
+        }
       }
     }
 
@@ -154,8 +204,8 @@ export default function AnalysisPanel({ history, onJumpToMove, onSelectArrow, on
   }, [history]);
 
   const calculateSummaries = (results) => {
-    const wCounts = { brilliant: 0, best: 0, excellent: 0, good: 0, neutral: 0, inaccuracy: 0, mistake: 0, blunder: 0 };
-    const bCounts = { brilliant: 0, best: 0, excellent: 0, good: 0, neutral: 0, inaccuracy: 0, mistake: 0, blunder: 0 };
+    const wCounts = { brilliant: 0, great: 0, best: 0, book: 0, excellent: 0, good: 0, neutral: 0, inaccuracy: 0, mistake: 0, blunder: 0 };
+    const bCounts = { brilliant: 0, great: 0, best: 0, book: 0, excellent: 0, good: 0, neutral: 0, inaccuracy: 0, mistake: 0, blunder: 0 };
     
     let wTotalScore = 0;
     let bTotalScore = 0;
@@ -178,7 +228,9 @@ export default function AnalysisPanel({ history, onJumpToMove, onSelectArrow, on
 
       switch (res.classification) {
         case 'Brilliant': c.brilliant++; break;
+        case 'Great': c.great++; break;
         case 'Best': c.best++; break;
+        case 'Book': c.book++; break;
         case 'Excellent': c.excellent++; break;
         case 'Good': c.good++; break;
         case 'Neutral': c.neutral++; break;
@@ -191,8 +243,13 @@ export default function AnalysisPanel({ history, onJumpToMove, onSelectArrow, on
     const wAcc = wMoves > 0 ? Math.round(wTotalScore / wMoves) : 100;
     const bAcc = bMoves > 0 ? Math.round(bTotalScore / bMoves) : 100;
 
-    setAccuracies({ w: wAcc, b: bAcc });
-    setCounts({ w: wCounts, b: bCounts });
+    const accResult = { w: wAcc, b: bAcc };
+    const countsResult = { w: wCounts, b: bCounts };
+
+    setAccuracies(accResult);
+    setCounts(countsResult);
+
+    return { accuracies: accResult, counts: countsResult };
   };
 
   const handleRowClick = (res, idx) => {
@@ -255,7 +312,15 @@ export default function AnalysisPanel({ history, onJumpToMove, onSelectArrow, on
           <span className="coach-name font-cinzel">Coach Danny</span>
         </div>
         <div className="coach-bubble">
-          <p className="coach-text">{coachComment}</p>
+          {loadingAi ? (
+            <p className="coach-text" style={{ fontStyle: 'italic', opacity: 0.7 }}>Drafting thoughts with Claude...</p>
+          ) : aiCommentary ? (
+            <div className="coach-text" style={{ fontSize: '11px', lineHeight: 1.4 }}>
+              <ReactMarkdown>{aiCommentary}</ReactMarkdown>
+            </div>
+          ) : (
+            <p className="coach-text">{coachComment}</p>
+          )}
         </div>
       </div>
 
@@ -276,7 +341,9 @@ export default function AnalysisPanel({ history, onJumpToMove, onSelectArrow, on
         <div className="quality-lists-container">
           <div className="quality-player-column">
             <div className="quality-summary-item"><span className="quality-badge brilliant-badge">!!</span> <span>{counts.w.brilliant} Brilliant</span></div>
+            <div className="quality-summary-item"><span className="quality-badge great-badge">!</span> <span>{counts.w.great} Great Move</span></div>
             <div className="quality-summary-item"><span className="quality-badge best-badge">✓</span> <span>{counts.w.best} Best Move</span></div>
+            <div className="quality-summary-item"><span className="quality-badge book-badge">📘</span> <span>{counts.w.book} Book Move</span></div>
             <div className="quality-summary-item"><span className="quality-badge excellent-badge">✓</span> <span>{counts.w.excellent} Excellent</span></div>
             <div className="quality-summary-item"><span className="quality-badge good-badge">!</span> <span>{counts.w.good} Good</span></div>
             <div className="quality-summary-item"><span className="quality-badge inaccuracy-badge">?!</span> <span>{counts.w.inaccuracy} Inaccuracy</span></div>
@@ -285,7 +352,9 @@ export default function AnalysisPanel({ history, onJumpToMove, onSelectArrow, on
           </div>
           <div className="quality-player-column">
             <div className="quality-summary-item"><span className="quality-badge brilliant-badge">!!</span> <span>{counts.b.brilliant} Brilliant</span></div>
+            <div className="quality-summary-item"><span className="quality-badge great-badge">!</span> <span>{counts.b.great} Great Move</span></div>
             <div className="quality-summary-item"><span className="quality-badge best-badge">✓</span> <span>{counts.b.best} Best Move</span></div>
+            <div className="quality-summary-item"><span className="quality-badge book-badge">📘</span> <span>{counts.b.book} Book Move</span></div>
             <div className="quality-summary-item"><span className="quality-badge excellent-badge">✓</span> <span>{counts.b.excellent} Excellent</span></div>
             <div className="quality-summary-item"><span className="quality-badge good-badge">!</span> <span>{counts.b.good} Good</span></div>
             <div className="quality-summary-item"><span className="quality-badge inaccuracy-badge">?!</span> <span>{counts.b.inaccuracy} Inaccuracy</span></div>

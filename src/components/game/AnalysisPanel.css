@@ -346,6 +346,11 @@
   background: #a07a50;
 }
 
+.great-badge {
+  background: #479ecb; /* Blue color for great move */
+  box-shadow: 0 0 6px rgba(71, 158, 203, 0.4);
+}
+
 /* Virtual Coach Styles */
 .coach-review-card {
   display: flex;
