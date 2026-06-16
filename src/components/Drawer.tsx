@@ -22,6 +22,7 @@ export default function Drawer({ isOpen, onClose, onOpenSignUp, onOpenLogin }: D
     { label: 'Train', path: '/train', icon: '💪' },
     { label: 'Watch', path: '/watch', icon: '👁' },
     { label: 'Community', path: '/community', icon: '👥' },
+    { label: 'Tournaments', path: '/tournaments', icon: '🏆' },
     { label: 'Other', path: '/other', icon: '···' },
   ];
 

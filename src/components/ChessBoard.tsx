@@ -13,7 +13,27 @@ interface ChessBoardProps {
   customState?: any;
   customHandleSquareClick?: (square: string) => void;
   customHandlePromotion?: (pieceType: string) => void;
+  readOnly?: boolean;
+  arrows?: Array<{ from: string; to: string; color?: string }> | null;
+  highlights?: Array<{ square: string; color?: string }> | null;
+  onMove?: (from: string, to: string) => void;
 }
+
+const getHighlightColor = (colorName?: string) => {
+  const c = colorName?.toLowerCase();
+  if (c === 'red') return 'rgba(239, 68, 68, 0.4)';
+  if (c === 'green') return 'rgba(34, 197, 94, 0.4)';
+  if (c === 'blue') return 'rgba(59, 130, 246, 0.4)';
+  return 'rgba(234, 179, 8, 0.4)'; // yellow/gold default
+};
+
+const getArrowColorCode = (colorName?: string) => {
+  const c = colorName?.toLowerCase();
+  if (c === 'red') return '#ef4444';
+  if (c === 'green') return '#22c55e';
+  if (c === 'blue') return '#3b82f6';
+  return '#f59e0b'; // yellow/gold default
+};
 
 const FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 const RANKS = ['8', '7', '6', '5', '4', '3', '2', '1'];
@@ -24,7 +44,11 @@ export default function ChessBoard({
   currentReviewIndex,
   customState,
   customHandleSquareClick,
-  customHandlePromotion
+  customHandlePromotion,
+  readOnly = false,
+  arrows = [],
+  highlights = [],
+  onMove
 }: ChessBoardProps) {
   const context = useGame();
   const state = customState || context.state;
@@ -95,6 +119,7 @@ export default function ChessBoard({
 
   // Drag and drop handlers
   const handleDragStart = (e: any, square: string) => {
+    if (readOnly) return;
     setDraggedFrom(square);
     handleSquareClick(square);
     e.dataTransfer.effectAllowed = 'move';
@@ -107,15 +132,21 @@ export default function ChessBoard({
 
   const handleDrop = (e: any, square: string) => {
     e.preventDefault();
+    if (readOnly) return;
     setDragOver(null);
     if (draggedFrom && draggedFrom !== square) {
-      handleSquareClick(square);
+      if (onMove) {
+        onMove(draggedFrom, square);
+      } else {
+        handleSquareClick(square);
+      }
     }
     setDraggedFrom(null);
   };
 
   // Touch handlers
   const handlePieceTouchStart = (e: any, square: string, pieceId: string) => {
+    if (readOnly) return;
     if (e.touches.length !== 1) return;
     const touch = e.touches[0];
     touchStartPos.current = { x: touch.clientX, y: touch.clientY };
@@ -126,11 +157,13 @@ export default function ChessBoard({
   };
 
   const handleTouchStart = (e: any, square: string) => {
+    if (readOnly) return;
     touchDragState.current = { active: true, fromSquare: square };
     handleSquareClick(square);
   };
 
   const handleTouchMove = (e: any) => {
+    if (readOnly) return;
     if (e.touches.length === 0) return;
     const touch = e.touches[0];
 
@@ -157,24 +190,47 @@ export default function ChessBoard({
 
   const handleTouchEnd = (e: any) => {
     e.preventDefault();
+    if (readOnly) return;
     const touch = e.changedTouches[0];
     const el = document.elementFromPoint(touch.clientX, touch.clientY);
     const targetSquare = el?.getAttribute('data-square') || el?.closest('[data-square]')?.getAttribute('data-square');
 
     if (touchActiveId) {
       if (targetSquare && draggedFrom && targetSquare !== draggedFrom) {
-        handleSquareClick(targetSquare);
+        if (onMove) {
+          onMove(draggedFrom, targetSquare);
+        } else {
+          handleSquareClick(targetSquare);
+        }
       }
       setTouchActiveId(null);
       setTouchOffset({ x: 0, y: 0 });
       setDraggedFrom(null);
     } else if (touchDragState.current.active) {
       if (targetSquare && touchDragState.current.fromSquare && targetSquare !== touchDragState.current.fromSquare) {
-        handleSquareClick(targetSquare);
+        if (onMove) {
+          onMove(touchDragState.current.fromSquare, targetSquare);
+        } else {
+          handleSquareClick(targetSquare);
+        }
       }
       touchDragState.current = { active: false, fromSquare: null };
     }
     setDragOver(null);
+  };
+
+  // Custom click handler wrapper to support onMove
+  const handleSquareClickWithOnMove = (square: string) => {
+    if (readOnly) return;
+    if (onMove) {
+      if (selectedSquare && selectedSquare !== square) {
+        onMove(selectedSquare, square);
+      } else {
+        handleSquareClick(square);
+      }
+    } else {
+      handleSquareClick(square);
+    }
   };
 
   // Generate coordinate array of squares following correct visual representation
@@ -252,7 +308,8 @@ export default function ChessBoard({
           sqBg = isLight ? 'rgba(127, 201, 127, 0.55)' : 'rgba(127, 201, 127, 0.45)';
         }
 
-        const isValidTarget = validMoves.includes(squareName);
+        const isValidTarget = !readOnly && validMoves.includes(squareName);
+        const highlight = highlights?.find(h => h.square === squareName);
         
         // Decide coordinate label visibility: ranks on left edge, files on bottom edge
         // Left edge: col === 0 (when not flipped) or col === 7 (when flipped)
@@ -269,11 +326,11 @@ export default function ChessBoard({
             key={squareName}
             id={`sq-${squareName}`}
             data-square={squareName}
-            onClick={() => handleSquareClick(squareName)}
-            onDragOver={(e) => { e.preventDefault(); setDragOver(squareName); }}
-            onDragLeave={() => setDragOver(null)}
-            onDrop={(e) => handleDrop(e, squareName)}
-            onTouchStart={(e) => handleTouchStart(e, squareName)}
+            onClick={readOnly ? undefined : () => handleSquareClickWithOnMove(squareName)}
+            onDragOver={readOnly ? undefined : (e) => { e.preventDefault(); setDragOver(squareName); }}
+            onDragLeave={readOnly ? undefined : () => setDragOver(null)}
+            onDrop={readOnly ? undefined : (e) => handleDrop(e, squareName)}
+            onTouchStart={readOnly ? undefined : (e) => handleTouchStart(e, squareName)}
             style={{
               gridRow,
               gridColumn: gridCol,
@@ -284,10 +341,23 @@ export default function ChessBoard({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              cursor: 'pointer',
+              cursor: readOnly ? 'default' : 'pointer',
               transition: 'background-color 100ms ease',
             }}
           >
+            {/* Highlight Overlay */}
+            {highlight && (
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  backgroundColor: getHighlightColor(highlight.color),
+                  pointerEvents: 'none',
+                  zIndex: 1,
+                }}
+              />
+            )}
+
             {/* Rank Label (inside, left-top, low opacity) */}
             {showRank && (
               <span
@@ -300,6 +370,7 @@ export default function ChessBoard({
                   color: isLight ? '#769656' : '#eeeed2',
                   opacity: 0.55,
                   pointerEvents: 'none',
+                  zIndex: 2,
                 }}
               >
                 {rankLabel}
@@ -318,6 +389,7 @@ export default function ChessBoard({
                   color: isLight ? '#769656' : '#eeeed2',
                   opacity: 0.55,
                   pointerEvents: 'none',
+                  zIndex: 2,
                 }}
               >
                 {fileLabel}
@@ -333,6 +405,7 @@ export default function ChessBoard({
                   borderRadius: '50%',
                   background: isLight ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.35)',
                   pointerEvents: 'none',
+                  zIndex: 3,
                 }}
               />
             )}
@@ -344,6 +417,7 @@ export default function ChessBoard({
                   border: '5px solid rgba(107, 189, 68, 0.45)', // Green capture ring
                   borderRadius: '4px',
                   pointerEvents: 'none',
+                  zIndex: 3,
                 }}
               />
             )}
@@ -406,17 +480,17 @@ export default function ChessBoard({
             }}
           >
             <div
-              onTouchStart={(e) => handlePieceTouchStart(e, p.square, p.id)}
-              style={{ pointerEvents: isActiveTouch ? 'none' : 'auto', width: '100%', height: '100%' }}
+              onTouchStart={readOnly ? undefined : (e) => handlePieceTouchStart(e, p.square, p.id)}
+              style={{ pointerEvents: readOnly ? 'none' : (isActiveTouch ? 'none' : 'auto'), width: '100%', height: '100%' }}
             >
               <ChessPiece
                 piece={p}
                 square={p.square}
                 isSelected={isSelected}
                 animationsEnabled={animationsEnabled}
-                onDragStart={handleDragStart}
-                onDrop={handleDrop}
-                onClick={() => handleSquareClick(p.square)}
+                onDragStart={readOnly ? undefined : handleDragStart}
+                onDrop={readOnly ? undefined : handleDrop}
+                onClick={readOnly ? undefined : () => handleSquareClickWithOnMove(p.square)}
                 animStyle={{ animation: isLanding ? 'slideIn 0.2s ease' : 'none' }}
                 flippedView={isFlipped}
               />
@@ -425,55 +499,113 @@ export default function ChessBoard({
         );
       })}
 
-      {/* Best Move Arrow SVG Overlay */}
-      {bestMoveArrow && (() => {
-        const fromOffset = getSquareOffset(bestMoveArrow.from);
-        const toOffset = getSquareOffset(bestMoveArrow.to);
-        if (!fromOffset || !toOffset) return null;
-        
-        const getPct = (str: string) => parseFloat(str);
-        const x1 = getPct(fromOffset.left) + 6.25;
-        const y1 = getPct(fromOffset.top) + 6.25;
-        const x2 = getPct(toOffset.left) + 6.25;
-        const y2 = getPct(toOffset.top) + 6.25;
+      {/* Arrows SVG Overlay */}
+      {((arrows && arrows.length > 0) || bestMoveArrow) && (
+        <svg
+          style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 15,
+            pointerEvents: 'none',
+            width: '100%',
+            height: '100%',
+          }}
+        >
+          <defs>
+            <marker id="arrowhead-best" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+              <path d="M0,0 L6,3 L0,6 Z" fill="#6bbd44" />
+            </marker>
+            <marker id="arrowhead-red" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+              <path d="M0,0 L6,3 L0,6 Z" fill="#ef4444" />
+            </marker>
+            <marker id="arrowhead-green" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+              <path d="M0,0 L6,3 L0,6 Z" fill="#22c55e" />
+            </marker>
+            <marker id="arrowhead-blue" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+              <path d="M0,0 L6,3 L0,6 Z" fill="#3b82f6" />
+            </marker>
+            <marker id="arrowhead-yellow" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+              <path d="M0,0 L6,3 L0,6 Z" fill="#f59e0b" />
+            </marker>
+          </defs>
 
-        const dx = x2 - x1;
-        const dy = y2 - y1;
-        const len = Math.hypot(dx, dy);
-        if (len === 0) return null;
-        
-        const shorten = 3.5;
-        const x2Short = x1 + (dx / len) * (len - shorten);
-        const y2Short = y1 + (dy / len) * (len - shorten);
+          {/* Render Best Move Arrow */}
+          {bestMoveArrow && (() => {
+            const fromOffset = getSquareOffset(bestMoveArrow.from);
+            const toOffset = getSquareOffset(bestMoveArrow.to);
+            if (!fromOffset || !toOffset) return null;
+            
+            const getPct = (str: string) => parseFloat(str);
+            const x1 = getPct(fromOffset.left) + 6.25;
+            const y1 = getPct(fromOffset.top) + 6.25;
+            const x2 = getPct(toOffset.left) + 6.25;
+            const y2 = getPct(toOffset.top) + 6.25;
 
-        return (
-          <svg style={{ position: 'absolute', inset: 0, zIndex: 15, pointerEvents: 'none', width: '100%', height: '100%' }}>
-            <defs>
-              <marker
-                id="arrowhead-best"
-                markerWidth="6"
-                markerHeight="6"
-                refX="3"
-                refY="3"
-                orient="auto"
-              >
-                <path d="M0,0 L6,3 L0,6 Z" fill="#6bbd44" />
-              </marker>
-            </defs>
-            <line
-              x1={`${x1}%`}
-              y1={`${y1}%`}
-              x2={`${x2Short}%`}
-              y2={`${y2Short}%`}
-              stroke="#6bbd44"
-              strokeWidth="5"
-              strokeLinecap="round"
-              opacity="0.8"
-              markerEnd="url(#arrowhead-best)"
-            />
-          </svg>
-        );
-      })()}
+            const dx = x2 - x1;
+            const dy = y2 - y1;
+            const len = Math.hypot(dx, dy);
+            if (len === 0) return null;
+            
+            const shorten = 3.5;
+            const x2Short = x1 + (dx / len) * (len - shorten);
+            const y2Short = y1 + (dy / len) * (len - shorten);
+
+            return (
+              <line
+                x1={`${x1}%`}
+                y1={`${y1}%`}
+                x2={`${x2Short}%`}
+                y2={`${y2Short}%`}
+                stroke="#6bbd44"
+                strokeWidth="5"
+                strokeLinecap="round"
+                opacity="0.8"
+                markerEnd="url(#arrowhead-best)"
+              />
+            );
+          })()}
+
+          {/* Render Custom Arrows */}
+          {arrows && arrows.map((arrow, idx) => {
+            const fromOffset = getSquareOffset(arrow.from);
+            const toOffset = getSquareOffset(arrow.to);
+            if (!fromOffset || !toOffset) return null;
+
+            const getPct = (str: string) => parseFloat(str);
+            const x1 = getPct(fromOffset.left) + 6.25;
+            const y1 = getPct(fromOffset.top) + 6.25;
+            const x2 = getPct(toOffset.left) + 6.25;
+            const y2 = getPct(toOffset.top) + 6.25;
+
+            const dx = x2 - x1;
+            const dy = y2 - y1;
+            const len = Math.hypot(dx, dy);
+            if (len === 0) return null;
+
+            const shorten = 3.5;
+            const x2Short = x1 + (dx / len) * (len - shorten);
+            const y2Short = y1 + (dy / len) * (len - shorten);
+            const colorCode = getArrowColorCode(arrow.color);
+            const colorName = arrow.color?.toLowerCase() || 'yellow';
+            const markerId = `arrowhead-${colorName === 'gold' ? 'yellow' : colorName}`;
+
+            return (
+              <line
+                key={`custom-arrow-${idx}`}
+                x1={`${x1}%`}
+                y1={`${y1}%`}
+                x2={`${x2Short}%`}
+                y2={`${y2Short}%`}
+                stroke={colorCode}
+                strokeWidth="5"
+                strokeLinecap="round"
+                opacity="0.85"
+                markerEnd={`url(#${markerId})`}
+              />
+            );
+          })}
+        </svg>
+      )}
 
       {/* Particle overlay effects */}
       <ParticleCanvas boardRef={boardRef} />

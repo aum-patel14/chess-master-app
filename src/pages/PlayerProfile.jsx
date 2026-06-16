@@ -77,7 +77,61 @@ export default function PlayerProfile() {
   }, [aiGames, onlineGames, historyFilter]);
 
   const [highestBotBeaten, setHighestBotBeaten] = useState(null);
+  const [tournamentBadges, setTournamentBadges] = useState([]);
+  const [tournamentPrizes, setTournamentPrizes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [learnStats, setLearnStats] = useState({
+    xp: 0,
+    lessonsCount: 0,
+    coursesCount: 0
+  });
+
+  useEffect(() => {
+    if (!profile || profile.id === 'guest') return;
+
+    async function loadLearnStats() {
+      try {
+        let totalLessonXp = 0;
+        let totalCourseXp = 0;
+        let completedLessons = 0;
+        let completedCourses = 0;
+
+        const { data: lessonData } = await supabase
+          .from('user_lesson_progress')
+          .select('completed, xp_earned')
+          .eq('user_id', profile.id);
+
+        if (lessonData) {
+          lessonData.forEach(p => {
+            totalLessonXp += p.xp_earned || 0;
+            if (p.completed) completedLessons++;
+          });
+        }
+
+        const { data: courseData } = await supabase
+          .from('user_course_progress')
+          .select('xp_earned, completed_at')
+          .eq('user_id', profile.id);
+
+        if (courseData) {
+          courseData.forEach(p => {
+            totalCourseXp += p.xp_earned || 0;
+            if (p.completed_at) completedCourses++;
+          });
+        }
+
+        setLearnStats({
+          xp: totalLessonXp + totalCourseXp,
+          lessonsCount: completedLessons,
+          coursesCount: completedCourses
+        });
+      } catch (e) {
+        console.error('Failed to load learn stats:', e);
+      }
+    }
+
+    loadLearnStats();
+  }, [profile]);
   const [puzzleStats, setPuzzleStats] = useState({
     rating: 1200,
     rd: 350,
@@ -199,6 +253,35 @@ export default function PlayerProfile() {
           }
         } catch (supabaseErr) {
           console.warn('Supabase query for bot stats failed:', supabaseErr);
+        }
+
+        // Fetch tournament badges
+        try {
+          const { data: userDataSupabase, error: userError } = await supabase
+            .from('users')
+            .select('badges')
+            .eq('id', userProfile.id)
+            .maybeSingle();
+
+          if (userDataSupabase && !userError) {
+            setTournamentBadges(userDataSupabase.badges || []);
+          }
+        } catch (badgeErr) {
+          console.warn('Failed to fetch user badges:', badgeErr);
+        }
+
+        // Fetch tournament prizes
+        try {
+          const { data: prizes, error: prizesError } = await supabase
+            .from('tournament_prizes')
+            .select('*')
+            .eq('user_id', userProfile.id);
+
+          if (prizes && !prizesError) {
+            setTournamentPrizes(prizes);
+          }
+        } catch (prizeErr) {
+          console.warn('Failed to fetch user tournament prizes:', prizeErr);
         }
 
       } catch (err) {
@@ -619,6 +702,65 @@ export default function PlayerProfile() {
                 </div>
               );
             })()}
+
+            {/* Academy Learning Progress Card */}
+            <div className="rating-badge-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <span className="badge-emoji">🎓</span>
+                <div className="badge-info font-cinzel">
+                  <span className="badge-name">Academy Progress</span>
+                  <span className="badge-rating" style={{ fontSize: '13px', marginTop: '2px' }}>
+                    {learnStats.xp} XP • {learnStats.coursesCount} courses / {learnStats.lessonsCount} lessons completed
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Tournament Trophies Card */}
+            {(() => {
+              const gold = tournamentPrizes.filter(p => p.prize_type === 'trophy' && p.trophy_tier === 'gold').length;
+              const silver = tournamentPrizes.filter(p => p.prize_type === 'trophy' && p.trophy_tier === 'silver').length;
+              const bronze = tournamentPrizes.filter(p => p.prize_type === 'trophy' && p.trophy_tier === 'bronze').length;
+              
+              if (gold > 0 || silver > 0 || bronze > 0) {
+                return (
+                  <div className="rating-badge-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                      <span className="badge-emoji">🏆</span>
+                      <div className="badge-info font-cinzel">
+                        <span className="badge-name">Championship Trophies</span>
+                        <span className="badge-rating" style={{ fontSize: '13px', marginTop: '2px', display: 'flex', gap: '8px' }}>
+                          <span>🥇 {gold}</span>
+                          <span>🥈 {silver}</span>
+                          <span>🥉 {bronze}</span>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+              return null;
+            })()}
+
+            {/* Tournament Badges Card */}
+            {tournamentBadges.length > 0 && (
+              <div className="rating-badge-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gridColumn: '1 / -1' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', width: '100%' }}>
+                  <span className="badge-emoji">🎖️</span>
+                  <div className="badge-info font-cinzel" style={{ width: '100%' }}>
+                    <span className="badge-name">Championship Badges</span>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
+                      {tournamentBadges.map((badge, idx) => (
+                        <span key={idx} style={{ background: 'rgba(226,176,74,0.12)', border: '1px solid rgba(226,176,74,0.3)', borderRadius: '12px', padding: '4px 10px', fontSize: '11px', color: '#e2b04a', fontWeight: 'bold' }}>
+                          {badge}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
           </div>
         </div>
 

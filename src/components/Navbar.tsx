@@ -50,6 +50,7 @@ export default function Navbar({ onOpenDrawer, onOpenSignUp, onOpenLogin }: Navb
     { label: 'Train', path: '/train' },
     { label: 'Watch', path: '/watch' },
     { label: 'Community', path: '/community' },
+    { label: 'Tournaments', path: '/tournaments' },
   ];
 
   const handleNav = (path: string) => {

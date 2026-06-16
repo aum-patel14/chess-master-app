@@ -80,8 +80,25 @@ export default function OnlineGamePage() {
   const [chatInput, setChatInput] = useState('');
   const [showResignConfirm, setShowResignConfirm] = useState(false);
   const [showRematchOfferModal, setShowRematchOfferModal] = useState(true);
+  const [tournamentId, setTournamentId] = useState<string | null>(null);
   
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // Load tournament ID if this is a tournament match
+  useEffect(() => {
+    if (gameData?.id) {
+      supabase
+        .from('tournament_pairings')
+        .select('tournament_id')
+        .eq('game_id', gameData.id)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data?.tournament_id) {
+            setTournamentId(data.tournament_id);
+          }
+        });
+    }
+  }, [gameData?.id]);
 
   // Auto-scroll chat to bottom
   useEffect(() => {
@@ -607,8 +624,12 @@ export default function OnlineGamePage() {
                 </div>
               )}
 
-              <div style={modalActionRow}>
-                {rematchOffer ? (
+               <div style={modalActionRow}>
+                {tournamentId ? (
+                  <button style={{ ...btnModalConfirm, background: 'var(--gold)', color: '#0a0a14' }} onClick={() => navigate(`/tournaments/${tournamentId}`)}>
+                    Back to Tournament
+                  </button>
+                ) : rematchOffer ? (
                   <button style={{ ...btnModalConfirm, background: '#81b64c', color: '#ffffff' }} onClick={() => navigate(`/play/online/${rematchOffer.roomCode}`)}>
                     Accept Rematch
                   </button>
@@ -620,11 +641,13 @@ export default function OnlineGamePage() {
                 <button style={btnModalCancel} onClick={() => { setShowAnalysis(true); setGameOver(null); }}>
                   Analyze Game
                 </button>
-                <button style={btnModalCancel} onClick={() => navigate('/play/online')}>
-                  New Game
-                </button>
-                <button style={btnModalCancel} onClick={() => navigate('/play/online')}>
-                  Back to Lobby
+                {!tournamentId && (
+                  <button style={btnModalCancel} onClick={() => navigate('/play/online')}>
+                    New Game
+                  </button>
+                )}
+                <button style={btnModalCancel} onClick={() => navigate(tournamentId ? `/tournaments/${tournamentId}` : '/play/online')}>
+                  {tournamentId ? 'Lobby' : 'Back to Lobby'}
                 </button>
               </div>
             </div>

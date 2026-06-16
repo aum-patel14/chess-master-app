@@ -271,6 +271,60 @@ class SoundManager {
     osc.start();
     osc.stop(this.ctx.currentTime + 0.08);
   }
+
+  playSuccess() {
+    if (!this.enabled) return;
+    const theme = this._getTheme();
+    if (theme === 'silent') return;
+    this.init(); this.resume();
+    
+    const melody = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+    const tStart = this.ctx.currentTime;
+    melody.forEach((freq, i) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this._gain(0.1);
+      const t = tStart + i * 0.08;
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t);
+      gain.gain.setValueAtTime(0.1 * this.volume, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+      osc.connect(gain);
+      osc.start(t);
+      osc.stop(t + 0.25);
+    });
+  }
+
+  playError() {
+    if (!this.enabled) return;
+    const theme = this._getTheme();
+    if (theme === 'silent') return;
+    this.init(); this.resume();
+    
+    const osc1 = this.ctx.createOscillator();
+    const osc2 = this.ctx.createOscillator();
+    const gain1 = this._gain(0.15);
+    const gain2 = this._gain(0.15);
+    const t = this.ctx.currentTime;
+    
+    osc1.type = 'sawtooth';
+    osc1.frequency.setValueAtTime(120, t);
+    gain1.gain.setValueAtTime(0.15 * this.volume, t);
+    gain1.gain.linearRampToValueAtTime(0.15 * this.volume, t + 0.2);
+    gain1.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+    osc1.connect(gain1);
+    
+    osc2.type = 'sawtooth';
+    osc2.frequency.setValueAtTime(123, t);
+    gain2.gain.setValueAtTime(0.15 * this.volume, t);
+    gain2.gain.linearRampToValueAtTime(0.15 * this.volume, t + 0.2);
+    gain2.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+    osc2.connect(gain2);
+    
+    osc1.start(t);
+    osc1.stop(t + 0.28);
+    osc2.start(t);
+    osc2.stop(t + 0.28);
+  }
 }
 
 export const soundManager = new SoundManager();

@@ -49,8 +49,8 @@ export default function Sidebar({ onToast, onOpenSignUp, onOpenLogin, mobileOpen
         <SidebarLink icon={<Play size={20} color="var(--lp-gold)" />} label="Play" active={location.pathname.startsWith('/play')} onClick={() => handleNav('/play', false)} />
         <SidebarLink icon={<Laptop size={20} color="var(--lp-green)" />} label="Play vs Computer" active={location.pathname === '/game'} onClick={() => handleNav('/game', false)} />
         <SidebarLink icon={<Puzzle size={20} color="var(--lp-purple)" />} label="Puzzles" onClick={() => handleNav('', true)} />
-        <SidebarLink icon={<BookOpen size={20} color="#60A5FA" />} label="Learn" onClick={() => handleNav('', true)} />
-        <SidebarLink icon={<Swords size={20} color="var(--lp-red)" />} label="Compete" onClick={() => handleNav('', true)} />
+        <SidebarLink icon={<BookOpen size={20} color="#60A5FA" />} label="Learn" active={location.pathname.startsWith('/learn')} onClick={() => handleNav('/learn', false)} />
+        <SidebarLink icon={<Swords size={20} color="var(--lp-red)" />} label="Tournaments" active={location.pathname.startsWith('/tournaments')} onClick={() => handleNav('/tournaments', false)} />
         <SidebarLink icon={<Tv size={20} color="#EC4899" />} label="Watch" onClick={() => handleNav('', true)} />
         <SidebarLink icon={<Users size={20} color="var(--lp-green)" />} label="Community" onClick={() => handleNav('', true)} />
         <SidebarLink icon={<MoreHorizontal size={20} color="var(--lp-text-secondary)" />} label="More" onClick={() => handleNav('', true)} />

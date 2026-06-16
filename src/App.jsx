@@ -29,9 +29,14 @@ const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const StatsPage = lazy(() => import('./pages/StatsPage'));
 const LeaderboardPage = lazy(() => import('./pages/LeaderboardPage'));
 const AchievementsPage = lazy(() => import('./pages/AchievementsPage'));
-const LearnPage = lazy(() => import('./pages/LearnPage'));
+const LearnHub = lazy(() => import('./pages/LearnHub'));
+const CoursePage = lazy(() => import('./pages/CoursePage'));
+const LessonPlayer = lazy(() => import('./components/LessonPlayer'));
+const GenerateLesson = lazy(() => import('./pages/admin/GenerateLesson'));
 const GameHistoryPage = lazy(() => import('./pages/GameHistoryPage'));
-const TournamentsPage = lazy(() => import('./pages/TournamentsPage'));
+const TournamentHub = lazy(() => import('./pages/TournamentHub'));
+const CreateTournament = lazy(() => import('./pages/CreateTournament'));
+const TournamentPage = lazy(() => import('./pages/TournamentPage'));
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
 const DemoPage = lazy(() => import('./pages/DemoPage'));
 const OtherPage = lazy(() => import('./pages/OtherPage'));
@@ -95,13 +100,18 @@ function RouteSwitch() {
             <Route path="/puzzles/rated" element={<ErrorBoundary><PuzzlePage mode="rated" /></ErrorBoundary>} />
             <Route path="/puzzles/daily" element={<ErrorBoundary><PuzzlePage mode="daily" /></ErrorBoundary>} />
             <Route path="/puzzles/streak" element={<ErrorBoundary><PuzzleStreak /></ErrorBoundary>} />
-            <Route path="/learn" element={<ErrorBoundary><LearnPage /></ErrorBoundary>} />
+            <Route path="/learn" element={<ErrorBoundary><LearnHub /></ErrorBoundary>} />
+            <Route path="/learn/:slug" element={<ErrorBoundary><CoursePage /></ErrorBoundary>} />
+            <Route path="/learn/:slug/:lessonId" element={<ErrorBoundary><LessonPlayer /></ErrorBoundary>} />
+            <Route path="/admin/generate" element={<ErrorBoundary><GenerateLesson /></ErrorBoundary>} />
             <Route path="/leaderboard" element={<ErrorBoundary><LeaderboardPage /></ErrorBoundary>} />
             <Route path="/stats" element={<ErrorBoundary><StatsPage /></ErrorBoundary>} />
             <Route path="/achievements" element={<ErrorBoundary><AchievementsPage /></ErrorBoundary>} />
             <Route path="/settings" element={<ErrorBoundary><SettingsPage /></ErrorBoundary>} />
             <Route path="/history" element={<ErrorBoundary><GameHistoryPage /></ErrorBoundary>} />
-            <Route path="/tournaments" element={<ErrorBoundary><TournamentsPage /></ErrorBoundary>} />
+            <Route path="/tournaments" element={<ErrorBoundary><TournamentHub /></ErrorBoundary>} />
+            <Route path="/tournaments/create" element={<ErrorBoundary><CreateTournament /></ErrorBoundary>} />
+            <Route path="/tournaments/:id" element={<ErrorBoundary><TournamentPage /></ErrorBoundary>} />
             <Route path="/privacy" element={<ErrorBoundary><PrivacyPolicy /></ErrorBoundary>} />
             <Route path="/watch" element={<ErrorBoundary><DemoPage /></ErrorBoundary>} />
             <Route path="/other" element={<ErrorBoundary><OtherPage /></ErrorBoundary>} />

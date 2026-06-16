@@ -196,6 +196,37 @@ export function useOnlineGame(roomCode: string) {
         game_result: result,
         final_pgn: pgnStr
       });
+
+      // Submit tournament results if it's a tournament game
+      try {
+        const { data: pairing, error: pairingErr } = await supabase
+          .from('tournament_pairings')
+          .select('*, tournaments(format)')
+          .eq('game_id', gameData.id)
+          .maybeSingle();
+
+        if (pairing && !pairingErr && pairing.tournaments) {
+          const format = pairing.tournaments.format;
+          if (format === 'arena') {
+            const winner_id = result === 'white_wins' ? pairing.white_id : (result === 'black_wins' ? pairing.black_id : null);
+            await supabase.rpc('arena_submit_result', {
+              t_id: pairing.tournament_id,
+              game_id: gameData.id,
+              winner_id,
+              is_draw: result === 'draw'
+            });
+          } else if (format === 'swiss') {
+            const swissResult = result === 'white_wins' ? 'white' : (result === 'black_wins' ? 'black' : 'draw');
+            await supabase.rpc('swiss_submit_result', {
+              pairing_id: pairing.id,
+              result: swissResult
+            });
+          }
+        }
+      } catch (tournamentErr) {
+        console.error('Error submitting tournament result:', tournamentErr);
+      }
+
       localStorage.removeItem('active_online_game');
     } catch (e) {
       console.error('Error completing game via RPC:', e);

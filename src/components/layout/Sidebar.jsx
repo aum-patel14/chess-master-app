@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Home, Trophy, BarChart2, Settings, BookOpen, Puzzle, ChevronLeft, ChevronRight, Menu, MoreHorizontal } from 'lucide-react';
+import { Home, Trophy, BarChart2, Settings, BookOpen, Puzzle, ChevronLeft, ChevronRight, Menu, MoreHorizontal, Swords } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import './Sidebar.css';
 
@@ -14,9 +14,10 @@ export default function Sidebar({ isExpanded, onToggle, mobileOpen, setMobileOpe
 
   const navItems = [
     { label: 'Home', icon: <Home size={20} />, path: '/' },
-    { label: 'Play', icon: <span style={{ fontSize: '20px', fontWeight: 'bold', lineHeight: 1 }}>♞</span>, path: '/game' },
+    { label: 'Play', icon: <span style={{ fontSize: '20px', fontWeight: 'bold', lineHeight: 1 }}>♞</span>, path: '/play' }, // changed to /play lobby
     { label: 'Puzzles', icon: <Puzzle size={20} />, path: '/puzzles' },
     { label: 'Learn', icon: <BookOpen size={20} />, path: '/learn' },
+    { label: 'Tournaments', icon: <Swords size={20} />, path: '/tournaments' },
     { label: 'Leaderboard', icon: <Trophy size={20} />, path: '/leaderboard' },
     { label: 'Stats', icon: <BarChart2 size={20} />, path: '/stats' },
     { label: 'Settings', icon: <Settings size={20} />, path: '/settings' },
