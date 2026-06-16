@@ -13,9 +13,8 @@ self.onmessage = (event: MessageEvent) => {
       break;
 
     case 'go':
-      // Map 0-20 stockfish skill to 1-16 custom engine difficulty
-      const skillLevel = data.skill || 0;
-      const difficulty = Math.max(1, Math.min(16, Math.round((skillLevel / 20) * 16)));
+      // The skillLevel from bot config is already 1-16 for the custom engine
+      const difficulty = data.skill || 1;
       
       try {
         const bestMove = getBestMove(currentFen, difficulty);
