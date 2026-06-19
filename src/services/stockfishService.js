@@ -22,7 +22,7 @@ function resolveBase() {
 const STOCKFISH_SOURCES = [
   'https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js',
   'https://cdn.jsdelivr.net/npm/stockfish.js@10.0.2/stockfish.js',
-  `${resolveBase()}stockfish-engine.js`,  // local fallback (pure-JS version in your public/)
+  `${resolveBase()}stockfish.js`,  // local fallback (pure-JS version in your public/)
 ];
 
 let workerInstance = null;

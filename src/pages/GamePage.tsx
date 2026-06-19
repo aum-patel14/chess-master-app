@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Chess } from 'chess.js';
 import { useGame } from '../context/GameContext';
@@ -55,7 +55,8 @@ import ChessBoard from '../components/ChessBoard';
 import GameOverDialog from '../components/game/GameOverDialog';
 import MultiplayerLobby from '../components/game/MultiplayerLobby';
 import { readElo, readStats, writeStats } from '../utils/chessStats';
-import { ArrowLeft, ArrowRight, ChevronsLeft, ChevronsRight, Flag, RefreshCw, Undo2, HelpCircle, Download, Share2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ChevronsLeft, ChevronsRight, Flag, RefreshCw, Undo2, HelpCircle, Download, Share2, Loader2 } from 'lucide-react';
+import { soundManager } from '../engine/soundManager';
 import AnalysisPanel from '../components/game/AnalysisPanel';
 import CapturedPieces from '../components/game/CapturedPieces';
 import { downloadPgn, generatePgnString } from '../utils/pgnExporter';
@@ -63,7 +64,7 @@ import EvalBar from '../components/chesscom/EvalBar';
 import EngineDifficultyBar from '../components/chesscom/EngineDifficultyBar';
 import ThinkingIndicator from '../components/chesscom/ThinkingIndicator';
 import { BOTS, BotConfig } from '../config/bots';
-import { useStockfish } from '../hooks/useStockfish';
+import { useCustomEngine } from '../hooks/useCustomEngine';
 import { BotSelector } from '../components/BotSelector';
 
 
@@ -85,7 +86,7 @@ const normalizeColor = (color: any, fallback: 'w' | 'b' = 'w'): 'w' | 'b' => {
 
 export default function GamePage() {
   const { state, dispatch, resign, undoMove, startNewGame, applyMove, isSimpleMode } = useGame();
-  const { isThinking: isStockfishThinking, getBestMove } = useStockfish();
+  const { isThinking: isCustomEngineThinking, getBestMove } = useCustomEngine();
   const { showToast } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
@@ -237,11 +238,17 @@ export default function GamePage() {
   const [historyExpanded, setHistoryExpanded] = useState(false);
   const [reviewIndex, setReviewIndex] = useState<number | null>(null);
   const [isDesktop, setIsDesktop] = useState(typeof window !== 'undefined' && window.innerWidth > 900);
+  const [hintLoading, setHintLoading] = useState(false);
 
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [analysisResults, setAnalysisResults] = useState<any[] | null>(null);
   const [bestMoveArrow, setBestMoveArrow] = useState<{ from: string; to: string } | null>(null);
   const [retryBoardProps, setRetryBoardProps] = useState<any>(null);
+
+  // Refs for move history auto-scroll
+  const desktopMoveListRef = useRef<HTMLDivElement>(null);
+  const mobileMoveListRef = useRef<HTMLDivElement>(null);
+  const gameStartTimeRef = useRef<number>(Date.now());
 
   const handleAnalysisComplete = (results: any[]) => {
     setAnalysisResults(results);
@@ -279,24 +286,46 @@ export default function GamePage() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Auto-scroll move list to latest move
+  useEffect(() => {
+    if (state.history.length > 0) {
+      requestAnimationFrame(() => {
+        desktopMoveListRef.current?.scrollTo({ top: desktopMoveListRef.current.scrollHeight, behavior: 'smooth' });
+        mobileMoveListRef.current?.scrollTo({ top: mobileMoveListRef.current.scrollHeight, behavior: 'smooth' });
+      });
+    }
+  }, [state.history.length]);
+
+  // Reset game start time on new game
+  useEffect(() => {
+    if (state.history.length === 0) {
+      gameStartTimeRef.current = Date.now();
+    }
+  }, [state.history.length]);
+
   // Resume or start requested game immediately
   useEffect(() => {
     if (resume) {
       setIsPlaying(true);
       setGameState('playing');
-    } else if (paramMode === 'ai' && (paramDiff || paramBotId)) {
-      const activeBot = BOTS.find(b => b.id === paramBotId) || BOTS.find(b => b.id === localStorage.getItem('chess_bot_id')) || BOTS[0];
-      setSelectedBot(activeBot);
-      const tc = paramTimeControl ? paramTimeControl : { base: 10, increment: 0 };
-      startNewGame({
-        mode: 'vsAI',
-        playerColor: normalizeColor(paramColor),
-        difficulty: Math.max(1, Math.min(5, Math.round((Number(activeBot.skillLevel) || 3) / 3))),
-        botId: activeBot.id,
-        timeControl: tc.base > 0 ? tc : null,
-      });
-      setIsPlaying(true);
-      setGameState('playing');
+    } else if (paramMode === 'ai') {
+      if (paramDiff || paramBotId) {
+        const activeBot = BOTS.find(b => b.id === paramBotId) || BOTS.find(b => b.id === localStorage.getItem('chess_bot_id')) || BOTS[0];
+        setSelectedBot(activeBot);
+        const tc = paramTimeControl ? paramTimeControl : { base: 10, increment: 0 };
+        startNewGame({
+          mode: 'vsAI',
+          playerColor: normalizeColor(paramColor),
+          difficulty: Math.max(1, Math.min(5, Math.round((Number(activeBot.skillLevel) || 3) / 3))),
+          botId: activeBot.id,
+          timeControl: tc.base > 0 ? tc : null,
+        });
+        setIsPlaying(true);
+        setGameState('playing');
+      } else {
+        setIsPlaying(false);
+        setGameState('selection');
+      }
     } else if (paramMode === 'local') {
       startNewGame({ mode: 'local' });
       setIsPlaying(true);
@@ -309,7 +338,7 @@ export default function GamePage() {
 
   // Trigger Stockfish AI moves in vsAI mode
   useEffect(() => {
-    if (state.gameMode !== 'vsAI' || isStockfishThinking) return;
+    if (state.gameMode !== 'vsAI' || isCustomEngineThinking) return;
     if (state.status.type !== 'playing' && state.status.type !== 'check') return;
 
     const activeChess = new Chess(state.fen);
@@ -343,6 +372,16 @@ export default function GamePage() {
 
             if (moveResult) {
               applyMove(moveResult, aiChess);
+              // Play sound for AI moves
+              try {
+                if (aiChess.isCheck()) {
+                  soundManager.playCheck();
+                } else if (moveResult.captured) {
+                  soundManager.playCapture();
+                } else {
+                  soundManager.playMove();
+                }
+              } catch (_) {}
             } else {
               throw new Error('Stockfish returned illegal move: ' + uciMove);
             }
@@ -360,6 +399,7 @@ export default function GamePage() {
             const moveResult = aiChess.move(randomMove);
             if (moveResult) {
               applyMove(moveResult, aiChess);
+              try { soundManager.playMove(); } catch (_) {}
             }
           }
         } finally {
@@ -370,7 +410,7 @@ export default function GamePage() {
       const timer = setTimeout(triggerAiMove, 300);
       return () => clearTimeout(timer);
     }
-  }, [state.fen, state.gameMode, state.playerColor, state.aiBotId, isStockfishThinking, getBestMove, dispatch, applyMove, showToast]);
+  }, [state.fen, state.gameMode, state.playerColor, state.aiBotId, isCustomEngineThinking, getBestMove, dispatch, applyMove, showToast]);
 
 
   // Handle active ticking clock warnings
@@ -467,21 +507,42 @@ export default function GamePage() {
     dispatch({ type: 'SET_REVIEW_FEN', payload: state.history[idx].fen });
   };
 
-  // Quick move suggestion hint
-  const handleHint = () => {
+  // Engine-powered move hint
+  const handleHint = useCallback(async () => {
+    if (hintLoading) return;
     try {
       const chessEngine = new Chess(state.fen);
       const moves = chessEngine.moves({ verbose: true });
       if (moves.length === 0) return;
 
-      // Pick a smart fallback move or random legal move as hint
-      const bestMove = moves[Math.floor(Math.random() * moves.length)];
-      if (bestMove) {
-        dispatch({ type: 'SET_HINT_SQUARES', payload: { from: bestMove.from, to: bestMove.to } });
-        showToast(`Hint: Move from ${bestMove.from} to ${bestMove.to}`, 'info');
+      setHintLoading(true);
+      try {
+        // Use engine to find the best move
+        const hintBot = { skillLevel: 15, moveTimeMs: 800, id: 'hint', name: 'Hint', elo: 2000, description: '', colorClass: 'teal' };
+        const uciMove = await getBestMove(state.fen, hintBot as any);
+        if (uciMove && uciMove !== '(none)') {
+          const from = uciMove.substring(0, 2);
+          const to = uciMove.substring(2, 4);
+          // Convert to SAN for a nicer toast
+          const sanChess = new Chess(state.fen);
+          const sanMove = sanChess.move({ from, to, promotion: uciMove.length > 4 ? uciMove[4] : undefined });
+          dispatch({ type: 'SET_HINT_SQUARES', payload: { from, to } });
+          showToast(`Hint: ${sanMove ? sanMove.san : `${from} → ${to}`}`, 'info');
+        } else {
+          throw new Error('No hint');
+        }
+      } catch {
+        // Fallback to random move if engine fails
+        const bestMove = moves[Math.floor(Math.random() * moves.length)];
+        if (bestMove) {
+          dispatch({ type: 'SET_HINT_SQUARES', payload: { from: bestMove.from, to: bestMove.to } });
+          showToast(`Hint: ${bestMove.san}`, 'info');
+        }
+      } finally {
+        setHintLoading(false);
       }
     } catch (e) {}
-  };
+  }, [state.fen, hintLoading, getBestMove, dispatch, showToast]);
 
   const handleFlip = () => {
     dispatch({ type: 'TOGGLE_BOARD_FLIP' });
@@ -492,6 +553,52 @@ export default function GamePage() {
     localStorage.setItem('chess_difficulty', String(level));
     showToast(`Engine set to level ${level}`, 'info', 1500);
   };
+
+  // Keyboard shortcuts for gameplay
+  useEffect(() => {
+    if (!isPlaying || showAnalysis) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger shortcuts when typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      switch (e.key) {
+        case 'ArrowLeft':
+          e.preventDefault();
+          handlePrevMove();
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          handleNextMove();
+          break;
+        case 'Home':
+          e.preventDefault();
+          handleFirstMove();
+          break;
+        case 'End':
+          e.preventDefault();
+          handleLastMove();
+          break;
+        case 'z':
+          if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            undoMove();
+          }
+          break;
+        case 'f':
+          if (!e.ctrlKey && !e.metaKey) {
+            e.preventDefault();
+            handleFlip();
+          }
+          break;
+        case 'Escape':
+          e.preventDefault();
+          dispatch({ type: 'CLEAR_SELECTION' });
+          break;
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isPlaying, showAnalysis, reviewIndex, state.history.length]);
 
   const handleSelectBot = (bot: Bot) => {
     setSelectedBot(bot);
@@ -666,6 +773,7 @@ export default function GamePage() {
                 {/* Opponent Clock Display */}
                 {state.timeControl && (
                   <div
+                    className={(state.playerColor === 'w' ? (chess.turn() === 'b') : (chess.turn() === 'w')) && (state.playerColor === 'w' ? state.blackTime : state.whiteTime) < 10 ? 'clock-urgent' : ''}
                     style={{
                       fontSize: '18px',
                       fontWeight: 700,
@@ -690,7 +798,7 @@ export default function GamePage() {
                 {(state.gameMode === 'vsAI' || state.gameMode === 'analysis') && (
                   <EvalBar fen={state.reviewFen || state.fen} flipped={state.boardFlipped} refreshKey={state.evalTick} />
                 )}
-                <div style={{ flex: 1, minWidth: 0, pointerEvents: state.isAIThinking || isStockfishThinking ? 'none' : 'auto' }}>
+                <div style={{ flex: 1, minWidth: 0, pointerEvents: state.isAIThinking || isCustomEngineThinking ? 'none' : 'auto' }}>
                   {state.gameMode === 'vsAI' && isSimpleMode && (
                     <div style={{ marginBottom: '8px', background: 'rgba(245, 158, 11, 0.15)', border: '1px solid rgba(245, 158, 11, 0.45)', color: '#fbbf24', borderRadius: '8px', padding: '8px 10px', fontSize: '12px', fontWeight: 600 }}>
                       Engine unavailable - using fallback AI mode.
@@ -761,6 +869,7 @@ export default function GamePage() {
                 {/* Player Clock Display */}
                 {state.timeControl && (
                   <div
+                    className={(state.playerColor === 'w' ? (chess.turn() === 'w') : (chess.turn() === 'b')) && (state.playerColor === 'w' ? state.whiteTime : state.blackTime) < 10 ? 'clock-urgent' : ''}
                     style={{
                       fontSize: '18px',
                       fontWeight: 700,
@@ -838,7 +947,7 @@ export default function GamePage() {
                           <div>White</div>
                           <div>Black</div>
                         </div>
-                        <div style={{ flex: 1, overflowY: 'auto', maxHeight: '240px' }}>
+                        <div ref={desktopMoveListRef} style={{ flex: 1, overflowY: 'auto', maxHeight: '240px' }}>
                           {state.history.length === 0 ? (
                             <div style={{ padding: '24px 12px', color: '#555', textAlign: 'center', fontSize: '13px' }}>
                               No moves played yet.
@@ -919,8 +1028,8 @@ export default function GamePage() {
                       <button onClick={undoMove} style={historySubBtnStyle} aria-label="Undo move">
                         <Undo2 size={13} style={{ marginRight: '4px' }} /> Undo
                       </button>
-                      <button onClick={handleHint} style={historySubBtnStyle} aria-label="Show hint">
-                        💡 Hint
+                      <button onClick={handleHint} style={historySubBtnStyle} aria-label="Show hint" disabled={hintLoading}>
+                        {hintLoading ? <><Loader2 size={13} style={{ marginRight: '4px', animation: 'spin 1s linear infinite' }} /> Thinking...</> : '💡 Hint'}
                       </button>
                       <button onClick={handleFlip} style={historySubBtnStyle} aria-label="Flip board">
                         <RefreshCw size={13} style={{ marginRight: '4px' }} /> Flip
@@ -1050,6 +1159,7 @@ export default function GamePage() {
                     </button>
                     <button
                       onClick={handleHint}
+                      disabled={hintLoading}
                       style={{
                         flex: 1,
                         height: '42px',
@@ -1063,10 +1173,11 @@ export default function GamePage() {
                         gap: '6px',
                         fontSize: '13px',
                         fontWeight: 600,
-                        cursor: 'pointer',
+                        cursor: hintLoading ? 'wait' : 'pointer',
+                        opacity: hintLoading ? 0.6 : 1,
                       }}
                     >
-                      💡 Hint
+                      {hintLoading ? <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> ...</> : '💡 Hint'}
                     </button>
                     <button
                       onClick={handleFlip}
@@ -1136,6 +1247,7 @@ export default function GamePage() {
                       <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         {/* Move string notation container */}
                         <div
+                          ref={mobileMoveListRef}
                           style={{
                             maxHeight: '100px',
                             overflowY: 'auto',

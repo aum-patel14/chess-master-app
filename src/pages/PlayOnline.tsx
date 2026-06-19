@@ -7,7 +7,7 @@ import { useToast } from '../hooks/useToast';
 import { Cpu, Users, Copy, Share2, Play, X, Shield, Clock } from 'lucide-react';
 import { SignUpModal, LoginModal } from '../components/Modals';
 import PageShell from '../components/PageShell';
-import { supabase } from '../services/supabase';
+import { supabase, isDummyConfig } from '../services/supabase';
 
 const TIME_CONTROLS = {
   bullet: [
@@ -169,6 +169,24 @@ export default function PlayOnline() {
             <h1 style={lobbyTitle}>Online Arena</h1>
             <p style={lobbySubtitle}>Challenge players worldwide in real-time matches</p>
           </div>
+          {isDummyConfig && (
+            <div style={{
+              background: 'rgba(239, 68, 68, 0.15)',
+              border: '1px solid rgba(239, 68, 68, 0.45)',
+              color: '#f87171',
+              borderRadius: '8px',
+              padding: '12px 16px',
+              marginBottom: '20px',
+              textAlign: 'center',
+              fontSize: '14px',
+              fontWeight: 500,
+              lineHeight: 1.5,
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+            }}>
+              <strong style={{ color: '#fff', display: 'block', marginBottom: '4px' }}>⚠️ Database Connection Offline</strong>
+              Online Arena matchmaking, friend lobbies, and live Elo rating updates are disabled. Please configure your <code style={{ background: 'rgba(0,0,0,0.3)', padding: '2px 4px', borderRadius: '4px', color: '#fbbf24' }}>.env</code> file with valid Supabase credentials.
+            </div>
+          )}
           <div style={guestCardContainer}>
             <div style={guestIcon}>⚔️</div>
             <h2 style={guestTitle}>Create a free account to play online</h2>
@@ -194,6 +212,24 @@ export default function PlayOnline() {
           <h1 style={lobbyTitle}>Online Arena</h1>
           <p style={lobbySubtitle}>Choose your format and challenge the world</p>
         </div>
+        {isDummyConfig && (
+          <div style={{
+            background: 'rgba(239, 68, 68, 0.15)',
+            border: '1px solid rgba(239, 68, 68, 0.45)',
+            color: '#f87171',
+            borderRadius: '8px',
+            padding: '12px 16px',
+            marginBottom: '20px',
+            textAlign: 'center',
+            fontSize: '14px',
+            fontWeight: 500,
+            lineHeight: 1.5,
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+          }}>
+            <strong style={{ color: '#fff', display: 'block', marginBottom: '4px' }}>⚠️ Database Connection Offline</strong>
+            Online Arena matchmaking, friend lobbies, and live Elo rating updates are disabled. Please configure your <code style={{ background: 'rgba(0,0,0,0.3)', padding: '2px 4px', borderRadius: '4px', color: '#fbbf24' }}>.env</code> file with valid Supabase credentials.
+          </div>
+        )}
 
         {activeGameCode && (
           <div style={resumeBanner}>

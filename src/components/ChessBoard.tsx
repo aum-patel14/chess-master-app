@@ -326,7 +326,9 @@ export default function ChessBoard({
         
         // Compute background color overrides
         let sqBg = defaultBg;
-        if (isCheck) {
+        if (errorSquare === squareName) {
+          sqBg = 'rgba(239, 68, 68, 0.6)';
+        } else if (isCheck) {
           sqBg = '#FF6B6B';
         } else if (isSelected) {
           sqBg = '#7FC97F';
@@ -370,7 +372,7 @@ export default function ChessBoard({
               alignItems: 'center',
               justifyContent: 'center',
               cursor: readOnly ? 'default' : 'pointer',
-              transition: 'background-color 100ms ease',
+              transition: 'background-color 200ms ease',
             }}
           >
             {/* Highlight Overlay */}
