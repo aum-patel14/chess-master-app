@@ -10,33 +10,3 @@ body {
 a { color: #6bbd44; text-decoration: none }
 button { cursor: pointer; font-family: inherit }
 input, textarea { font-family: inherit }
-
-/* Clock urgency pulse animation when time < 10s */
-.clock-urgent {
-  animation: clockPulse 0.5s ease-in-out infinite;
-}
-
-@keyframes clockPulse {
-  0%, 100% { 
-    transform: scale(1);
-    box-shadow: 0 0 0 rgba(239, 68, 68, 0);
-  }
-  50% { 
-    transform: scale(1.05);
-    box-shadow: 0 0 12px rgba(239, 68, 68, 0.6);
-  }
-}
-
-/* Loading spinner animation */
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-/* Mobile viewport height fix */
-@supports (height: 100dvh) {
-  .game-mobile-viewport {
-    max-height: 100dvh;
-    overflow: hidden;
-  }
-}

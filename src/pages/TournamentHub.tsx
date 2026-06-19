@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Trophy, Calendar, Swords, Plus, Search, Filter, Clock, Users, ArrowRight, Lock, Award, Star } from 'lucide-react';
 import PageShell from '../components/PageShell';
-import supabase, { isDummyConfig } from '../services/supabase';
+import supabase from '../services/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../hooks/useToast';
 
@@ -127,24 +127,6 @@ export default function TournamentHub() {
             </button>
           )}
         </div>
-        {isDummyConfig && (
-          <div style={{
-            background: 'rgba(239, 68, 68, 0.15)',
-            border: '1px solid rgba(239, 68, 68, 0.45)',
-            color: '#f87171',
-            borderRadius: '8px',
-            padding: '12px 16px',
-            marginBottom: '20px',
-            textAlign: 'center',
-            fontSize: '14px',
-            fontWeight: 500,
-            lineHeight: 1.5,
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
-          }}>
-            <strong style={{ color: '#fff', display: 'block', marginBottom: '4px' }}>⚠️ Database Connection Offline</strong>
-            Swiss & Arena tournaments, automatic round generation, and standings updates are disabled. Please configure your <code style={{ background: 'rgba(0,0,0,0.3)', padding: '2px 4px', borderRadius: '4px', color: '#fbbf24' }}>.env</code> file with valid Supabase credentials.
-          </div>
-        )}
 
         {/* Filters and Search Dashboard */}
         <div style={styles.dashboardFilters}>

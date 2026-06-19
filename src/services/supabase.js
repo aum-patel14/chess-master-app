@@ -9,6 +9,5 @@ if (supabaseUrl === 'https://dummy-project.supabase.co') {
   );
 }
 
-export const isDummyConfig = supabaseUrl === 'https://dummy-project.supabase.co';
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 export default supabase;
