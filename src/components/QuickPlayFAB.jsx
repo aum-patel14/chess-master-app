@@ -27,7 +27,11 @@ export default function QuickPlayFAB() {
     setPulse(false)
     const difficulty = parseInt(localStorage.getItem('chess_difficulty') || '3', 10) || 3
     const color = localStorage.getItem('chess_playercolor') || 'w'
-    const tc = parseInt(localStorage.getItem('chess_timecontrol') || '600', 10)
+    let tc = { base: 10, increment: 0 }
+    try {
+      const saved = localStorage.getItem('chess_time')
+      if (saved) tc = JSON.parse(saved)
+    } catch (_) {}
     navigate('/game', { state: { mode: 'ai', difficulty, timeControl: tc, playerColor: color } })
   }
 

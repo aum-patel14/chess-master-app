@@ -57,6 +57,7 @@ import MultiplayerLobby from '../components/game/MultiplayerLobby';
 import { readElo, readStats, writeStats } from '../utils/chessStats';
 import { ArrowLeft, ArrowRight, ChevronsLeft, ChevronsRight, Flag, RefreshCw, Undo2, HelpCircle, Download, Share2 } from 'lucide-react';
 import AnalysisPanel from '../components/game/AnalysisPanel';
+import CapturedPieces from '../components/game/CapturedPieces';
 import { downloadPgn, generatePgnString } from '../utils/pgnExporter';
 import EvalBar from '../components/chesscom/EvalBar';
 import EngineDifficultyBar from '../components/chesscom/EngineDifficultyBar';
@@ -75,13 +76,15 @@ const TIME_OPTIONS = [
 ];
 
 const PIECE_VALUES: Record<string, number> = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
-const CAPTURED_SYMBOLS: Record<string, string> = {
-  p: '♟', n: '♞', b: '♝', r: '♜', q: '♛',
-  P: '♟', N: '♞', B: '♝', R: '♜', Q: '♛'
+
+const normalizeColor = (color: any, fallback: 'w' | 'b' = 'w'): 'w' | 'b' => {
+  if (color === 'white') return 'w';
+  if (color === 'black') return 'b';
+  return color === 'w' || color === 'b' ? color : fallback;
 };
 
 export default function GamePage() {
-  const { state, dispatch, resign, undoMove, startNewGame, applyMove } = useGame();
+  const { state, dispatch, resign, undoMove, startNewGame, applyMove, isSimpleMode } = useGame();
   const { isThinking: isStockfishThinking, getBestMove } = useStockfish();
   const { showToast } = useToast();
   const location = useLocation();
@@ -127,7 +130,7 @@ export default function GamePage() {
               // Set active game locally
               localStorage.setItem('active_online_game', JSON.stringify({
                 roomCode: game.room_code,
-                color: isWhite ? 'white' : 'black',
+                color: isWhite ? 'w' : 'b',
                 opponentName,
                 opponentRating,
                 timeControl: timeControlSecs
@@ -137,7 +140,7 @@ export default function GamePage() {
                 type: 'RESTORE_ONLINE_GAME',
                 payload: {
                   roomCode: game.room_code,
-                  color: isWhite ? 'white' : 'black',
+                  color: isWhite ? 'w' : 'b',
                   opponentName,
                   opponentRating,
                   fen: game.current_fen,
@@ -192,7 +195,7 @@ export default function GamePage() {
           type: 'LOAD_ANALYSIS_GAME',
           payload: {
             history: moves,
-            color: location.state.playerColor || 'w',
+            color: normalizeColor(location.state.playerColor),
             opponentName: location.state.opponentName || 'Opponent',
             opponentRating: location.state.opponentRating || 1200
           }
@@ -281,14 +284,14 @@ export default function GamePage() {
     if (resume) {
       setIsPlaying(true);
       setGameState('playing');
-    } else if (paramMode === 'ai' && paramDiff && paramBotId) {
-      const activeBot = BOTS.find(b => b.id === paramBotId) || BOTS[0];
+    } else if (paramMode === 'ai' && (paramDiff || paramBotId)) {
+      const activeBot = BOTS.find(b => b.id === paramBotId) || BOTS.find(b => b.id === localStorage.getItem('chess_bot_id')) || BOTS[0];
       setSelectedBot(activeBot);
       const tc = paramTimeControl ? paramTimeControl : { base: 10, increment: 0 };
       startNewGame({
         mode: 'vsAI',
-        playerColor: paramColor,
-        difficulty: (activeBot.id === 'rookie' ? 1 : activeBot.id === 'beginner' ? 2 : activeBot.id === 'casual' ? 3 : activeBot.id === 'club' ? 5 : activeBot.id === 'intermediate' ? 6 : activeBot.id === 'advanced' ? 8 : activeBot.id === 'expert' ? 9 : 10),
+        playerColor: normalizeColor(paramColor),
+        difficulty: Math.max(1, Math.min(5, Math.round((Number(activeBot.skillLevel) || 3) / 3))),
         botId: activeBot.id,
         timeControl: tc.base > 0 ? tc : null,
       });
@@ -503,17 +506,7 @@ export default function GamePage() {
           show={true}
           onBotSelected={(bot, color, timeControl) => {
             setSelectedBot(bot);
-            const mapping: Record<string, number> = {
-              rookie: 1,
-              beginner: 2,
-              casual: 3,
-              club: 5,
-              intermediate: 6,
-              advanced: 8,
-              expert: 9,
-              master: 10,
-            };
-            const diff = mapping[bot.id] || 3;
+            const diff = Math.max(1, Math.min(5, Math.round((Number(bot.skillLevel) || 3) / 3)));
             
             startNewGame({
               mode: 'vsAI',
@@ -532,6 +525,8 @@ export default function GamePage() {
 
   // Active playing view matching Chess.com Clean Mobile UI
   const activeBot = BOTS.find(b => b.id === state.aiBotId) || BOTS[0];
+  const playerPieceIcon = state.playerColor === 'w' ? '♙' : '♟';
+  const opponentPieceIcon = state.playerColor === 'w' ? '♟' : '♙';
   const isOpponentTurn = state.playerColor === 'w' ? (chess.turn() === 'b') : (chess.turn() === 'w'); // simplified ticking
 
   return (
@@ -632,7 +627,7 @@ export default function GamePage() {
                       border: '2px solid #555',
                     }}
                   >
-                    {state.gameMode === 'vsAI' ? activeBot.avatarInitials : '👤'}
+                    {state.gameMode === 'vsAI' ? opponentPieceIcon : '👤'}
                   </div>
                   <div>
                     {/* Bot name & ELO */}
@@ -655,11 +650,10 @@ export default function GamePage() {
                     )}
                     {/* Captured pieces + material diff */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
-                      <span style={{ fontSize: '13px', color: '#ffffff', letterSpacing: '1px' }}>
-                        {opponentCaptures.map((p: any, idx: number) => (
-                          <span key={idx} style={{ color: '#ffffff' }}>{CAPTURED_SYMBOLS[typeof p === 'string' ? p : p.type]}</span>
-                        ))}
-                      </span>
+                      <CapturedPieces
+                        pieces={opponentCaptures}
+                        color={state.playerColor === 'w' ? 'b' : 'w'}
+                      />
                       {advantageStats.oppAdv > 0 && (
                         <span style={{ fontSize: '11px', color: '#aaaaaa', fontWeight: 700, marginLeft: '2px' }}>
                           +{advantageStats.oppAdv}
@@ -697,6 +691,11 @@ export default function GamePage() {
                   <EvalBar fen={state.reviewFen || state.fen} flipped={state.boardFlipped} refreshKey={state.evalTick} />
                 )}
                 <div style={{ flex: 1, minWidth: 0, pointerEvents: state.isAIThinking || isStockfishThinking ? 'none' : 'auto' }}>
+                  {state.gameMode === 'vsAI' && isSimpleMode && (
+                    <div style={{ marginBottom: '8px', background: 'rgba(245, 158, 11, 0.15)', border: '1px solid rgba(245, 158, 11, 0.45)', color: '#fbbf24', borderRadius: '8px', padding: '8px 10px', fontSize: '12px', fontWeight: 600 }}>
+                      Engine unavailable - using fallback AI mode.
+                    </div>
+                  )}
                   <ChessBoard
                     currentReviewIndex={reviewIndex}
                     analysisResults={analysisResults}
@@ -737,7 +736,7 @@ export default function GamePage() {
                       border: '2px solid #6bbd44',
                     }}
                   >
-                    ♟
+                    {state.gameMode === 'vsAI' ? playerPieceIcon : '♟'}
                   </div>
                   <div>
                     {/* User name & ELO */}
@@ -749,11 +748,7 @@ export default function GamePage() {
                     </div>
                     {/* Captured pieces + material diff */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
-                      <span style={{ fontSize: '13px', color: '#111111', letterSpacing: '1px' }}>
-                        {playerCaptures.map((p: any, idx: number) => (
-                          <span key={idx} style={{ color: '#111111' }}>{CAPTURED_SYMBOLS[typeof p === 'string' ? p : p.type]}</span>
-                        ))}
-                      </span>
+                      <CapturedPieces pieces={playerCaptures} color={state.playerColor === 'w' ? 'w' : 'b'} />
                       {advantageStats.playerAdv > 0 && (
                         <span style={{ fontSize: '11px', color: '#aaaaaa', fontWeight: 700, marginLeft: '2px' }}>
                           +{advantageStats.playerAdv}
@@ -921,13 +916,13 @@ export default function GamePage() {
 
                     {/* Primary Game Action Row */}
                     <div style={{ display: 'flex', gap: '8px', margin: '20px 0 12px 0' }}>
-                      <button onClick={undoMove} style={historySubBtnStyle}>
+                      <button onClick={undoMove} style={historySubBtnStyle} aria-label="Undo move">
                         <Undo2 size={13} style={{ marginRight: '4px' }} /> Undo
                       </button>
-                      <button onClick={handleHint} style={historySubBtnStyle}>
+                      <button onClick={handleHint} style={historySubBtnStyle} aria-label="Show hint">
                         💡 Hint
                       </button>
-                      <button onClick={handleFlip} style={historySubBtnStyle}>
+                      <button onClick={handleFlip} style={historySubBtnStyle} aria-label="Flip board">
                         <RefreshCw size={13} style={{ marginRight: '4px' }} /> Flip
                       </button>
                     </div>
@@ -1261,7 +1256,7 @@ export default function GamePage() {
 
         {/* GameOver results modal popup dialog */}
         {state.status.type !== 'playing' && state.status.type !== 'check' && (
-          <GameOverDialog />
+          <GameOverDialog onAnalyze={() => setShowAnalysis(true)} />
         )}
       </div>
     </PageShell>

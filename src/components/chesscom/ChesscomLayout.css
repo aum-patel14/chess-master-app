@@ -748,3 +748,60 @@
   margin-bottom: -4px;
 }
 
+/* Second-Level Sub-Flyout Styles */
+.cc-sub-flyout {
+  position: absolute;
+  left: 100%;
+  top: -8px; /* Slightly offset upwards to overlap the parent border nicely */
+  padding-left: 6px;
+  z-index: 310;
+  animation: ccFlyoutIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cc-sub-flyout .cc-flyout-inner::before {
+  left: 0;
+  top: 25px; /* Aligned near the top of the sub-menu */
+  bottom: auto;
+  transform: rotate(45deg);
+}
+
+/* Subsection button style in first-level flyout */
+.cc-flyout-subsection-btn {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 16px;
+  background: transparent;
+  border: none;
+  color: var(--cc-text3);
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: all 150ms ease;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.cc-flyout-subsection-btn:hover,
+.cc-flyout-subsection-btn.active {
+  background: rgba(212, 175, 55, 0.08); /* Subtle gold tint on active sub-section */
+  color: #fff;
+}
+
+.cc-flyout-subsection-btn:hover .cc-flyout-label,
+.cc-flyout-subsection-btn.active .cc-flyout-label {
+  color: #d4af2f; /* Highlights subsection label to gold */
+}
+
+.cc-flyout-arrow {
+  color: #d4af2f;
+  font-weight: 700;
+  transition: transform 150ms ease;
+}
+
+.cc-flyout-subsection-btn:hover .cc-flyout-arrow,
+.cc-flyout-subsection-btn.active .cc-flyout-arrow {
+  transform: translateX(2px);
+}
+

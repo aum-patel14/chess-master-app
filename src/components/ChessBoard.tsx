@@ -74,6 +74,8 @@ export default function ChessBoard({
   const board = chess.board();
   const pieces = usePiecePositions(effectiveFen);
   
+  // Default orientation should match selected player color:
+  // white player -> white at bottom, black player -> black at bottom.
   const isFlipped = (playerColor === 'b') !== !!boardFlipped;
 
   const localBoardRef = useRef<HTMLDivElement>(null);
@@ -140,7 +142,7 @@ export default function ChessBoard({
     const fileIdx = FILES.indexOf(file);
     const rankIdx = RANKS.indexOf(rank);
     const x = isFlipped ? 7 - fileIdx : fileIdx;
-    const y = isFlipped ? rankIdx : 7 - rankIdx; // White at bottom (row 7 is top index 0 in ranks)
+    const y = isFlipped ? 7 - rankIdx : rankIdx;
     return { left: `${x * 12.5}%`, top: `${y * 12.5}%` };
   };
 
@@ -263,10 +265,9 @@ export default function ChessBoard({
   // Generate coordinate array of squares following correct visual representation
   const renderedSquares = useMemo(() => {
     const arr = [];
-    // Correct loop (White at bottom: row 7 to 0)
-    for (let row = 7; row >= 0; row--) {
+    // chess.board() is indexed from rank 8 to rank 1.
+    for (let row = 0; row < 8; row++) {
       for (let col = 0; col < 8; col++) {
-        // Correct rank label (8 at top, 1 at bottom)
         const rankLabel = 8 - row;
         const fileLabel = String.fromCharCode(97 + col);
         const squareName = `${fileLabel}${rankLabel}`;
@@ -342,10 +343,10 @@ export default function ChessBoard({
         // Left edge: col === 0 (when not flipped) or col === 7 (when flipped)
         const coordsOn = showCoords !== false;
         const showRank = coordsOn && (col === (isFlipped ? 7 : 0));
-        const showFile = coordsOn && (row === (isFlipped ? 7 : 0));
+        const showFile = coordsOn && (row === (isFlipped ? 0 : 7));
 
         // Placement indices in CSS Grid (invert if flipped)
-        const gridRow = isFlipped ? row + 1 : 8 - row;
+        const gridRow = isFlipped ? 8 - row : row + 1;
         const gridCol = isFlipped ? 8 - col : col + 1;
 
         return (

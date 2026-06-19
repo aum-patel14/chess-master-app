@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Trophy, Clock, Target, Calendar, Activity, ChevronRight } from 'lucide-react';
-import { DEMO_GAMES } from '../data/demoData';
 import PageShell from '../components/PageShell';
+import { getHistory } from '../utils/gameHistory';
+import { readElo } from '../utils/chessStats';
 import './GameHistoryPage.css';
 
 export default function GameHistoryPage() {
   const { userData } = useAuth();
   const [filter, setFilter] = useState('All');
+  const games = getHistory();
 
-  const filteredGames = DEMO_GAMES.filter(game => {
+  const filteredGames = games.filter(game => {
     if (filter === 'All') return true;
     if (filter === 'Wins') return game.result === 'win';
     if (filter === 'Losses') return game.result === 'loss';
@@ -31,11 +33,11 @@ export default function GameHistoryPage() {
             <div className="profile-stats">
               <div className="stat-badge">
                 <Trophy size={16} color="var(--gold)" />
-                <span>{userData?.rating || 1200} Elo</span>
+                <span>{readElo()} Elo</span>
               </div>
               <div className="stat-badge">
                 <Activity size={16} color="#0ea5e9" />
-                <span>{DEMO_GAMES.length} Games Played</span>
+                <span>{games.length} Games Played</span>
               </div>
             </div>
           </div>
@@ -89,12 +91,12 @@ export default function GameHistoryPage() {
                       <div style={{ flex: 1 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                           <span className={`result-badge ${resultClass}`}>{resultText}</span>
-                          <span style={{ fontWeight: 700, fontSize: '16px' }}>vs {game.opponent?.name}</span>
+                          <span style={{ fontWeight: 700, fontSize: '16px' }}>vs {game.opponent || 'AI'}</span>
                         </div>
                         <div style={{ fontSize: '14px', color: '#94a3b8', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                          <span>{game.opening}</span>
+                          <span>{game.difficulty ? `Difficulty ${game.difficulty}` : 'Standard Game'}</span>
                           <span>•</span>
-                          <span>{game.accuracy?.me}% Accuracy</span>
+                          <span>{game.playerColor === 'w' ? 'White' : game.playerColor === 'b' ? 'Black' : 'Random'} pieces</span>
                         </div>
                       </div>
                     </div>
@@ -103,11 +105,11 @@ export default function GameHistoryPage() {
                       <div className="game-meta" style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-end' }}>
                         <div className="meta-item" style={{ fontSize: '14px', color: '#e8e8e8' }}>
                           <Calendar size={14} style={{ marginRight: '4px', opacity: 0.7 }} />
-                          {game.date}
+                          {game.date || '-'}
                         </div>
                         <div className="meta-item" style={{ fontSize: '12px', color: '#94a3b8' }}>
                           <Clock size={12} style={{ marginRight: '4px' }} />
-                          {game.moves} moves ({game.duration})
+                          {game.moves || 0} moves ({game.duration || 0}s)
                         </div>
                       </div>
                     </div>

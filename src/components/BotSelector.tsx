@@ -1,137 +1,214 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { BOTS, BotConfig } from '../config/bots';
-import { Crown, User, X, Clock } from 'lucide-react';
+import { X, Crown, Clock } from 'lucide-react';
 import './BotSelector.css';
 
 interface BotSelectorProps {
   show: boolean;
   onClose?: () => void;
-  onBotSelected: (bot: BotConfig, playerColor: 'white' | 'black', timeControl: { base: number, increment: number } | null) => void;
+  onBotSelected: (bot: BotConfig, playerColor: 'white' | 'black', timeControl: { base: number; increment: number } | null) => void;
 }
 
-const TIME_OPTIONS = [
-  { base: 1, increment: 0, label: '1 min' },
-  { base: 3, increment: 0, label: '3 min' },
-  { base: 5, increment: 0, label: '5 min' },
-  { base: 10, increment: 0, label: '10 min' },
-  { base: 0, increment: 0, label: 'Unlimited' },
+const TIME_OPTIONS: { base: number; increment: number; label: string }[] = [
+  { base: 1, increment: 0, label: '1m' },
+  { base: 3, increment: 0, label: '3m' },
+  { base: 5, increment: 0, label: '5m' },
+  { base: 10, increment: 0, label: '10m' },
+  { base: 0, increment: 0, label: '∞' },
 ];
 
+type BotCategory = 'beginner' | 'intermediate' | 'advanced' | 'master';
+
+const CATEGORY_LABELS: Record<BotCategory, string> = {
+  beginner: 'Beginner',
+  intermediate: 'Intermediate',
+  advanced: 'Advanced',
+  master: 'Master',
+};
+
 export const BotSelector: React.FC<BotSelectorProps> = ({ show, onClose, onBotSelected }) => {
+  const [activeCategory, setActiveCategory] = useState<BotCategory>('beginner');
   const [selectedBot, setSelectedBot] = useState<BotConfig | null>(null);
   const [playerColor, setPlayerColor] = useState<'white' | 'black'>('white');
-  const [timeControl, setTimeControl] = useState<{ base: number, increment: number }>(TIME_OPTIONS[3]);
+  const [timeControl, setTimeControl] = useState<{ base: number; increment: number } | null>(TIME_OPTIONS[3]);
 
-  // Load last selected bot from localStorage
+  // Restore last selected bot
   useEffect(() => {
-    const lastBotId = localStorage.getItem('chessmaster_lastBot');
+    if (!show) return;
+    const lastBotId = typeof window !== 'undefined' ? localStorage.getItem('chessmaster_lastBot') : null;
     if (lastBotId) {
-      const bot = BOTS.find((b) => b.id === lastBotId);
-      if (bot) setSelectedBot(bot);
+      const found = BOTS.find((b) => b.id === lastBotId);
+      if (found) {
+        setSelectedBot(found);
+        setActiveCategory(found.category);
+        return;
+      }
     }
-  }, []);
+    // default to first bot in beginner
+    const first = BOTS[0];
+    if (first) {
+      setSelectedBot(first);
+      setActiveCategory(first.category);
+    }
+  }, [show]);
+
+  const filteredBots = useMemo(
+    () => BOTS.filter((b) => b.category === activeCategory),
+    [activeCategory],
+  );
 
   if (!show) return null;
 
-  const handleStartGame = () => {
-    if (selectedBot) {
-      // Remember selected bot
+  const handleStart = () => {
+    if (!selectedBot) return;
+    if (typeof window !== 'undefined') {
       localStorage.setItem('chessmaster_lastBot', selectedBot.id);
-      onBotSelected(selectedBot, playerColor, timeControl.base > 0 ? timeControl : null);
     }
+    onBotSelected(selectedBot, playerColor, timeControl && timeControl.base > 0 ? timeControl : null);
   };
+
+  const selectedTimeBase = timeControl ? timeControl.base : 0;
 
   return (
     <div className="bot-selector-overlay">
-      <div className="bot-selector-container">
-        {onClose && (
-          <button className="bot-selector-close" onClick={onClose} aria-label="Close">
-            <X size={20} />
-          </button>
-        )}
-
+      <div className="bot-selector-modal">
         <div className="bot-selector-header">
-          <div className="bot-selector-title-wrap">
-            <Crown className="bot-title-icon" />
-            <h2 className="bot-selector-title font-cinzel">Select AI Opponent</h2>
-          </div>
-          <p className="bot-selector-subtitle">
-            Challenge one of our 8 custom engine bot personalities, rated from 400 to 2400+ ELO.
-          </p>
-        </div>
-
-        <div className="bot-selector-grid">
-          {BOTS.map((bot) => {
-            const isSelected = selectedBot?.id === bot.id;
-            return (
-              <div
-                key={bot.id}
-                className={`bot-card-new ${isSelected ? 'selected' : ''}`}
-                onClick={() => setSelectedBot(bot)}
-              >
-                <div className={`bot-avatar-circle ${bot.colorClass}`}>
-                  {bot.avatarInitials}
-                </div>
-                <div className="bot-card-info">
-                  <div className="bot-card-header">
-                    <span className="bot-card-name font-cinzel">{bot.name}</span>
-                    <span className="bot-card-elo">{bot.elo} ELO</span>
-                  </div>
-                  <p className="bot-card-desc">{bot.description}</p>
-                </div>
+          <div className="bot-selector-title-row">
+            <div className="bot-selector-title-left">
+              <Crown className="bot-selector-title-icon" />
+              <div>
+                <h2 className="bot-selector-title">Play Bots</h2>
+                <p className="bot-selector-subtitle">Challenge themed engine opponents with unique styles and personalities.</p>
               </div>
-            );
-          })}
+            </div>
+            {onClose && (
+              <button className="bot-selector-close-btn" onClick={onClose} aria-label="Close bot selector">
+                <X size={18} />
+              </button>
+            )}
+          </div>
+
+          <div className="bot-category-tabs">
+            {(Object.keys(CATEGORY_LABELS) as BotCategory[]).map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                className={`bot-category-tab ${activeCategory === cat ? 'active' : ''}`}
+                onClick={() => setActiveCategory(cat)}
+              >
+                {CATEGORY_LABELS[cat]}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div className="bot-selector-controls">
-          <div className="color-toggle-container">
-            <span className="control-label font-cinzel">Play As</span>
-            <div className="color-toggle-buttons">
-              <button
-                type="button"
-                className={`color-btn white ${playerColor === 'white' ? 'active' : ''}`}
-                onClick={() => setPlayerColor('white')}
-              >
-                <span className="piece-symbol">♙</span> White
-              </button>
-              <button
-                type="button"
-                className={`color-btn black ${playerColor === 'black' ? 'active' : ''}`}
-                onClick={() => setPlayerColor('black')}
-              >
-                <span className="piece-symbol">♟</span> Black
-              </button>
-            </div>
+        <div className="bot-selector-body">
+          <div className="bot-list" aria-label="Bot list">
+            {filteredBots.map((bot) => {
+              const isSelected = selectedBot?.id === bot.id;
+              return (
+                <button
+                  key={bot.id}
+                  type="button"
+                  className={`bot-list-item ${isSelected ? 'selected' : ''}`}
+                  onClick={() => setSelectedBot(bot)}
+                >
+                  <div className={`bot-list-avatar ${bot.avatarColor}`}>
+                    <span>{bot.avatarEmoji}</span>
+                  </div>
+                  <div className="bot-list-meta">
+                    <div className="bot-list-name-row">
+                      <span className="bot-list-name">{bot.name}</span>
+                      <span className="bot-list-elo">{bot.elo} ELO</span>
+                    </div>
+                    <div className="bot-list-subrow">
+                      <span className="bot-list-category">{CATEGORY_LABELS[bot.category]}</span>
+                      <span className="bot-list-style">{bot.style}</span>
+                    </div>
+                  </div>
+                  <span className="bot-list-chevron">›</span>
+                </button>
+              );
+            })}
           </div>
 
-          <div className="time-toggle-container">
-            <span className="control-label font-cinzel"><Clock size={16} style={{display: 'inline', verticalAlign: 'sub', marginRight: '4px'}}/>Time Control</span>
-            <div className="time-toggle-buttons">
-              <select 
-                className="time-select" 
-                value={timeControl.base} 
-                onChange={(e) => {
-                  const val = parseInt(e.target.value, 10);
-                  const option = TIME_OPTIONS.find(t => t.base === val) || TIME_OPTIONS[3];
-                  setTimeControl(option);
-                }}
-              >
-                {TIME_OPTIONS.map(opt => (
-                  <option key={opt.base} value={opt.base}>{opt.label}</option>
-                ))}
-              </select>
-            </div>
-          </div>
+          <div className="bot-preview">
+            {selectedBot ? (
+              <>
+                <div className="bot-preview-top">
+                  <div className={`bot-preview-avatar ${selectedBot.avatarColor}`}>
+                    <span>{selectedBot.avatarEmoji}</span>
+                  </div>
+                  <div className="bot-preview-header">
+                    <h3 className="bot-preview-name">{selectedBot.name}</h3>
+                    <div className="bot-preview-badges">
+                      <span className="bot-preview-badge bot-preview-elo-badge">
+                        {selectedBot.elo} ELO
+                      </span>
+                      <span className="bot-preview-badge bot-preview-style-badge">
+                        {selectedBot.style}
+                      </span>
+                    </div>
+                  </div>
+                </div>
 
-          <button
-            type="button"
-            className="start-game-btn font-cinzel"
-            disabled={!selectedBot}
-            onClick={handleStartGame}
-          >
-            Start Game
-          </button>
+                <p className="bot-preview-quote">“{selectedBot.quote}”</p>
+                <p className="bot-preview-description">{selectedBot.description}</p>
+
+                <div className="bot-preview-section-label">Play As</div>
+                <div className="color-toggle">
+                  <button
+                    type="button"
+                    className={`color-toggle-btn ${playerColor === 'white' ? 'active' : ''}`}
+                    onClick={() => setPlayerColor('white')}
+                  >
+                    <span className="color-toggle-piece">♙</span>
+                    White
+                  </button>
+                  <button
+                    type="button"
+                    className={`color-toggle-btn ${playerColor === 'black' ? 'active' : ''}`}
+                    onClick={() => setPlayerColor('black')}
+                  >
+                    <span className="color-toggle-piece">♟</span>
+                    Black
+                  </button>
+                </div>
+
+                <div className="bot-preview-section-label">
+                  <Clock size={14} className="time-label-icon" />
+                  Time
+                </div>
+                <div className="time-pills">
+                  {TIME_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.label}
+                      type="button"
+                      className={`time-pill ${selectedTimeBase === opt.base ? 'active' : ''}`}
+                      onClick={() => setTimeControl(opt)}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="play-controls">
+                  <button
+                    type="button"
+                    className="play-button"
+                    disabled={!selectedBot}
+                    onClick={handleStart}
+                  >
+                    ▶ Play Now
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="bot-preview-empty">
+                <p>Select a bot on the left to see their style and personality.</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

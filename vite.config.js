@@ -1,10 +1,14 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import { fileURLToPath } from 'node:url'
+import { dirname, resolve } from 'node:path'
 
 const basePath = '/chess-master-app/';
+const rootDir = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
+  root: rootDir,
   base: basePath,
   plugins: [
     react(),
@@ -37,7 +41,7 @@ export default defineConfig({
     })
   ],
   build: {
-    outDir: 'dist',
+    outDir: resolve(rootDir, 'dist'),
     assetsDir: 'assets',
     sourcemap: false
   },

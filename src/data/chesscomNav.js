@@ -3,80 +3,74 @@ export const CHESSCOM_NAV = [
     id: 'play',
     icon: '🎮',
     label: 'Play',
-    path: '/game',
+    path: '/play',
     items: [
-      { icon: '🌐', label: 'Play Online', desc: 'Real-time multiplayer games', path: '/play/online' },
-      { icon: '🤖', label: 'Play Bots', desc: 'Challenge customized AI levels', path: '/game', state: { mode: 'ai' } },
-      { icon: '👨‍🏫', label: 'Play Coach', desc: 'Solve positions with feedback', path: '/game', soon: true, separatorAfter: true },
-      { icon: '📊', label: 'Stats', desc: 'Track your rating progression', path: '/stats' },
-      { icon: '🏆', label: 'Tournaments', desc: 'Swiss & Arena championships', path: '/tournaments' },
-      { icon: '♟️', label: 'Variants', desc: 'Chess960, King of Hill & more', path: '/game', soon: true },
-      { icon: '📜', label: 'Game History', desc: 'Browse and analyze your archives', path: '/history' },
-    ],
-  },
-  {
-    id: 'puzzles',
-    icon: '🧩',
-    label: 'Puzzles',
-    path: '/puzzles',
-    items: [
-      { icon: '🧩', label: 'Puzzles', desc: 'Solve tactics of all levels', path: '/puzzles' },
-      { icon: '📅', label: 'Daily Puzzle', desc: 'Solve the daily board challenge', path: '/puzzles' },
-      { icon: '⚡', label: 'Puzzle Rush', desc: 'Race the clock under pressure', path: '/puzzles', soon: true },
-      { icon: '⚔️', label: 'Puzzle Battle', desc: 'Head-to-head speed puzzle race', path: '/puzzles', soon: true },
-      { icon: '🎯', label: 'Custom Puzzles', desc: 'Target specific tactical motifs', path: '/puzzles', soon: true },
-    ],
-  },
-  {
-    id: 'learn',
-    icon: '🎓',
-    label: 'Learn',
-    path: '/learn',
-    items: [
-      { icon: '📖', label: 'Lessons', desc: 'Interactive chess video courses', path: '/learn' },
-      { icon: '👨‍🏫', label: 'Play Coach', desc: 'AI-guided move evaluation', path: '/learn', soon: true },
-      { icon: '📚', label: 'Openings', desc: 'Explore lines and main theory', path: '/learn' },
-    ],
-  },
-  {
-    id: 'train',
-    icon: '🏋️',
-    label: 'Train',
-    path: '/train',
-    items: [
-      { icon: '📘', label: 'Courses', desc: 'Deep dive masterclasses', path: '/train', soon: true },
-      { icon: '🔍', label: 'Analysis', desc: 'Review with cloud engine', path: '/game', soon: true },
-      { icon: '💡', label: 'Insights', desc: 'Track mistakes and strengths', path: '/stats' },
-      { icon: '🏫', label: 'Classroom', desc: 'Interactive classroom study', path: '/train', soon: true },
-      { icon: '♜', label: 'Endgames', desc: 'Master key mating patterns', path: '/learn' },
-      { icon: '🎯', label: 'Practice', desc: 'Train custom positions', path: '/puzzles' },
-      { icon: '🤖', label: 'Aimchess', desc: 'Daily custom training report', path: '/train', soon: true },
-    ],
-  },
-  {
-    id: 'watch',
-    icon: '📺',
-    label: 'Watch',
-    path: '/watch',
-    items: [
-      { icon: '🔴', label: 'Live Games', desc: 'Spectate ongoing master matches', path: '/watch' },
-      { icon: '🎬', label: 'Videos', desc: 'Instructional library content', path: '/watch', soon: true },
-      { icon: '📡', label: 'Streamers', desc: 'Watch your favorite creators', path: '/watch', soon: true },
-      { icon: '🏆', label: 'Championships', desc: 'Official tournaments coverage', path: '/tournaments' },
-    ],
-  },
-  {
-    id: 'community',
-    icon: '👥',
-    label: 'Community',
-    path: '/community',
-    items: [
-      { icon: '👤', label: 'Players', desc: 'Search and find community members', path: '/leaderboard' },
-      { icon: '🏛️', label: 'Clubs', desc: 'Join groups and custom events', path: '/community', soon: true },
-      { icon: '💬', label: 'Forum', desc: 'Discuss strategy and chess topics', path: '/community', soon: true },
-      { icon: '📰', label: 'News', desc: 'Latest chess news and reports', path: '/community', soon: true },
-      { icon: '📅', label: 'Events', desc: 'Find local & global competitions', path: '/tournaments' },
-      { icon: '🏅', label: 'Leaderboard', desc: 'Compare rankings against the best', path: '/leaderboard' },
+      {
+        icon: '🌐',
+        label: 'Play Online',
+        desc: 'Real-time multiplayer games',
+        path: '/play',
+        isSubSection: true,
+        subSectionId: 'play-online',
+        items: [
+          { icon: '🌐', label: 'Play Live', desc: 'Real-time multiplayer matchmaking', path: '/play' },
+          { icon: '🏆', label: 'Tournaments', desc: 'Join arena and chess events', path: '/tournaments' },
+          { icon: '👥', label: 'Play a Friend', desc: 'Invite friends to a match', path: '/play' }
+        ]
+      },
+      {
+        icon: '🤖',
+        label: 'Play Bots',
+        desc: 'Challenge customized AI levels',
+        path: '/game',
+        state: { mode: 'ai' },
+        isSubSection: true,
+        subSectionId: 'play-bots',
+        items: [
+          { icon: '🤖', label: 'Bot Selector', desc: 'Choose from adaptive AI levels', path: '/game', state: { mode: 'ai' } },
+          { icon: '🔥', label: 'Custom Match', desc: 'Customize bot configuration', path: '/game', state: { mode: 'ai' } },
+          { icon: '🧠', label: 'Engine Practice', desc: 'Train with Stockfish engine', path: '/game', state: { mode: 'ai' } }
+        ]
+      },
+      {
+        icon: '🧩',
+        label: 'Puzzles',
+        desc: 'Solve tactics, rushes & streaks',
+        path: '/puzzles',
+        isSubSection: true,
+        subSectionId: 'puzzles',
+        items: [
+          { icon: '🧩', label: 'Puzzles Hub', desc: 'Solve tactics of all levels', path: '/puzzles' },
+          { icon: '📅', label: 'Daily Challenge', desc: 'Solve the daily board challenge', path: '/puzzles/daily' },
+          { icon: '🔥', label: 'Puzzle Streak', desc: 'Endless tactics solver', path: '/puzzles/streak' },
+          { icon: '⚡', label: 'Puzzle Rush', desc: 'Race the clock under pressure', path: '/puzzles', soon: true },
+        ]
+      },
+      {
+        icon: '🎓',
+        label: 'Learn',
+        desc: 'Lessons, openings & endgames',
+        path: '/learn',
+        isSubSection: true,
+        subSectionId: 'learn',
+        items: [
+          { icon: '📖', label: 'Lessons Hub', desc: 'Interactive chess video courses', path: '/learn' },
+          { icon: '📚', label: 'Openings Explorer', desc: 'Explore lines and main theory', path: '/learn' },
+          { icon: '♜', label: 'Endgames', desc: 'Master key mating patterns', path: '/learn' },
+        ]
+      },
+      {
+        icon: '📺',
+        label: 'Watch',
+        desc: 'Watch live games & events',
+        path: '/watch',
+        isSubSection: true,
+        subSectionId: 'watch',
+        items: [
+          { icon: '🔴', label: 'Live Games', desc: 'Spectate ongoing master matches', path: '/watch' },
+          { icon: '🏆', label: 'Championships', desc: 'Official tournaments coverage', path: '/tournaments' },
+        ]
+      }
     ],
   },
   {
@@ -85,20 +79,58 @@ export const CHESSCOM_NAV = [
     label: 'Other',
     path: '/other',
     items: [
-      { icon: '📁', label: 'Collections', desc: 'Save and group games databases', path: '/other', soon: true },
-      { icon: '🗄️', label: 'Games Database', desc: 'Millions of master game entries', path: '/history' },
-      { icon: '📖', label: 'Chess Terms', desc: 'Look up chess terminology definitions', path: '/other' },
-      { icon: '📋', label: 'Rules', desc: 'Official chess regulations handbook', path: '/other' },
-      { icon: '🔎', label: 'Explorer', desc: 'Interactive move stats tree', path: '/other', soon: true },
-      { icon: '🗳️', label: 'Vote Chess', desc: 'Play in team-coordinated games', path: '/other', soon: true },
-      { icon: '♟️', label: 'Solo Chess', desc: 'Solve logic capture puzzles', path: '/puzzles', soon: true },
-      { icon: '💻', label: 'Computer Championship', desc: 'Watch engines battle it out', path: '/tournaments', soon: true },
-      { icon: '🧒', label: 'ChessKid', desc: 'Chess environment for kids', path: '/other', soon: true },
-      { icon: '🛠️', label: 'Tools', desc: 'Generate FEN diagrams and setups', path: '/other' },
-      { icon: '👁️', label: 'Vision', desc: 'Train grid coordinates reflexes', path: '/puzzles', soon: true },
-      { icon: '🛍️', label: 'Shop/Merch', desc: 'Get chess boards and pieces designs', path: '/shop' },
-      { icon: '🎁', label: 'Gift', desc: 'Gift premium access to friends', path: '/shop', soon: true },
-      { icon: '🧮', label: 'Calculator', desc: 'Compute tournament ELO variations', path: '/other', soon: true },
+      {
+        icon: '👥',
+        label: 'Community',
+        desc: 'Players, clubs & leaderboards',
+        path: '/leaderboard',
+        isSubSection: true,
+        subSectionId: 'community',
+        items: [
+          { icon: '👥', label: 'Leaderboard', desc: 'Compare rankings against the best', path: '/leaderboard' },
+          { icon: '🏛️', label: 'Clubs', desc: 'Join groups and custom events', path: '/community', soon: true },
+          { icon: '💬', label: 'Forum', desc: 'Discuss strategy and chess topics', path: '/community', soon: true },
+        ]
+      },
+      {
+        icon: '🛠️',
+        label: 'Tools',
+        desc: 'Generate FEN diagrams and setups',
+        path: '/other',
+        isSubSection: true,
+        subSectionId: 'tools',
+        items: [
+          { icon: '🛠️', label: 'Analysis Board', desc: 'Analyze positions and games', path: '/other' },
+          { icon: '📋', label: 'Setup Board', desc: 'Customize chess board setups', path: '/other' },
+          { icon: '📚', label: 'Opening Explorer', desc: 'Master initial openings theory', path: '/learn' }
+        ]
+      },
+      {
+        icon: '🛍️',
+        label: 'Shop/Merch',
+        desc: 'Get chess boards and pieces designs',
+        path: '/shop',
+        isSubSection: true,
+        subSectionId: 'shop',
+        items: [
+          { icon: '🛍️', label: 'Chess Sets', desc: 'Unique 3D & 2D piece styles', path: '/shop' },
+          { icon: '🎨', label: 'Board Designs', desc: 'Beautiful custom table themes', path: '/shop' },
+          { icon: '✨', label: 'Premium Membership', desc: 'Access unlimited features', path: '/shop' }
+        ]
+      },
+      {
+        icon: '📋',
+        label: 'Rules',
+        desc: 'Official chess regulations handbook',
+        path: '/other',
+        isSubSection: true,
+        subSectionId: 'rules',
+        items: [
+          { icon: '📋', label: 'Basic Rules', desc: 'General gameplay regulations', path: '/other' },
+          { icon: '♟️', label: 'Special Moves', desc: 'Castling, en passant & promotion', path: '/other' },
+          { icon: '🏁', label: 'Draw Conditions', desc: 'Stalemate & repeat rules', path: '/other' }
+        ]
+      },
     ],
   },
 ];

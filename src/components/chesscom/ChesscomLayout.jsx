@@ -35,9 +35,9 @@ const NAV_ICONS = {
   other: MoreHorizontal,
 };
 
-function FlyoutMenu({ items, onSelect }) {
+function SubFlyoutMenu({ items, onSelect }) {
   return (
-    <div className="cc-flyout cc-nav-flyout">
+    <div className="cc-sub-flyout">
       <div className="cc-flyout-inner">
         {items.map((item) => (
           <div key={item.label}>
@@ -58,6 +58,71 @@ function FlyoutMenu({ items, onSelect }) {
             {item.separatorAfter && <div className="cc-flyout-sep" />}
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function FlyoutMenu({ items, hoveredSubSection, setHoveredSubSection, onSelect }) {
+  return (
+    <div className="cc-flyout cc-nav-flyout">
+      <div className="cc-flyout-inner">
+        {items.map((item) => {
+          if (item.isSubSection) {
+            const isSubHovered = hoveredSubSection === item.subSectionId;
+            return (
+              <div
+                key={item.label}
+                onMouseEnter={() => setHoveredSubSection(item.subSectionId)}
+                style={{ position: 'relative' }}
+              >
+                <button
+                  type="button"
+                  className={`cc-flyout-item cc-flyout-subsection-btn${isSubHovered ? ' active' : ''}`}
+                  onClick={() => onSelect(item)}
+                >
+                  <span className="cc-flyout-icon" aria-hidden="true">{item.icon}</span>
+                  <div className="cc-flyout-content">
+                    <span className="cc-flyout-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                      {item.label}
+                      <span className="cc-flyout-arrow" style={{ fontSize: '10px', marginLeft: '6px', opacity: 0.6 }}>»</span>
+                    </span>
+                    {item.desc && <span className="cc-flyout-desc">{item.desc}</span>}
+                  </div>
+                </button>
+                {isSubHovered && item.items && (
+                  <SubFlyoutMenu
+                    items={item.items}
+                    onSelect={onSelect}
+                  />
+                )}
+              </div>
+            );
+          }
+
+          return (
+            <div
+              key={item.label}
+              onMouseEnter={() => setHoveredSubSection(null)}
+            >
+              <button
+                type="button"
+                className="cc-flyout-item"
+                onClick={() => onSelect(item)}
+              >
+                <span className="cc-flyout-icon" aria-hidden="true">{item.icon}</span>
+                <div className="cc-flyout-content">
+                  <span className="cc-flyout-label">
+                    {item.label}
+                    {item.soon && <span className="cc-flyout-soon">Soon</span>}
+                  </span>
+                  {item.desc && <span className="cc-flyout-desc">{item.desc}</span>}
+                </div>
+              </button>
+              {item.separatorAfter && <div className="cc-flyout-sep" />}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -234,7 +299,9 @@ export default function ChesscomLayout({ children }) {
   const { userData, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileExpanded, setMobileExpanded] = useState(null);
+  const [mobileSubExpanded, setMobileSubExpanded] = useState(null);
   const [hoveredMenu, setHoveredMenu] = useState(null);
+  const [hoveredSubSection, setHoveredSubSection] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSignUp, setShowSignUp] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
@@ -278,6 +345,7 @@ export default function ChesscomLayout({ children }) {
     }
     enterTimeoutRef.current = setTimeout(() => {
       setHoveredMenu(menuId);
+      setHoveredSubSection(null);
     }, 120); // 120ms enter debounce
   };
 
@@ -291,6 +359,7 @@ export default function ChesscomLayout({ children }) {
     }
     leaveTimeoutRef.current = setTimeout(() => {
       setHoveredMenu(null);
+      setHoveredSubSection(null);
     }, 150); // 150ms leave debounce
   };
 
@@ -373,8 +442,11 @@ export default function ChesscomLayout({ children }) {
         {section.items?.length > 0 && isHovered && (
           <FlyoutMenu
             items={section.items}
+            hoveredSubSection={hoveredSubSection}
+            setHoveredSubSection={setHoveredSubSection}
             onSelect={(item) => {
               setHoveredMenu(null);
+              setHoveredSubSection(null);
               handleNavItem(item);
             }}
           />
@@ -580,9 +652,9 @@ export default function ChesscomLayout({ children }) {
       </div>
 
       {mobileOpen && (
-        <div className="cc-mobile-overlay" onClick={() => setMobileOpen(false)}>
+        <div className="cc-mobile-overlay" onClick={() => { setMobileOpen(false); setMobileExpanded(null); setMobileSubExpanded(null); }}>
           <aside className="cc-mobile-sidebar" onClick={(e) => e.stopPropagation()}>
-            <div className="cc-logo" onClick={() => { setMobileOpen(false); navigate('/'); }}>
+            <div className="cc-logo" onClick={() => { setMobileOpen(false); setMobileExpanded(null); setMobileSubExpanded(null); navigate('/'); }}>
               <div className="cc-logo-icon">♞</div>
               <span><em>Chess</em>Master</span>
             </div>
@@ -591,24 +663,81 @@ export default function ChesscomLayout({ children }) {
                 <div key={section.id} className="cc-mobile-nav-section">
                   <div
                     className="cc-mobile-nav-parent"
-                    onClick={() => setMobileExpanded(mobileExpanded === section.id ? null : section.id)}
+                    onClick={() => {
+                      setMobileExpanded(mobileExpanded === section.id ? null : section.id);
+                      setMobileSubExpanded(null);
+                    }}
                   >
                     <span>{section.id === 'puzzles' && dailyStreak > 0 ? `${section.label} 🔥 ${dailyStreak}` : section.label}</span>
                     <span>{mobileExpanded === section.id ? '▾' : '▸'}</span>
                   </div>
-                  {mobileExpanded === section.id && section.items?.map((item) => (
-                    <div key={item.label}>
-                      <button
-                        type="button"
-                        className="cc-flyout-item cc-flyout-item--mobile"
-                        onClick={() => { setMobileOpen(false); handleNavItem(item); }}
-                      >
-                        <span className="cc-flyout-icon">{item.icon}</span>
-                        <span className="cc-flyout-label">{item.label}</span>
-                      </button>
-                      {item.separatorAfter && <div className="cc-flyout-sep" />}
-                    </div>
-                  ))}
+                  {mobileExpanded === section.id && section.items?.map((item) => {
+                    const isSubExpanded = mobileSubExpanded === item.subSectionId;
+                    return (
+                      <div key={item.label} className="cc-mobile-sub-section" style={{ paddingLeft: '12px' }}>
+                        <div
+                          className={`cc-mobile-nav-subparent${isSubExpanded ? ' active' : ''}`}
+                          onClick={() => {
+                            if (item.isSubSection) {
+                              setMobileSubExpanded(isSubExpanded ? null : item.subSectionId);
+                            } else {
+                              setMobileOpen(false);
+                              handleNavItem(item);
+                            }
+                          }}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '8px 12px',
+                            color: 'var(--cc-text3)',
+                            cursor: 'pointer',
+                            borderRadius: '6px',
+                            fontSize: '14px',
+                            fontWeight: '600'
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <span style={{ fontSize: '15px' }}>{item.icon}</span>
+                            <span>{item.label}</span>
+                          </div>
+                          {item.isSubSection && (
+                            <span style={{ fontSize: '10px', opacity: 0.6 }}>{isSubExpanded ? '▾' : '▸'}</span>
+                          )}
+                        </div>
+                        {item.isSubSection && isSubExpanded && item.items?.map((subItem) => (
+                          <button
+                            key={subItem.label}
+                            type="button"
+                            className="cc-flyout-item cc-flyout-item--mobile"
+                            onClick={() => { setMobileOpen(false); handleNavItem(subItem); }}
+                            style={{
+                              paddingLeft: '32px',
+                              fontSize: '13px',
+                              background: 'transparent',
+                              border: 'none',
+                              color: 'var(--cc-text2)',
+                              width: '100%',
+                              textAlign: 'left',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '10px',
+                              paddingTop: '6px',
+                              paddingBottom: '6px'
+                            }}
+                          >
+                            <span className="cc-flyout-icon" style={{ fontSize: '14px' }}>{subItem.icon}</span>
+                            <div className="cc-flyout-content">
+                              <span className="cc-flyout-label" style={{ fontSize: '13px', fontWeight: '500' }}>
+                                {subItem.label}
+                                {subItem.soon && <span className="cc-flyout-soon" style={{ fontSize: '8px', marginLeft: '6px' }}>Soon</span>}
+                              </span>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    );
+                  })}
                 </div>
               ))}
             </nav>

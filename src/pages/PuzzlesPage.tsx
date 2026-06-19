@@ -53,6 +53,33 @@ export default function PuzzlesPage() {
   const [rushActive, setRushActive] = useState(false);
   const [rushModeType, setRushModeType] = useState<'3min' | '5min' | 'survival'>('3min');
 
+  // Chess.com-style streak tracking (local only)
+  const [puzzleStreak, setPuzzleStreak] = useState(() => {
+    const v = parseInt(localStorage.getItem('chess_puzzle_streak') || '0', 10);
+    return Number.isFinite(v) ? v : 0;
+  });
+  const [puzzleStreakDate, setPuzzleStreakDate] = useState(() => localStorage.getItem('chess_puzzle_streak_date') || '');
+  const todayKey = () => new Date().toISOString().slice(0, 10);
+
+  useEffect(() => {
+    setPuzzleStreak(parseInt(localStorage.getItem('chess_puzzle_streak') || '0', 10) || 0);
+    setPuzzleStreakDate(localStorage.getItem('chess_puzzle_streak_date') || '');
+  }, []);
+
+  const commitDailyStreakIfNeeded = () => {
+    const today = todayKey();
+    const last = localStorage.getItem('chess_puzzle_streak_date') || '';
+    if (last === today) return;
+
+    const prev = parseInt(localStorage.getItem('chess_puzzle_streak') || '0', 10) || 0;
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const next = last === yesterday ? prev + 1 : 1;
+    localStorage.setItem('chess_puzzle_streak', String(next));
+    localStorage.setItem('chess_puzzle_streak_date', today);
+    setPuzzleStreak(next);
+    setPuzzleStreakDate(today);
+  };
+
   const chess = useMemo(() => {
     try {
       return new Chess(fen);
@@ -219,6 +246,9 @@ export default function PuzzlesPage() {
                 } catch (e) {
                   console.warn("Failed to increment puzzles solved:", e);
                 }
+              }
+              if (currentMode === 'daily' && screen !== 'rush') {
+                commitDailyStreakIfNeeded();
               }
 
               if (screen === 'rush') {
@@ -482,8 +512,44 @@ export default function PuzzlesPage() {
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               {/* Header */}
               <div style={{ background: '#1a1a1a', padding: '20px 16px', borderBottom: '1px solid #333333', textAlign: 'left' }}>
-                <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#ffffff', margin: 0 }}>Puzzles</h1>
-                <p style={{ fontSize: '13px', color: '#aaaaaa', margin: '4px 0 0' }}>Sharpen your skills</p>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '12px' }}>
+                  <div>
+                    <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#ffffff', margin: 0 }}>Puzzles</h1>
+                    <p style={{ fontSize: '13px', color: '#aaaaaa', margin: '4px 0 0' }}>Sharpen your skills</p>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <div style={{ fontSize: '12px', background: '#252525', border: '1px solid #333', padding: '6px 10px', borderRadius: '999px', color: '#e5e7eb', fontWeight: 700 }}>
+                      🔥 {puzzleStreak} day streak
+                    </div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '8px', marginTop: '14px', overflowX: 'auto', paddingBottom: '4px' }}>
+                  {[
+                    { id: 'daily', label: 'Daily', onClick: () => { setCurrentMode('daily'); setScreen('solving'); } },
+                    { id: 'rated', label: 'Rated', onClick: () => { setCurrentMode('rated'); loadPuzzle(puzzlesData[1]); setScreen('solving'); } },
+                    { id: 'rush', label: 'Rush', onClick: () => startPuzzleRush('3min') },
+                    { id: 'custom', label: 'By Theme', onClick: () => { setCurrentMode('custom'); loadPuzzle(puzzlesData[2]); setScreen('solving'); } },
+                  ].map(tab => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={tab.onClick}
+                      style={{
+                        borderRadius: '999px',
+                        border: '1px solid rgba(255,255,255,0.12)',
+                        padding: '8px 12px',
+                        fontSize: '13px',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        background: tab.id === currentMode ? 'rgba(107,189,68,0.18)' : 'transparent',
+                        color: tab.id === currentMode ? '#6bbd44' : '#cbd5e1',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* Main Contents */}
@@ -507,7 +573,7 @@ export default function PuzzlesPage() {
                       {getDifficultyLabel(currentPuzzle.rating)} ({currentPuzzle.rating})
                     </span>
                     <span style={{ color: '#ff9f0a', fontWeight: 700 }}>
-                      🔥 3 day streak
+                      🔥 {puzzleStreak} day streak
                     </span>
                   </div>
 

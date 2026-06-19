@@ -40,6 +40,13 @@ export default function StatsPage() {
 
   const stats = useMemo(() => readStats(), [])
   const elo = useMemo(() => readElo(), [])
+  const username = useMemo(() => {
+    try {
+      return localStorage.getItem('chess_username') || 'Guest';
+    } catch {
+      return 'Guest';
+    }
+  }, []);
 
   const allHistory = useMemo(() => {
     try {
@@ -147,23 +154,72 @@ export default function StatsPage() {
           margin: '0 auto',
         }}
       >
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            style={{
+              minHeight: 44,
+              padding: '0 16px',
+              borderRadius: 8,
+              border: '1px solid rgba(212,175,55,0.35)',
+              background: 'transparent',
+              color: '#d4af37',
+              cursor: 'pointer',
+              fontWeight: 600,
+            }}
+          >
+            ← Back
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/history')}
+            style={{
+              minHeight: 44,
+              padding: '0 16px',
+              borderRadius: 999,
+              border: '1px solid rgba(255,255,255,0.12)',
+              background: 'rgba(255,255,255,0.04)',
+              color: '#e8e8e8',
+              cursor: 'pointer',
+              fontWeight: 700,
+            }}
+          >
+            View History
+          </button>
+        </div>
+
+        <section
           style={{
-            marginBottom: 20,
-            minHeight: 44,
-            padding: '0 16px',
-            borderRadius: 8,
-            border: '1px solid rgba(212,175,55,0.35)',
-            background: 'transparent',
-            color: '#d4af37',
-            cursor: 'pointer',
-            fontWeight: 600,
+            background: '#1a1a2e',
+            borderRadius: 16,
+            padding: 18,
+            marginBottom: 16,
+            border: '1px solid rgba(212,175,55,0.15)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 14,
           }}
         >
-          ← Back
-        </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+            <div style={{ width: 44, height: 44, borderRadius: 999, background: 'linear-gradient(135deg, #81b64c, #638f36)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0a0a14', fontWeight: 900 }}>
+              {String(username).slice(0, 1).toUpperCase()}
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontWeight: 900, fontSize: 16, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{username}</div>
+              <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>Local profile</div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            <div style={{ fontSize: 12, fontWeight: 800, padding: '6px 10px', borderRadius: 999, border: '1px solid rgba(212,175,55,0.35)', color: '#d4af37' }}>
+              {elo} Elo
+            </div>
+            <div style={{ fontSize: 12, fontWeight: 800, padding: '6px 10px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.12)', color: '#e8e8e8' }}>
+              {currentStreakLabel}
+            </div>
+          </div>
+        </section>
 
         <section
           style={{
@@ -341,7 +397,20 @@ export default function StatsPage() {
                     paddingBottom: 8,
                   }}
                 >
-                  <span>{g.result === 'win' ? '✓' : g.result === 'loss' ? '✗' : '='}</span>
+                  <span
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 900,
+                      padding: '4px 10px',
+                      borderRadius: 999,
+                      alignSelf: 'flex-start',
+                      background: g.result === 'win' ? 'rgba(34,197,94,0.16)' : g.result === 'loss' ? 'rgba(239,68,68,0.16)' : 'rgba(148,163,184,0.14)',
+                      color: g.result === 'win' ? '#4ade80' : g.result === 'loss' ? '#f87171' : '#cbd5e1',
+                      border: '1px solid rgba(255,255,255,0.08)'
+                    }}
+                  >
+                    {g.result === 'win' ? 'Victory' : g.result === 'loss' ? 'Defeat' : 'Draw'}
+                  </span>
                   <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.opponent || '—'}</span>
                   <span style={{ opacity: 0.7, fontSize: 12 }}>{g.moveCount ?? '—'} mv</span>
                 </li>

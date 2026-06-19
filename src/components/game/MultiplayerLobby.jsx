@@ -85,7 +85,7 @@ export default function MultiplayerLobby({ onStartGame }) {
             const isWhite = game.white_id === currentUser.uid;
             onStartGame({
               roomCode: game.room_code,
-              color: isWhite ? 'white' : 'black',
+              color: isWhite ? 'w' : 'b',
               opponentName: isWhite ? game.black_username : game.white_username,
               opponentRating: isWhite ? game.black_elo : game.white_elo,
               timeControl: ENUM_TO_SECONDS[game.time_control] || 180
@@ -120,7 +120,7 @@ export default function MultiplayerLobby({ onStartGame }) {
             setCreatedRoomCode(null);
             onStartGame({
               roomCode: game.room_code,
-              color: 'white',
+              color: 'w',
               opponentName: game.black_username,
               opponentRating: game.black_elo,
               timeControl: ENUM_TO_SECONDS[game.time_control] || selectedTime
@@ -164,7 +164,7 @@ export default function MultiplayerLobby({ onStartGame }) {
         const isWhite = game.white_id === currentUser.uid;
         onStartGame({
           roomCode: game.room_code,
-          color: isWhite ? 'white' : 'black',
+          color: isWhite ? 'w' : 'b',
           opponentName: isWhite ? game.black_username : game.white_username,
           opponentRating: isWhite ? game.black_elo : game.white_elo,
           timeControl: ENUM_TO_SECONDS[game.time_control] || selectedTime
@@ -259,7 +259,7 @@ export default function MultiplayerLobby({ onStartGame }) {
         const game = data.game;
         onStartGame({
           roomCode: game.room_code,
-          color: 'black',
+          color: 'b',
           opponentName: game.white_username,
           opponentRating: game.white_elo,
           timeControl: ENUM_TO_SECONDS[game.time_control] || 180
@@ -679,4 +679,3 @@ const guestActionButtons = {
   width: '100%',
   gap: '12px'
 };
-

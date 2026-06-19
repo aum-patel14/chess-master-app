@@ -24,10 +24,10 @@ export default function SettingsPage() {
   const [animationSpeed, setAnimationSpeed] = useLocalStorage('chess_animation_speed', 'normal')
   const [highlightStyle, setHighlightStyle] = useLocalStorage('chess_highlight_style', 'glow')
   const [confirmMove, setConfirmMove] = useLocalStorage('chess_confirm_move', false)
-  const [difficulty, setDifficulty] = useLocalStorage('chess_difficulty', 'medium')
-  const [timeControl, setTimeControl] = useLocalStorage('chess_timecontrol', 600)
+  const [difficulty, setDifficulty] = useLocalStorage('chess_difficulty', 3)
+  const [timeControl, setTimeControl] = useLocalStorage('chess_time', { base: 10, increment: 0 })
   const [showHints, setShowHints] = useLocalStorage('chess_show_hints', true)
-  const [showCoords, setShowCoords] = useLocalStorage('chess_show_coords', true)
+  const [showCoords, setShowCoords] = useLocalStorage('chess_coords', true)
   const [autoPromote, setAutoPromote] = useLocalStorage('chess_autopromote', false)
 
   const [resetOpen, setResetOpen] = useState(false)
@@ -37,19 +37,18 @@ export default function SettingsPage() {
   }, [theme, dispatch])
 
   useEffect(() => {
-    const map = { easy: 2, medium: 3, hard: 4 }
-    const lvl = map[difficulty] || 3
+    const lvl = Number(difficulty) || 3
     dispatch({ type: 'SET_DIFFICULTY', payload: lvl })
   }, [difficulty, dispatch])
 
   useEffect(() => {
-    const mins = timeControl === 0 ? null : Math.max(1, Math.round(timeControl / 60))
-    dispatch({ type: 'SET_TIME_CONTROL', payload: mins })
+    dispatch({ type: 'SET_TIME_CONTROL', payload: timeControl })
   }, [timeControl, dispatch])
 
   const setDiff = (level) => {
-    if (!['easy', 'medium', 'hard'].includes(level)) return
-    setDifficulty(level)
+    const parsed = Number(level)
+    if (!Number.isFinite(parsed) || parsed < 1 || parsed > 5) return
+    setDifficulty(parsed)
     showToast('Difficulty saved', 'success')
   }
 
@@ -73,16 +72,18 @@ export default function SettingsPage() {
   })
 
   const doReset = () => {
+    const keys = [
       'chess_theme',
       'chess_sound_theme',
       'chess_animation_speed',
       'chess_highlight_style',
       'chess_confirm_move',
       'chess_difficulty',
-      'chess_timecontrol',
+      'chess_time',
       'chess_show_hints',
-      'chess_show_coords',
+      'chess_coords',
       'chess_autopromote',
+    ]
     keys.forEach((k) => localStorage.removeItem(k))
     showToast('Settings reset to defaults', 'info')
     setResetOpen(false)
@@ -179,29 +180,29 @@ export default function SettingsPage() {
               role="group"
               aria-label="Difficulty"
             >
-              {['easy', 'medium', 'hard'].map((d) => (
+              {[1, 2, 3, 4, 5].map((d) => (
                 <button
                   key={d}
                   type="button"
                   data-diff={d}
                   style={pill(difficulty === d)}
                 >
-                  {d}
+                  L{d}
                 </button>
               ))}
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
-              {[60, 180, 600, 1800, 0].map((s) => (
+              {[1, 3, 5, 10, 0].map((minutes) => (
                 <button
-                  key={s}
+                  key={minutes}
                   type="button"
-                  style={pill(timeControl === s)}
+                  style={pill((timeControl?.base ?? 10) === minutes)}
                   onClick={() => {
-                    setTimeControl(s)
+                    setTimeControl(minutes === 0 ? null : { base: minutes, increment: 0 })
                     showToast('Time control saved', 'success')
                   }}
                 >
-                  {s === 0 ? '∞' : `${s / 60}m`}
+                  {minutes === 0 ? '∞' : `${minutes}m`}
                 </button>
               ))}
             </div>

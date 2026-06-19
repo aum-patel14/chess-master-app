@@ -26,9 +26,9 @@ function fenToGrid(fen) {
 const BOTS = LANDING_BOTS.map((b, i) => ({ ...b, id: b.name.toLowerCase() + i }));
 
 const LIVE_GAMES = [
-  { white: 'Magnus', black: 'Hikaru', event: 'Speed Chess Championship', viewers: '12.4K' },
-  { white: 'Anna', black: 'Ding', event: 'Titled Tuesday', viewers: '8.1K' },
-  { white: 'Fabiano', black: 'Nepo', event: 'Live Rated', viewers: '5.6K' },
+  { white: 'Bot Arena', black: 'Daily Challenger', event: 'Featured Match Replay', viewers: '2.1K' },
+  { white: 'Puzzle Sprint', black: 'Tactics Night', event: 'Community Replay', viewers: '1.4K' },
+  { white: 'Endgame Drill', black: 'Rapid Session', event: 'Training Highlight', viewers: '980' },
 ];
 
 export default function LandingPage() {
@@ -92,24 +92,24 @@ export default function LandingPage() {
           
           <div className="landing-stats">
             <div className="stat-item">
-              <span className="stat-count">13,294,845</span>
+              <span className="stat-count">25,000+</span>
               <span className="stat-label">Games Today</span>
             </div>
             <div className="stat-divider" />
             <div className="stat-item">
-              <span className="stat-count">1,498,321</span>
+              <span className="stat-count">2,300+</span>
               <span className="stat-label">Playing Now</span>
             </div>
           </div>
 
           <div className="hero-cta-container">
-            <div className="hero-cta-card card-green" onClick={() => navigate('/play')}>
+            <div className="hero-cta-card card-green" onClick={handlePlayDefault}>
               <div className="cta-icon-container">
                 <Zap size={32} fill="#ffffff" stroke="#ffffff" />
               </div>
               <div className="cta-text-container">
-                <div className="cta-title">Play Online</div>
-                <div className="cta-subtitle">Play against players of your skill level</div>
+                <div className="cta-title">Quick Play</div>
+                <div className="cta-subtitle">Jump into a game against a bot instantly</div>
               </div>
             </div>
 
@@ -152,12 +152,18 @@ export default function LandingPage() {
               ['Fundamentals', '320 lessons'],
               ['Practice', 'Unlimited'],
             ].map(([title, count]) => (
-              <div key={title} className="lesson-chip" onClick={() => navigate('/learn')}>
+              <button
+                key={title}
+                type="button"
+                className="lesson-chip"
+                onClick={() => navigate('/learn')}
+                aria-label={`Open lessons: ${title}`}
+              >
                 <div className="lc-text">
                   <strong>{title}</strong>
                   <span>{count}</span>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         </div>
@@ -175,11 +181,11 @@ export default function LandingPage() {
           </div>
           <div className="bots-grid">
             {BOTS.map((bot, index) => (
-              <div key={index} className="bot-card" onClick={() => handlePlayBot(bot)}>
+              <button key={index} type="button" className="bot-card" onClick={() => handlePlayBot(bot)} aria-label={`Play bot ${bot.name}`}>
                 <div className="bot-avatar">{bot.avatar}</div>
                 <div className="bot-name">{bot.name}</div>
                 <div className="bot-rating">{bot.elo}</div>
-              </div>
+              </button>
             ))}
           </div>
         </div>
@@ -215,19 +221,19 @@ export default function LandingPage() {
       <section className="section">
         <div className="section-inner">
           <div>
-            <h2>Watch the Best in the World Compete</h2>
-            <p>Tune into live events, and follow top players move-by-move with real-time analysis.</p>
-            <button type="button" className="btn-section" onClick={() => navigate('/watch')}>
-              <Binoculars size={18} /> Watch Chess
+            <h2>Review Featured Chess Highlights</h2>
+            <p>Watch curated training clips and game highlights from the ChessMaster community.</p>
+            <button type="button" className="btn-section" onClick={() => navigate('/puzzles')}>
+              <Binoculars size={18} /> View Highlights
             </button>
           </div>
           <div className="watch-list">
             {LIVE_GAMES.map((g) => (
-              <div key={g.white + g.black} className="watch-card" onClick={() => navigate('/watch')}>
+              <div key={g.white + g.black} className="watch-card" onClick={() => navigate('/puzzles')}>
                 <div className="watch-live">LIVE</div>
                 <div className="watch-players">{g.white} vs {g.black}</div>
                 <div className="watch-event">{g.event}</div>
-                <div className="watch-viewers">{g.viewers} watching</div>
+                <div className="watch-viewers">{g.viewers} views</div>
               </div>
             ))}
           </div>
@@ -238,11 +244,11 @@ export default function LandingPage() {
       <section className="section section-alt">
         <div className="section-inner">
           <div>
-            <h2>Play Anywhere with the ChessMaster App</h2>
-            <p>Take your chess game on the go. Available on iOS and Android.</p>
+            <h2>Play Anywhere with ChessMaster</h2>
+            <p>Install the web app on desktop or mobile and keep playing from any device.</p>
             <div className="app-badges">
-              <span className="app-badge"><Smartphone size={18} /><div><small>Download on the</small><strong>App Store</strong></div></span>
-              <span className="app-badge"><Smartphone size={18} /><div><small>Get it on</small><strong>Google Play</strong></div></span>
+              <span className="app-badge"><Smartphone size={18} /><div><small>Play instantly in your</small><strong>Web Browser</strong></div></span>
+              <span className="app-badge"><Smartphone size={18} /><div><small>Install as</small><strong>PWA App</strong></div></span>
             </div>
           </div>
           <div className="phone-wrap">

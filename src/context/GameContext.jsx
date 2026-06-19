@@ -88,6 +88,12 @@ const savedOnlineGame = (() => {
   }
 })();
 
+const normalizeColor = (color, fallback = 'w') => {
+  if (color === 'white') return 'w';
+  if (color === 'black') return 'b';
+  return color === 'b' || color === 'w' ? color : fallback;
+};
+
 const initialState = {
   fen: initGame().fen(),
   history: [],
@@ -97,7 +103,7 @@ const initialState = {
   errorSquare: null,          // Square that triggered an illegal move (for shake animation)
   status: { type: 'playing', message: '', winner: null },
   gameMode: savedOnlineGame ? 'online' : 'menu',          // 'menu' | 'vsAI' | 'local' | 'puzzle' | 'online'
-  playerColor: savedOnlineGame ? savedOnlineGame.color : 'w',          // player is white by default
+  playerColor: savedOnlineGame ? normalizeColor(savedOnlineGame.color) : 'w',          // player is white by default
   aiDifficulty: initialDifficulty,
   aiBotId: localStorage.getItem('chess_bot_id') || 'beginner',
   isAIThinking: false,
@@ -141,7 +147,7 @@ function gameReducer(state, action) {
         ...state,
         gameMode: 'online',
         roomCode: action.payload.roomCode,
-        playerColor: action.payload.color,
+        playerColor: normalizeColor(action.payload.color),
         opponentName: action.payload.opponentName,
         opponentRating: action.payload.opponentRating,
         timeControl: tc,
@@ -195,7 +201,7 @@ function gameReducer(state, action) {
         ...state,
         gameMode: 'online',
         roomCode: action.payload.roomCode,
-        playerColor: action.payload.color,
+        playerColor: normalizeColor(action.payload.color),
         opponentName: action.payload.opponentName,
         opponentRating: action.payload.opponentRating,
         timeControl: parsedTc,
@@ -239,7 +245,7 @@ function gameReducer(state, action) {
         ...state,
         gameMode: 'analysis',
         roomCode: null,
-        playerColor: action.payload.color || 'w',
+        playerColor: normalizeColor(action.payload.color),
         opponentName: action.payload.opponentName || 'Opponent',
         opponentRating: action.payload.opponentRating || 1200,
         timeControl: null,
@@ -287,7 +293,7 @@ function gameReducer(state, action) {
     case 'SET_MODE': return { ...state, gameMode: action.payload };
     case 'SET_THEME': return { ...state, theme: action.payload };
     case 'SET_DIFFICULTY': return { ...state, aiDifficulty: action.payload };
-    case 'SET_PLAYER_COLOR': return { ...state, playerColor: action.payload };
+    case 'SET_PLAYER_COLOR': return { ...state, playerColor: normalizeColor(action.payload) };
     case 'SET_BOT_ID': {
       localStorage.setItem('chess_bot_id', action.payload);
       return { ...state, aiBotId: action.payload };
@@ -373,7 +379,7 @@ function gameReducer(state, action) {
     case 'NEW_GAME': {
       const tc = action.timeControl !== undefined ? action.timeControl : state.timeControl;
       const baseSecs = tc ? tc.base * 60 : 600;
-      let pColor = action.playerColor || 'w';
+      let pColor = normalizeColor(action.playerColor, 'w');
       if (pColor === 'r') {
         pColor = Math.random() < 0.5 ? 'w' : 'b';
       }
@@ -555,7 +561,7 @@ export function GameProvider({ children }) {
                 type: 'RESTORE_ONLINE_GAME',
                 payload: {
                   roomCode: game.room_code,
-                  color: isWhite ? 'white' : 'black',
+                  color: isWhite ? 'w' : 'b',
                   opponentName: isWhite ? game.black_username : game.white_username,
                   opponentRating: isWhite ? game.black_elo : game.white_elo,
                   fen: game.current_fen,
@@ -1374,7 +1380,11 @@ async function saveBotGameToSupabase(state, finalStatus, history, fen) {
 
   const offerDraw = useCallback(() => {
     soundManager.playDraw();
-    dispatch({ type: 'OFFER_DRAW' });
+    // Local games can accept draw instantly, online must wait for opponent response.
+    if (state.gameMode !== 'online') {
+      dispatch({ type: 'OFFER_DRAW' });
+      return;
+    }
 
     if (state.gameMode === 'online' && state.roomCode) {
       if (channelRef.current) {

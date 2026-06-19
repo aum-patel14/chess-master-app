@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { RotateCcw, BarChart2, Home } from 'lucide-react';
 import { useGame } from '../../context/GameContext';
 import { useNavigate } from 'react-router-dom';
@@ -29,43 +29,12 @@ export default function GameOverDialog({
   const status = statusProp || state.status;
   const isVisible = status && status.type !== 'playing' && status.type !== 'check';
 
-  const [playerAccuracy, setPlayerAccuracy] = useState(0);
-  const [opponentAccuracy, setOpponentAccuracy] = useState(0);
-
-  useEffect(() => {
-    if (!isVisible) return;
-    const isWin = status.winner === (state.playerColor === 'w' ? 'White' : 'Black');
-    const isDraw = !status.winner;
-
-    let pAcc;
-    let oAcc;
-    if (isDraw) {
-      pAcc = Math.floor(74 + Math.random() * 12);
-      oAcc = Math.floor(74 + Math.random() * 12);
-    } else if (isWin) {
-      pAcc = Math.floor(84 + Math.random() * 12);
-      oAcc = Math.min(92, Math.floor(65 + Math.random() * 15));
-    } else {
-      pAcc = Math.min(92, Math.floor(65 + Math.random() * 15));
-      oAcc = Math.floor(84 + Math.random() * 12);
-    }
-
-    setPlayerAccuracy(pAcc);
-    setOpponentAccuracy(oAcc);
-  }, [isVisible, status?.winner, state.playerColor]);
-
   if (!isVisible) {
     return null;
   }
 
   const config = STATUS_CONFIG[status.type] || STATUS_CONFIG.draw;
   const moveCount = moveCountProp ?? state.history.length;
-
-  const getAccuracyColor = (acc) => {
-    if (acc >= 85) return '#22c55e';
-    if (acc >= 70) return '#e2b04a';
-    return '#ef4444';
-  };
 
   const handleNewGame = () => {
     if (onNewGame) {
@@ -96,9 +65,19 @@ export default function GameOverDialog({
     navigate('/');
   };
 
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        handleMenu();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
   return (
-    <div className="game-over-overlay">
-      <div className="game-over-dialog revamped-game-over animate-scaleIn">
+    <div className="game-over-overlay" role="presentation">
+      <div className="game-over-dialog revamped-game-over animate-scaleIn" role="dialog" aria-modal="true" aria-labelledby="game-over-title">
         <div className="dialog-glow" style={{ '--color': config.color }} />
 
         <div className="result-emoji animate-scaleIn" style={{ color: config.color }}>
@@ -108,40 +87,10 @@ export default function GameOverDialog({
         </div>
 
         <div className="result-content">
-          <h2 className="result-title" style={{ color: config.color }}>
+          <h2 id="game-over-title" className="result-title" style={{ color: config.color }}>
             {config.title}
           </h2>
           <p className="result-message">{status.message}</p>
-        </div>
-
-        <div className="accuracy-section">
-          <h3 className="section-title font-cinzel">ACCURACY</h3>
-          <div className="accuracy-scores-row">
-            <div className="accuracy-box">
-              <span className="acc-label">You</span>
-              <div
-                className="acc-ring"
-                style={{
-                  borderColor: getAccuracyColor(playerAccuracy),
-                  color: getAccuracyColor(playerAccuracy),
-                }}
-              >
-                <span className="acc-percentage">{playerAccuracy}%</span>
-              </div>
-            </div>
-            <div className="accuracy-box">
-              <span className="acc-label">Opponent</span>
-              <div
-                className="acc-ring"
-                style={{
-                  borderColor: getAccuracyColor(opponentAccuracy),
-                  color: getAccuracyColor(opponentAccuracy),
-                }}
-              >
-                <span className="acc-percentage">{opponentAccuracy}%</span>
-              </div>
-            </div>
-          </div>
         </div>
 
         <div className="result-stats">
