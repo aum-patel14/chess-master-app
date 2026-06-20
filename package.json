@@ -12,6 +12,8 @@
     "preview": "vite preview",
     "predeploy": "npm run build",
     "deploy": "npx gh-pages -d dist",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
     "build:android": "vite build && npx cap sync android && npx cap open android",
     "build:web": "vite build && npx cap sync",
     "cap:sync": "npx cap sync",
@@ -51,6 +53,7 @@
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",
     "@eslint/js": "^9.39.4",
+    "@playwright/test": "^1.61.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",

@@ -23,15 +23,18 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+        working-directory: ./chessmaster-pro
 
       - name: Build
         run: npm run build
+        working-directory: ./chessmaster-pro
 
       - name: Verify Stockfish asset
-        run: test -f dist/stockfish-engine.js
+        run: test -f dist/stockfish.js
+        working-directory: ./chessmaster-pro
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist
+          publish_dir: ./chessmaster-pro/dist
