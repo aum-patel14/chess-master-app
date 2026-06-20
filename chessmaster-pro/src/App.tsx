@@ -11,7 +11,7 @@ import { Multiplayer } from './pages/Multiplayer'
 
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
       <Routes>
         {/* Public landing page — standalone layout */}
         <Route path="/" element={<LandingPage />} />
