@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Layout } from './components/Layout'
+import { LandingPage } from './pages/LandingPage'
 import { Dashboard } from './pages/Dashboard'
 import { Play } from './pages/Play'
 import { Puzzles } from './pages/Puzzles'
@@ -12,8 +13,12 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Public landing page — standalone layout */}
+        <Route path="/" element={<LandingPage />} />
+
+        {/* App shell — shared nav/footer via Layout */}
         <Route path="/" element={<Layout />}>
-          <Route index element={<Dashboard />} />
+          <Route path="dashboard" element={<Dashboard />} />
           <Route path="play" element={<Play />} />
           <Route path="play/online" element={<Multiplayer />} />
           <Route path="puzzles" element={<Puzzles />} />

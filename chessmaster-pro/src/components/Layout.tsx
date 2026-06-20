@@ -5,7 +5,7 @@ export function Layout() {
   const location = useLocation()
 
   const navItems = [
-    { path: '/', label: 'Dashboard', icon: Trophy, testId: 'nav-dashboard' },
+    { path: '/dashboard', label: 'Dashboard', icon: Trophy, testId: 'nav-dashboard' },
     { path: '/play', label: 'Play Chess', icon: PlayCircle, testId: 'nav-play' },
     { path: '/play/online', label: 'Play Online', icon: Users, testId: 'nav-play-online' },
     { path: '/puzzles', label: 'Puzzles', icon: Layers, testId: 'nav-puzzles' },
@@ -15,9 +15,6 @@ export function Layout() {
   ]
 
   const isActive = (path: string) => {
-    if (path === '/') {
-      return location.pathname === '/'
-    }
     return location.pathname.startsWith(path)
   }
 

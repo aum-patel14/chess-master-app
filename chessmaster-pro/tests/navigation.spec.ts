@@ -1,9 +1,17 @@
 import { test, expect } from '@playwright/test'
 
 test.describe('Chessmaster Pro - Core Navigation & Interactive Elements', () => {
+  test('should load the public landing page with hero and CTAs', async ({ page }) => {
+    await page.goto('/')
+    await expect(page).toHaveTitle('Chessmaster Pro — Play Chess Online | Chessmaster Pro')
+    await expect(page.getByTestId('landing-logo')).toBeVisible()
+    await expect(page.getByTestId('landing-cta-hero')).toBeVisible()
+    await expect(page.getByTestId('landing-cta-bottom')).toBeVisible()
+  })
+
   test('should navigate to all core routes and verify document titles', async ({ page }) => {
     // 1. Start at Dashboard
-    await page.goto('/')
+    await page.goto('/dashboard')
     await expect(page).toHaveTitle('Dashboard | Chessmaster Pro')
     await expect(page.getByTestId('logo-link')).toBeVisible()
 
