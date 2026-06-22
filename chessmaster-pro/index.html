@@ -41,6 +41,28 @@
         }
       })(window.location);
     </script>
+    <!-- Clean up any active Service Worker and caches from legacy PWA version -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function (registrations) {
+          if (registrations.length > 0) {
+            for (var i = 0; i < registrations.length; i++) {
+              registrations[i].unregister();
+            }
+            if ('caches' in window) {
+              caches.keys().then(function (keys) {
+                keys.forEach(function (key) {
+                  caches.delete(key);
+                });
+              });
+            }
+            setTimeout(function () {
+              window.location.reload();
+            }, 300);
+          }
+        });
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
