@@ -295,7 +295,7 @@ export function LessonPlayer() {
   if (lessonFinished) {
     return (
       <div className="max-w-md mx-auto py-12 text-center space-y-8 animate-fade-in">
-        <DocumentTitle title="Lesson Completed! | Chess Academy" />
+        <DocumentTitle title="Lesson Completed! | Chess Academy" description="Congratulations on completing the chess lesson! Keep learning and practice on Chessmaster Pro." />
 
         <div className="inline-flex p-6 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-xl shadow-emerald-500/5">
           <Award className="w-16 h-16" />
@@ -345,17 +345,18 @@ export function LessonPlayer() {
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
-      <DocumentTitle title={`${lesson.title} - Step ${currentStepIdx + 1} | Chess Academy`} />
+      <DocumentTitle title={`${lesson.title} - Step ${currentStepIdx + 1} | Chess Academy`} description={`Step ${currentStepIdx + 1} of the lesson "${lesson.title}" in the ${course.title} course at Chessmaster Pro's Chess Academy.`} />
 
       {/* Header Info */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-900 pb-4">
         <div className="space-y-1">
           <Link
-            to={`/courses/${course.id}`}
+            to={`/courses/${course?.id || ''}`}
             data-testid="btn-lesson-back"
+            aria-label={course?.title ? `Back to ${course.title}` : 'Back to Course'}
             className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 font-semibold transition-colors"
           >
-            <ArrowLeft className="w-3 h-3" /> {course.title}
+            <ArrowLeft className="w-3 h-3" /> {course?.title || 'Back to Course'}
           </Link>
           <h1 className="text-2xl font-bold text-white leading-tight">{lesson.title}</h1>
         </div>
@@ -392,6 +393,7 @@ export function LessonPlayer() {
         <div className="lg:col-span-7 flex flex-col items-center">
           <div className="w-full max-w-[480px]">
             <ChessBoard
+              key={currentStep.id}
               position={boardPosition}
               orientation="white"
               readOnly={currentStep.type === 'theory' || stepCompleted}

@@ -2,6 +2,40 @@ import { test, expect } from '@playwright/test'
 
 test.describe('Chessmaster Pro - Core Navigation & Interactive Elements', () => {
   test.beforeEach(async ({ page }) => {
+    // Inject mock session token to localStorage before page scripts initialize
+    await page.addInitScript(() => {
+      const rawSession = {
+        access_token: 'mock-access-token',
+        token_type: 'bearer',
+        expires_in: 3600,
+        refresh_token: 'mock-refresh-token',
+        user: {
+          id: 'test-user-id',
+          email: 'grandmaster@chess.com',
+        },
+        expires_at: 9999999999,
+      }
+      const wrappedSession = {
+        currentSession: rawSession,
+        expiresAt: 9999999999,
+      }
+      window.localStorage.setItem('sb-your-project-id-auth-token', JSON.stringify(rawSession))
+      window.localStorage.setItem('sb-placeholder-auth-token', JSON.stringify(rawSession))
+      window.localStorage.setItem('supabase.auth.token', JSON.stringify(wrappedSession))
+    })
+
+    // Intercept Supabase Auth user check
+    await page.route('**/auth/v1/user', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 'test-user-id',
+          email: 'grandmaster@chess.com',
+        }),
+      })
+    })
+
     // Intercept Supabase DB queries for courses list
     await page.route('**/rest/v1/courses*', async (route) => {
       await route.fulfill({
@@ -28,6 +62,15 @@ test.describe('Chessmaster Pro - Core Navigation & Interactive Elements', () => 
 
     // Intercept Supabase DB queries for lessons
     await page.route('**/rest/v1/lessons*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([]),
+      })
+    })
+
+    // Intercept Supabase DB queries for tournaments list
+    await page.route('**/rest/v1/tournaments*', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',

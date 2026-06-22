@@ -41,7 +41,7 @@ export function Profile() {
 
   return (
     <div className="space-y-8">
-      <DocumentTitle title="Profile" />
+      <DocumentTitle title="Profile" description="View your player statistics, rating ELO progress, recent match history, and achievements on Chessmaster Pro." />
 
       {/* User Identity Header Card */}
       <section className="border border-slate-800 bg-gradient-to-br from-slate-900 via-slate-900 to-purple-950/10 rounded-2xl p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6">

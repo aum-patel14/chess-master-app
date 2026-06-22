@@ -198,7 +198,7 @@ export function LandingPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans overflow-x-hidden">
-      <DocumentTitle title="Chessmaster Pro — Play Chess Online" />
+      <DocumentTitle title="Chessmaster Pro — Play Chess Online" description="Play chess online against powerful Stockfish AI bots, solve interactive puzzles, learn chess fundamentals, compete in matchmaking, and join tournaments." />
 
       {/* ─── NAVIGATION BAR ─── */}
       <header className="fixed top-0 w-full z-50 border-b border-slate-800/50 bg-slate-950/80 backdrop-blur-xl">

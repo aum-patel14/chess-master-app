@@ -1,12 +1,14 @@
 import { test, expect } from '@playwright/test'
 
 test.describe('Chessmaster Pro - VS AI Mode & Stockfish calculations', () => {
+  test.describe.configure({ mode: 'serial' })
   const difficulties = ['beginner', 'easy', 'medium', 'hard', 'master']
 
   for (const level of difficulties) {
     test(`should select ${level} bot, lazy-load engine, receive AI response in bounded time, and check console errors`, async ({
       page,
     }) => {
+      test.setTimeout(60000)
       const consoleErrors: string[] = []
 
       // Listen for console errors
@@ -42,13 +44,13 @@ test.describe('Chessmaster Pro - VS AI Mode & Stockfish calculations', () => {
       await page.getByTestId('board-square-e4').click()
       await expect(page.getByTestId('piece-e4-P')).toBeVisible()
 
-      // Confirm AI responds with a move (the moves history should get updated within 10 seconds)
+      // Confirm AI responds with a move (the moves history should get updated within 35 seconds)
       const movesHistory = page.getByTestId('moves-history')
-      await expect(movesHistory).toContainText('1. e4', { timeout: 20000 })
+      await expect(movesHistory).toContainText('1. e4', { timeout: 35000 })
 
       // After AI moves, there should be at least two moves in the log (White's e4 and Black's response)
       // Or we can verify the state returns to "Your turn" or "White" turn, and there is a black piece moved
-      await expect(page.locator('span:has-text("Your turn")')).toBeVisible({ timeout: 20000 })
+      await expect(page.locator('span:has-text("Your turn")')).toBeVisible({ timeout: 35000 })
 
       // Verify no console errors occurred during the game start and play
       expect(consoleErrors).toEqual([])

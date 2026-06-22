@@ -59,7 +59,7 @@ export function Dashboard() {
 
   return (
     <div className="space-y-8">
-      <DocumentTitle title="Dashboard" />
+      <DocumentTitle title="Dashboard" description="Access your rating progress, puzzle stats, active tournaments, and recommended lessons from your Chessmaster Pro dashboard." />
 
       {/* Hero Welcome banner */}
       <section className="relative overflow-hidden rounded-2xl border border-slate-800 bg-gradient-to-r from-slate-900 via-purple-950/20 to-slate-900 p-8 sm:p-10">

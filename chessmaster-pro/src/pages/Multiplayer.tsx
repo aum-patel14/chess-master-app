@@ -692,7 +692,7 @@ export function Multiplayer() {
   if (!session) {
     return (
       <div className="max-w-md mx-auto py-12 space-y-6">
-        <DocumentTitle title="Login Required" />
+        <DocumentTitle title="Login Required" description="Sign in to Chessmaster Pro to access multiplayer matchmaking, custom lobbies, and competitive tournaments." />
 
         <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl shadow-2xl space-y-6 text-center">
           <div className="w-16 h-16 bg-purple-600/10 text-purple-400 rounded-full flex items-center justify-center mx-auto border border-purple-500/20">
@@ -783,7 +783,7 @@ export function Multiplayer() {
   if (isSearching) {
     return (
       <div className="min-h-[50vh] flex flex-col items-center justify-center space-y-6 max-w-md mx-auto text-center animate-pulse">
-        <DocumentTitle title="SearchingOpponent" />
+        <DocumentTitle title="SearchingOpponent" description="Searching for a matchmaking opponent on Chessmaster Pro..." />
         <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
         <div className="space-y-2">
           <h2 className="text-xl font-bold text-white">Searching for opponent...</h2>
@@ -806,7 +806,7 @@ export function Multiplayer() {
   if (createdRoomCode && !currentGame) {
     return (
       <div className="min-h-[50vh] flex flex-col items-center justify-center space-y-6 max-w-md mx-auto text-center animate-pulse">
-        <DocumentTitle title="Waiting for Player" />
+        <DocumentTitle title="Waiting for Player" description="Waiting for player to join the multiplayer room on Chessmaster Pro..." />
         <div className="w-16 h-16 bg-blue-600/10 text-blue-400 border border-blue-500/25 rounded-full flex items-center justify-center mx-auto text-3xl font-extrabold animate-bounce">
           🌐
         </div>
@@ -857,7 +857,7 @@ export function Multiplayer() {
 
     return (
       <div className="space-y-6 max-w-4xl mx-auto py-2">
-        <DocumentTitle title={`Match Vs ${oppName}`} />
+        <DocumentTitle title={`Match Vs ${oppName}`} description={`Playing an active real-time multiplayer chess match against ${oppName} on Chessmaster Pro.`} />
 
         {/* Status header bar */}
         <div className="flex justify-between items-center bg-slate-900 border border-slate-800 p-3 rounded-lg text-xs">
@@ -1010,7 +1010,7 @@ export function Multiplayer() {
   // 10. Default Lobby Page
   return (
     <div className="space-y-8 max-w-5xl mx-auto py-6">
-      <DocumentTitle title="Online Matchmaking" />
+      <DocumentTitle title="Online Matchmaking" description="Enter the real-time multiplayer lobby, start matchmaking, or create a private custom lobby on Chessmaster Pro." />
 
       {/* Header */}
       <section className="flex justify-between items-center border-b border-slate-850 pb-4">

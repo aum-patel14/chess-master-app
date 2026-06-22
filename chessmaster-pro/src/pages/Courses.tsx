@@ -89,7 +89,7 @@ export function Courses() {
 
   return (
     <div className="space-y-8 max-w-6xl mx-auto">
-      <DocumentTitle title="Interactive Courses | Chess Academy" />
+      <DocumentTitle title="Interactive Courses | Chess Academy" description="Master chess theory, opening strategies, and endgame calculations with step-by-step interactive lessons at Chessmaster Pro's Chess Academy." />
 
       {/* Header section */}
       <section className="border-b border-slate-900 pb-5 flex flex-col md:flex-row md:items-end justify-between gap-4">

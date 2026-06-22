@@ -155,7 +155,7 @@ export function CourseDetail() {
 
   return (
     <div className="space-y-8 max-w-4xl mx-auto">
-      <DocumentTitle title={`${course.title} | Chess Academy`} />
+      <DocumentTitle title={`${course.title} | Chess Academy`} description={`Learn ${course.title} on Chessmaster Pro. ${course.description}`} />
 
       {/* Back button */}
       <div>

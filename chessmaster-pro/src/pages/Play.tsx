@@ -311,7 +311,7 @@ export function Play() {
   if (selectedDifficulty === null) {
     return (
       <div className="space-y-8 max-w-4xl mx-auto py-6">
-        <DocumentTitle title="Select AI Opponent" />
+        <DocumentTitle title="Select AI Opponent" description="Challenge adaptive Stockfish AI bots ranging from Beginner (1000 Elo) to Master (1800 Elo) on Chessmaster Pro." />
 
         <div className="text-center space-y-3">
           <h1 className="text-3xl font-extrabold tracking-tight text-white">
@@ -409,7 +409,7 @@ export function Play() {
   // 3. Render Game Screen
   return (
     <div className="space-y-6">
-      <DocumentTitle title={`VS AI (${selectedDifficulty})`} />
+      <DocumentTitle title={`VS AI (${selectedDifficulty})`} description={`Play an active chess match against the ${selectedDifficulty} Stockfish engine bot on Chessmaster Pro.`} />
 
       {/* Lobby button */}
       <div className="flex justify-between items-center">

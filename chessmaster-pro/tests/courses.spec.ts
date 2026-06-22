@@ -341,6 +341,7 @@ test.describe('Chessmaster Pro - Interactive Courses & Lessons', () => {
 
     // Perform correct move: e2 -> e4
     await page.getByTestId('board-square-e2').click()
+    await expect(page.getByTestId('board-square-e2')).toHaveClass(/ring-purple-500/)
     await page.getByTestId('board-square-e4').click()
     await expect(page.getByTestId('step-status-message')).toHaveText('Correct! Well done.')
 
@@ -349,9 +350,11 @@ test.describe('Chessmaster Pro - Interactive Courses & Lessons', () => {
 
     // --- STEP 3: INTERACTIVE CHALLENGE (Diagonal Capture) ---
     await expect(page.getByTestId('step-title')).toHaveText('Pawn Diagonal Capture')
+    await expect(page.getByTestId('piece-d5-p')).toBeVisible()
 
     // Perform correct move: e4 -> d5 (diagonally capture pawn)
     await page.getByTestId('board-square-e4').click()
+    await expect(page.getByTestId('board-square-e4')).toHaveClass(/ring-purple-500/)
     await page.getByTestId('board-square-d5').click()
     await expect(page.getByTestId('step-status-message')).toHaveText('Correct! Well done.')
 

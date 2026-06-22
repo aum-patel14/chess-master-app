@@ -8,6 +8,7 @@ import { Courses } from './pages/Courses'
 import { CourseDetail } from './pages/CourseDetail'
 import { LessonPlayer } from './pages/LessonPlayer'
 import { Tournaments } from './pages/Tournaments'
+import { TournamentDetail } from './pages/TournamentDetail'
 import { Profile } from './pages/Profile'
 import { Multiplayer } from './pages/Multiplayer'
 
@@ -28,6 +29,7 @@ function App() {
           <Route path="courses/:courseId" element={<CourseDetail />} />
           <Route path="courses/:courseId/lessons/:lessonId" element={<LessonPlayer />} />
           <Route path="tournaments" element={<Tournaments />} />
+          <Route path="tournaments/:tournamentId" element={<TournamentDetail />} />
           <Route path="profile" element={<Profile />} />
         </Route>
       </Routes>

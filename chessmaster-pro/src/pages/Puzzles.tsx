@@ -408,7 +408,7 @@ export function Puzzles() {
   if (activeMode !== 'hub' && currentPuzzle) {
     return (
       <div className="space-y-6 max-w-4xl mx-auto py-4">
-        <DocumentTitle title={`Solving Puzzle | Chessmaster Pro`} />
+        <DocumentTitle title="Solving Puzzle" description="Improve your chess tactics by solving this interactive chess puzzle on Chessmaster Pro." />
 
         {/* Back and Status Bar */}
         <div className="flex justify-between items-center bg-slate-900 border border-slate-800 p-4 rounded-xl shadow-lg">
@@ -540,7 +540,7 @@ export function Puzzles() {
   // 3. Render Hub Screen
   return (
     <div className="space-y-8 max-w-5xl mx-auto py-6">
-      <DocumentTitle title="Chess Puzzles" />
+      <DocumentTitle title="Chess Puzzles" description="Train your tactical calculation skills with daily puzzles, rated chess training, and high-difficulty puzzle streak challenges on Chessmaster Pro." />
 
       {/* Header section */}
       <section className="text-center space-y-3">
