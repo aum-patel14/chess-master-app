@@ -5,6 +5,8 @@ import { Dashboard } from './pages/Dashboard'
 import { Play } from './pages/Play'
 import { Puzzles } from './pages/Puzzles'
 import { Courses } from './pages/Courses'
+import { CourseDetail } from './pages/CourseDetail'
+import { LessonPlayer } from './pages/LessonPlayer'
 import { Tournaments } from './pages/Tournaments'
 import { Profile } from './pages/Profile'
 import { Multiplayer } from './pages/Multiplayer'
@@ -23,6 +25,8 @@ function App() {
           <Route path="play/online" element={<Multiplayer />} />
           <Route path="puzzles" element={<Puzzles />} />
           <Route path="courses" element={<Courses />} />
+          <Route path="courses/:courseId" element={<CourseDetail />} />
+          <Route path="courses/:courseId/lessons/:lessonId" element={<LessonPlayer />} />
           <Route path="tournaments" element={<Tournaments />} />
           <Route path="profile" element={<Profile />} />
         </Route>

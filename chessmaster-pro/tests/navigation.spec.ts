@@ -1,6 +1,41 @@
 import { test, expect } from '@playwright/test'
 
 test.describe('Chessmaster Pro - Core Navigation & Interactive Elements', () => {
+  test.beforeEach(async ({ page }) => {
+    // Intercept Supabase DB queries for courses list
+    await page.route('**/rest/v1/courses*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          {
+            id: 'c1111111-1111-1111-1111-111111111111',
+            slug: 'chess-basics',
+            title: 'Chess Basics & Movements',
+            description: 'Master the fundamental rules of chess, including how the pieces move.',
+            level: 'beginner',
+            category: 'fundamentals',
+            thumbnail_emoji: '♟',
+            xp_reward: 100,
+            lesson_count: 2,
+            estimated_minutes: 15,
+            is_published: true,
+            is_premium: false,
+          },
+        ]),
+      })
+    })
+
+    // Intercept Supabase DB queries for lessons
+    await page.route('**/rest/v1/lessons*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([]),
+      })
+    })
+  })
+
   test('should load the public landing page with hero and CTAs', async ({ page }) => {
     await page.goto('/')
     await expect(page).toHaveTitle('Chessmaster Pro — Play Chess Online | Chessmaster Pro')
@@ -43,11 +78,11 @@ test.describe('Chessmaster Pro - Core Navigation & Interactive Elements', () => 
     // 4. Navigate to Courses
     await page.getByTestId('nav-courses').click()
     await page.waitForURL('**/courses')
-    await expect(page).toHaveTitle('Interactive Courses | Chessmaster Pro')
+    await expect(page).toHaveTitle('Interactive Courses | Chess Academy | Chessmaster Pro')
 
     // Verify course card and start button are present
-    await expect(page.getByTestId('course-card-course-1')).toBeVisible()
-    await expect(page.getByTestId('btn-view-course-course-1')).toBeVisible()
+    await expect(page.getByTestId('course-card-c1111111-1111-1111-1111-111111111111')).toBeVisible()
+    await expect(page.getByTestId('btn-view-course-c1111111-1111-1111-1111-111111111111')).toBeVisible()
 
     // 5. Navigate to Tournaments
     await page.getByTestId('nav-tournaments').click()
