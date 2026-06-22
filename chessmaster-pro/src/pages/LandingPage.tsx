@@ -450,7 +450,7 @@ export function LandingPage() {
           </div>
           <div className="flex-shrink-0">
             <img
-              src="/hero-landing.png"
+              src={`${import.meta.env.BASE_URL}hero-landing.png`}
               alt="Chessmaster Pro"
               className="w-full max-w-md rounded-2xl shadow-2xl shadow-purple-500/10 border border-slate-800/50"
             />
