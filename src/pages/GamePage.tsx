@@ -637,17 +637,18 @@ export default function GamePage() {
                 })()}
               </div>
  
+              {state.gameMode === 'vsAI' && isSimpleMode && (
+                <div style={{ marginBottom: '8px', background: 'rgba(245, 158, 11, 0.15)', border: '1px solid rgba(245, 158, 11, 0.45)', color: '#fbbf24', borderRadius: '8px', padding: '8px 10px', fontSize: '12px', fontWeight: 600 }}>
+                  Engine unavailable - using fallback AI mode.
+                </div>
+              )}
+
               {/* 2. CHESS BOARD + EVAL BAR */}
               <div style={{ width: '100%', position: 'relative', display: 'flex', alignItems: 'stretch', gap: '6px' }}>
                 {(state.gameMode === 'vsAI' || state.gameMode === 'analysis') && (
                   <EvalBar fen={state.reviewFen || state.fen} flipped={state.boardFlipped} refreshKey={state.evalTick} />
                 )}
-                <div style={{ flex: 1, minWidth: 0, pointerEvents: state.isAIThinking || isStockfishThinking ? 'none' : 'auto' }}>
-                  {state.gameMode === 'vsAI' && isSimpleMode && (
-                    <div style={{ marginBottom: '8px', background: 'rgba(245, 158, 11, 0.15)', border: '1px solid rgba(245, 158, 11, 0.45)', color: '#fbbf24', borderRadius: '8px', padding: '8px 10px', fontSize: '12px', fontWeight: 600 }}>
-                      Engine unavailable - using fallback AI mode.
-                    </div>
-                  )}
+                <div style={{ flex: 1, minWidth: 0, aspectRatio: '1', pointerEvents: state.isAIThinking || isStockfishThinking ? 'none' : 'auto' }}>
                   <ChessBoard
                     currentReviewIndex={reviewIndex}
                     analysisResults={analysisResults}

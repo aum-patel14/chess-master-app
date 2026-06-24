@@ -7,7 +7,7 @@ import { useGame } from '../context/GameContext'
 import ConfirmModal from '../components/ConfirmModal'
 
 const THEMES = [
-  { id: 'classic', label: 'Classic', light: '#f0d9b5', dark: '#b58863' },
+  { id: 'classic', label: 'Classic', light: '#eeeed2', dark: '#769656' },
   { id: 'ocean', label: 'Ocean', light: '#dee3e6', dark: '#8ca2ad' },
   { id: 'wood', label: 'Wood', light: '#f0c070', dark: '#8a4f2a' },
   { id: 'midnight', label: 'Midnight', light: '#6f8fa4', dark: '#2e4057' },

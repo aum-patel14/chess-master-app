@@ -23,8 +23,8 @@
   --accent-green: var(--green);
 
   /* Board themes - updated classic to match wood colors to solve review point #1 */
-  --board-light-classic: #F0D9B5;
-  --board-dark-classic: #B58863;
+  --board-light-classic: #eeeed2;
+  --board-dark-classic: #769656;
   --board-light-wood: #f0d9b5;
   --board-dark-wood: #b58863;
   
