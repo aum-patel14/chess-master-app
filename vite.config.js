@@ -4,7 +4,8 @@ import { VitePWA } from 'vite-plugin-pwa'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 
-const basePath = '/chess-master-app/';
+const isGhPages = process.env.npm_lifecycle_event === 'predeploy' || process.env.npm_lifecycle_event === 'deploy';
+const basePath = isGhPages ? '/chess-master-app/' : '/';
 const rootDir = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
