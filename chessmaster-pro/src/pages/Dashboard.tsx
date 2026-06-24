@@ -19,8 +19,8 @@ export function Dashboard() {
       to: '/play',
       testId: 'dashboard-card-play',
       btnTestId: 'btn-dashboard-play',
-      color: 'from-blue-600/20 to-indigo-600/10 border-blue-500/30 text-blue-400',
-      btnColor: 'bg-blue-600 hover:bg-blue-500',
+      bgClass: 'bg-chess-dark border border-[#3c3a37] text-white',
+      accentColor: 'text-chess-green',
     },
     {
       title: 'Tactics & Puzzles',
@@ -30,8 +30,8 @@ export function Dashboard() {
       to: '/puzzles',
       testId: 'dashboard-card-puzzles',
       btnTestId: 'btn-dashboard-puzzles',
-      color: 'from-purple-600/20 to-fuchsia-600/10 border-purple-500/30 text-purple-400',
-      btnColor: 'bg-purple-600 hover:bg-purple-500',
+      bgClass: 'bg-chess-dark border border-[#3c3a37] text-white',
+      accentColor: 'text-chess-green',
     },
     {
       title: 'Interactive Lessons',
@@ -41,8 +41,8 @@ export function Dashboard() {
       to: '/courses',
       testId: 'dashboard-card-courses',
       btnTestId: 'btn-dashboard-courses',
-      color: 'from-emerald-600/20 to-teal-600/10 border-emerald-500/30 text-emerald-400',
-      btnColor: 'bg-emerald-600 hover:bg-emerald-500',
+      bgClass: 'bg-chess-dark border border-[#3c3a37] text-white',
+      accentColor: 'text-chess-green',
     },
     {
       title: 'Live Tournaments',
@@ -52,38 +52,39 @@ export function Dashboard() {
       to: '/tournaments',
       testId: 'dashboard-card-tournaments',
       btnTestId: 'btn-dashboard-tournaments',
-      color: 'from-amber-600/20 to-orange-600/10 border-amber-500/30 text-amber-400',
-      btnColor: 'bg-amber-600 hover:bg-amber-500',
+      bgClass: 'bg-chess-dark border border-[#3c3a37] text-white',
+      accentColor: 'text-chess-green',
     },
   ]
 
   return (
-    <div className="space-y-8">
-      <DocumentTitle title="Dashboard" description="Access your rating progress, puzzle stats, active tournaments, and recommended lessons from your Chessmaster Pro dashboard." />
+    <div className="space-y-6">
+      <DocumentTitle
+        title="Dashboard"
+        description="Access your rating progress, puzzle stats, active tournaments, and recommended lessons from your Chessmaster Pro dashboard."
+      />
 
       {/* Hero Welcome banner */}
-      <section className="relative overflow-hidden rounded-2xl border border-slate-800 bg-gradient-to-r from-slate-900 via-purple-950/20 to-slate-900 p-8 sm:p-10">
-        <div className="absolute top-0 right-0 -mt-4 -mr-4 w-56 h-56 bg-purple-500/10 rounded-full blur-3xl pointer-events-none"></div>
-        <div className="relative z-10 max-w-2xl">
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white mb-2">
-            Welcome back, <span className="text-purple-400">Grandmaster</span>
+      <section className="relative overflow-hidden rounded-xl border border-[#3c3a37] bg-chess-dark p-8 sm:p-10 shadow-lg">
+        <div className="relative z-10 max-w-2xl space-y-4">
+          <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-white">
+            Welcome back, <span className="text-chess-green">Grandmaster</span>
           </h1>
-          <p className="text-slate-400 text-lg leading-relaxed mb-6">
-            Ready to improve your game? Play a live match, solve tactical puzzles, or check out the
-            latest courses from top coaches.
+          <p className="text-[#bababa] text-sm sm:text-base leading-relaxed">
+            Ready to improve your game? Play a live match, solve tactical puzzles, or check out the latest courses from top coaches.
           </p>
-          <div className="flex flex-wrap gap-4">
+          <div className="flex flex-wrap gap-3 pt-2">
             <Link
               to="/play"
               data-testid="btn-hero-play"
-              className="px-5 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-medium rounded-lg shadow-lg hover:shadow-purple-500/25 transition-all"
+              className="chess-btn-green px-6 py-3 rounded-lg text-sm transition-all"
             >
               Start Playing Now
             </Link>
             <Link
               to="/courses"
               data-testid="btn-hero-learn"
-              className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium rounded-lg transition-all"
+              className="chess-btn-grey px-6 py-3 rounded-lg text-sm transition-all"
             >
               Browse Courses
             </Link>
@@ -98,16 +99,16 @@ export function Dashboard() {
           return (
             <div
               key={idx}
-              className="border border-slate-850 bg-slate-900/50 p-6 rounded-xl flex items-center space-x-4 shadow-sm"
+              className="border border-[#3c3a37] bg-chess-dark p-6 rounded-xl flex items-center space-x-4 shadow"
               data-testid={`stat-card-${stat.label.toLowerCase().replace(' ', '-')}`}
             >
-              <div className="p-3 bg-slate-800/80 rounded-lg text-purple-400">
+              <div className="p-3 bg-chess-darker rounded-lg text-chess-green">
                 <Icon className="w-6 h-6" />
               </div>
               <div>
-                <p className="text-slate-400 text-sm font-medium">{stat.label}</p>
-                <h3 className="text-2xl font-bold text-white mt-0.5">{stat.value}</h3>
-                <span className="text-xs text-slate-500">{stat.change}</span>
+                <p className="text-[#bababa] text-xs font-bold uppercase tracking-wider">{stat.label}</p>
+                <h3 className="text-2xl font-black text-white mt-0.5">{stat.value}</h3>
+                <span className="text-[10px] font-bold text-chess-green">{stat.change}</span>
               </div>
             </div>
           )
@@ -116,39 +117,39 @@ export function Dashboard() {
 
       {/* Feature Navigation Cards */}
       <section className="space-y-4">
-        <h2 className="text-2xl font-bold text-slate-100 flex items-center gap-2">
-          <span>🎯</span> Explore Chessmaster
+        <h2 className="text-xl font-black text-white flex items-center gap-2">
+          <span className="text-chess-green">♚</span> Explore Chessmaster
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {features.map((feat) => {
             const Icon = feat.icon
             return (
               <div
                 key={feat.title}
                 data-testid={feat.testId}
-                className={`border bg-gradient-to-br ${feat.color} p-6 rounded-2xl flex flex-col justify-between h-56 transition-all hover:scale-[1.01]`}
+                className={`${feat.bgClass} p-6 rounded-xl flex flex-col justify-between h-52 shadow`}
               >
                 <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-lg font-bold text-white">{feat.title}</span>
-                    <Icon className="w-6 h-6" />
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-lg font-black text-white">{feat.title}</span>
+                    <Icon className={`w-5 h-5 ${feat.accentColor}`} />
                   </div>
-                  <p className="text-slate-300 text-sm leading-relaxed">{feat.description}</p>
+                  <p className="text-[#bababa] text-xs leading-relaxed">{feat.description}</p>
                 </div>
-                <div className="mt-4 flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 pt-2">
                   {feat.title === 'Play Live Chess' ? (
                     <>
                       <Link
                         to="/play"
                         data-testid="btn-dashboard-play"
-                        className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg font-medium text-white shadow-md transition-all text-xs"
+                        className="chess-btn-green px-4 py-2 rounded-lg text-xs"
                       >
                         vs Computer
                       </Link>
                       <Link
                         to="/play/online"
                         data-testid="btn-dashboard-play-online"
-                        className="px-4 py-2 bg-purple-650 hover:bg-purple-550 rounded-lg font-medium text-white shadow-md transition-all text-xs"
+                        className="chess-btn-grey px-4 py-2 rounded-lg text-xs text-white"
                       >
                         vs Online Player
                       </Link>
@@ -157,7 +158,7 @@ export function Dashboard() {
                     <Link
                       to={feat.to}
                       data-testid={feat.btnTestId}
-                      className={`inline-block px-4 py-2 rounded-lg font-medium text-white shadow-md transition-all ${feat.btnColor}`}
+                      className="chess-btn-grey px-4 py-2 rounded-lg text-xs text-white"
                     >
                       {feat.buttonText}
                     </Link>
@@ -170,14 +171,14 @@ export function Dashboard() {
       </section>
 
       {/* Online Players overview */}
-      <section className="border border-slate-800 bg-slate-900/30 rounded-xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <section className="border border-[#3c3a37] bg-chess-dark rounded-xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-emerald-500/10 text-emerald-400 rounded-lg">
+          <div className="p-2.5 bg-chess-darker text-chess-green rounded-lg">
             <Users className="w-5 h-5" />
           </div>
           <div>
-            <h4 className="font-semibold text-white">Live Community Activity</h4>
-            <p className="text-sm text-slate-400">
+            <h4 className="font-bold text-white">Live Community Activity</h4>
+            <p className="text-xs text-[#bababa]">
               12,450 players online | 3,122 active chess games
             </p>
           </div>
@@ -185,7 +186,7 @@ export function Dashboard() {
         <Link
           to="/play/online"
           data-testid="btn-lobby-join"
-          className="px-4 py-2 border border-slate-700 hover:border-slate-500 hover:bg-slate-800 text-slate-300 text-sm font-medium rounded-lg transition-all"
+          className="chess-btn-grey px-5 py-2.5 rounded-lg text-xs text-white"
         >
           Open Game Lobby
         </Link>

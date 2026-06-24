@@ -112,7 +112,7 @@ export class StockfishEngine {
             this.pendingMove = null
           }
         },
-        moveTime * 3 + 6000
+        moveTime * 5 + 20000
       )
     })
   }

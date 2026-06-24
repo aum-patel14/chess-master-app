@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 const FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 const RANKS = ['8', '7', '6', '5', '4', '3', '2', '1'];
 
-export default function ChessPiece({ piece, square, isSelected, animationsEnabled, onDragStart, onDrop, onClick, animStyle, flippedView }) {
+export default function ChessPiece({ piece, square, isSelected, animationsEnabled, onDragStart, onDrop, onClick, animStyle, flippedView, isCaptureAttacker }) {
   const [isDragging, setIsDragging] = useState(false);
   const [transformOffset, setTransformOffset] = useState({ x: 0, y: 0 });
   const [isAnimating, setIsAnimating] = useState(false);
@@ -52,7 +52,7 @@ export default function ChessPiece({ piece, square, isSelected, animationsEnable
 
   // Inline transition and transform styles following Chess.com specs
   const transitionStyle = isAnimating
-    ? 'transform 150ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+    ? `transform 150ms cubic-bezier(0.16, 1, 0.3, 1)${isCaptureAttacker ? ' 100ms' : ''}`
     : 'transform 0.1s';
 
   const transformStyle = isAnimating
@@ -82,10 +82,10 @@ export default function ChessPiece({ piece, square, isSelected, animationsEnable
         width: '85%',
         height: '85%',
         objectFit: 'contain',
-        filter: 'drop-shadow(1px 2px 3px rgba(0,0,0,0.4))',
+        filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.4))',
         transition: transitionStyle,
         transform: transformStyle,
-        cursor: 'pointer',
+        cursor: isDragging ? 'grabbing' : 'grab',
         userSelect: 'none',
         pointerEvents: 'auto',
       }}

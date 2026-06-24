@@ -6,7 +6,6 @@ import { supabase } from '../lib/supabaseClient'
 import {
   Award,
   CheckCircle,
-  HelpCircle,
   ArrowRight,
   ArrowLeft,
   Sparkles,
@@ -81,7 +80,7 @@ export function Puzzles() {
   const [moveList, setMoveList] = useState<string[]>([])
   const [currentMoveIdx, setCurrentMoveIdx] = useState<number>(0)
   const [puzzleStatus, setPuzzleStatus] = useState<'solving' | 'success' | 'failed'>('solving')
-  const [feedback, setFeedback] = useState<string>('Find the best move.')
+  const [feedback, setFeedback] = useState<string>('Your turn. Find the best move.')
   const [loading, setLoading] = useState<boolean>(false)
 
   const fetchUserStats = async () => {
@@ -154,18 +153,11 @@ export function Puzzles() {
           setBestStreak(nextBest)
         }
       } else {
-        nextStreak = 0
         setCurrentStreak(0)
+        nextStreak = 0
       }
     }
 
-    let nextDailyStreak = dailyStreak
-    if (activeMode === 'daily' && solved) {
-      nextDailyStreak = dailyStreak + 1
-      setDailyStreak(nextDailyStreak)
-    }
-
-    // Persist
     try {
       const {
         data: { user },
@@ -173,202 +165,97 @@ export function Puzzles() {
 
       if (!user) {
         localStorage.setItem('guest_puzzle_rating', nextRating.toString())
-        localStorage.setItem('guest_puzzle_streak_best', nextBest.toString())
-        localStorage.setItem('guest_puzzle_streak_daily', nextDailyStreak.toString())
         localStorage.setItem('guest_puzzle_solved_count', nextSolved.toString())
         localStorage.setItem('guest_puzzle_failed_count', nextFailed.toString())
+        if (isStreakMode) {
+          localStorage.setItem('guest_puzzle_streak_best', nextBest.toString())
+        }
         return
       }
 
       await supabase.from('puzzle_ratings').upsert({
         user_id: user.id,
         rating: nextRating,
+        games_played: nextSolved + nextFailed,
         streak_best: nextBest,
-        daily_streak_days: nextDailyStreak,
-        games_played: nextSolved,
+        daily_streak_days: dailyStreak,
         updated_at: new Date().toISOString(),
       })
-
-      if (currentPuzzle) {
-        await supabase.from('puzzle_activity').insert({
-          user_id: user.id,
-          puzzle_id: currentPuzzle.id,
-          solved,
-          mode: activeMode,
-          rating_before: userRating,
-          rating_after: nextRating,
-        })
-      }
     } catch (err) {
-      console.warn('Failed to save stats in database:', err)
+      console.warn('Failed to save stats in Supabase:', err)
     }
   }
 
-  // Fetch puzzle based on current mode
   const loadPuzzle = async (mode: 'daily' | 'rated' | 'streak') => {
     setLoading(true)
-    setHintMove(null)
+    setPuzzleStatus('solving')
+    setFeedback('Your turn. Find the best move.')
     setLastMove(null)
+    setHintMove(null)
 
     try {
-      let selectedPuzzle: Puzzle | null = null
+      // Supabase puzzle query
+      const { data, error } = await supabase
+        .from('puzzles')
+        .select('*')
+        .limit(10)
 
-      if (mode === 'daily') {
-        const { data, error } = await supabase.from('puzzles').select('*').limit(1)
-        if (data && data.length > 0 && !error) {
-          selectedPuzzle = data[0]
+      let selectedPuzzle: Puzzle
+
+      if (data && data.length > 0 && !error) {
+        // Find suitable rated puzzle or random
+        if (mode === 'rated') {
+          const ratedPuzzles = data.filter(
+            (p) => Math.abs(p.rating - userRating) <= 250
+          )
+          selectedPuzzle =
+            ratedPuzzles.length > 0
+              ? getRandomElement(ratedPuzzles)
+              : getRandomElement(data)
         } else {
-          selectedPuzzle = MOCK_PUZZLES[0]
-        }
-      } else if (mode === 'rated') {
-        const { data, error } = await supabase
-          .from('puzzles')
-          .select('*')
-          .gte('rating', userRating - 150)
-          .lte('rating', userRating + 150)
-          .limit(10)
-
-        if (data && data.length > 0 && !error) {
           selectedPuzzle = getRandomElement(data)
-        } else {
-          selectedPuzzle = getRandomElement(MOCK_PUZZLES)
         }
       } else {
-        // Streak Mode (gradually increasing rating)
-        const targetRating = 800 + currentStreak * 100
-        const { data, error } = await supabase
-          .from('puzzles')
-          .select('*')
-          .gte('rating', targetRating - 100)
-          .lte('rating', targetRating + 100)
-          .limit(10)
+        // Fallback to local mocks
+        selectedPuzzle = getRandomElement(MOCK_PUZZLES)
+      }
 
-        if (data && data.length > 0 && !error) {
-          selectedPuzzle = getRandomElement(data)
-        } else {
-          selectedPuzzle = MOCK_PUZZLES[currentStreak % MOCK_PUZZLES.length]
+      setCurrentPuzzle(selectedPuzzle)
+
+      const instance = new Chess(selectedPuzzle.fen)
+      const moves = selectedPuzzle.moves.split(' ')
+
+      // Auto-play the opponent's first move
+      if (moves.length > 0) {
+        try {
+          const move = moves[0]
+          const from = move.slice(0, 2)
+          const to = move.slice(2, 4)
+          const promotion = move.slice(4, 5) || undefined
+          instance.move({ from, to, promotion })
+        } catch (e) {
+          console.error('Failed to autoplay opponent first move:', e)
         }
       }
 
-      if (selectedPuzzle) {
-        startPuzzleInstance(selectedPuzzle)
-      }
+      setChessInstance(instance)
+      setPosition(instance.fen())
+      setMoveList(moves)
+      setCurrentMoveIdx(1) // player starts at index 1
+      setBoardOrientation(instance.turn() === 'w' ? 'white' : 'black')
     } catch (err) {
-      console.error('Failed to load puzzle, falling back to mocks:', err)
+      console.error('Failed to load puzzle:', err)
       const fallback = getRandomElement(MOCK_PUZZLES)
-      startPuzzleInstance(fallback)
+      setCurrentPuzzle(fallback)
+      const instance = new Chess(fallback.fen)
+      setChessInstance(instance)
+      setPosition(fallback.fen)
+      setMoveList(fallback.moves.split(' '))
+      setCurrentMoveIdx(0)
+      setBoardOrientation(instance.turn() === 'w' ? 'white' : 'black')
     } finally {
       setLoading(false)
     }
-  }
-
-  const startPuzzleInstance = (puz: Puzzle) => {
-    setCurrentPuzzle(puz)
-
-    const chess = new Chess(puz.fen)
-    const movesArray = puz.moves.split(' ')
-
-    // First move is played by opponent
-    const oppMove = movesArray[0]
-    const parsedOpp = {
-      from: oppMove.slice(0, 2),
-      to: oppMove.slice(2, 4),
-      promotion: oppMove.length === 5 ? oppMove[4] : undefined,
-    }
-
-    chess.move(parsedOpp)
-
-    setChessInstance(chess)
-    setPosition(chess.fen())
-    setMoveList(movesArray)
-    setCurrentMoveIdx(1) // Index of the player's first correct move
-    setLastMove(parsedOpp)
-    setPuzzleStatus('solving')
-
-    const playerColor = chess.turn() === 'w' ? 'white' : 'black'
-    setBoardOrientation(playerColor)
-    setFeedback(`Find the best move for ${playerColor === 'white' ? 'White' : 'Black'}.`)
-  }
-
-  // Handle user moves
-  const handlePlayerMove = (move: { from: string; to: string; promotion?: string }) => {
-    if (!chessInstance || puzzleStatus !== 'solving') return
-
-    const playerUci = move.from + move.to + (move.promotion || '')
-    const correctUci = moveList[currentMoveIdx]
-
-    if (playerUci === correctUci) {
-      // Apply correct player move
-      const parsedMove = {
-        from: move.from,
-        to: move.to,
-        promotion: move.promotion || 'q',
-      }
-      chessInstance.move(parsedMove)
-      setPosition(chessInstance.fen())
-      setLastMove(parsedMove)
-      setHintMove(null)
-
-      const nextMoveIdx = currentMoveIdx + 2
-      if (nextMoveIdx >= moveList.length) {
-        // Solved!
-        setPuzzleStatus('success')
-        setFeedback('🎉 Correct! Puzzle solved successfully!')
-        updateStatsInDB(true, 15, activeMode === 'streak')
-      } else {
-        // Opponent reply
-        setFeedback('Correct! Opponent is replying...')
-        setCurrentMoveIdx(nextMoveIdx)
-
-        setTimeout(() => {
-          const oppReply = moveList[nextMoveIdx - 1]
-          const parsedOpp = {
-            from: oppReply.slice(0, 2),
-            to: oppReply.slice(2, 4),
-            promotion: oppReply.length === 5 ? oppReply[4] : undefined,
-          }
-          chessInstance.move(parsedOpp)
-          setPosition(chessInstance.fen())
-          setLastMove(parsedOpp)
-          setFeedback('Your turn. Keep going!')
-        }, 600)
-      }
-    } else {
-      // Failed move
-      setPuzzleStatus('failed')
-      setFeedback('❌ Incorrect move. That is not the best continuation. Try again!')
-      updateStatsInDB(false, -10, activeMode === 'streak')
-    }
-  }
-
-  const handleRetry = () => {
-    if (!currentPuzzle) return
-    // Reset to the position before the player's incorrect move
-    const chess = new Chess(currentPuzzle.fen)
-    // Replay moves up to the last opponent move
-    for (let i = 0; i < currentMoveIdx; i++) {
-      const uci = moveList[i]
-      chess.move({
-        from: uci.slice(0, 2),
-        to: uci.slice(2, 4),
-        promotion: uci.length === 5 ? uci[4] : undefined,
-      })
-    }
-    setChessInstance(chess)
-    setPosition(chess.fen())
-    setHintMove(null)
-    setPuzzleStatus('solving')
-    setFeedback('Your turn. Find the best move.')
-  }
-
-  const handleGetHint = () => {
-    if (!chessInstance || puzzleStatus !== 'solving') return
-    const correctUci = moveList[currentMoveIdx]
-    setHintMove({
-      from: correctUci.slice(0, 2),
-      to: correctUci.slice(2, 4),
-    })
-    setFeedback('Hint: The best square has been outlined.')
   }
 
   const handleStartMode = (mode: 'daily' | 'rated' | 'streak') => {
@@ -383,23 +270,135 @@ export function Puzzles() {
     setActiveMode('hub')
     setCurrentPuzzle(null)
     setChessInstance(null)
-    fetchUserStats()
+    setPosition('')
+    setLastMove(null)
+    setHintMove(null)
+  }
+
+  const handleRetry = () => {
+    if (!currentPuzzle) return
+    setPuzzleStatus('solving')
+    setFeedback('Your turn. Find the best move.')
+    setLastMove(null)
+    setHintMove(null)
+
+    const instance = new Chess(currentPuzzle.fen)
+    const moves = currentPuzzle.moves.split(' ')
+
+    // Auto-play the opponent's first move on retry
+    if (moves.length > 0) {
+      try {
+        const move = moves[0]
+        const from = move.slice(0, 2)
+        const to = move.slice(2, 4)
+        const promotion = move.slice(4, 5) || undefined
+        instance.move({ from, to, promotion })
+      } catch (e) {
+        console.error('Failed to autoplay opponent first move on retry:', e)
+      }
+    }
+
+    setChessInstance(instance)
+    setPosition(instance.fen())
+    setCurrentMoveIdx(1)
+  }
+
+  const handleGetHint = () => {
+    if (puzzleStatus !== 'solving' || !moveList || moveList.length <= currentMoveIdx) return
+    const nextMoveStr = moveList[currentMoveIdx]
+    const nextMoveFrom = nextMoveStr.slice(0, 2)
+    const nextMoveTo = nextMoveStr.slice(2, 4)
+    setHintMove({ from: nextMoveFrom, to: nextMoveTo })
+    setFeedback('Hint: Review the highlighted suggestion on the board.')
+  }
+
+  const handlePlayerMove = (move: { from: string; to: string; promotion?: string }) => {
+    if (puzzleStatus !== 'solving' || !chessInstance || !currentPuzzle) return
+
+    const expectedMove = moveList[currentMoveIdx]
+    const playerMoveStr = `${move.from}${move.to}`
+
+    if (playerMoveStr.toLowerCase() === expectedMove.toLowerCase().slice(0, 4)) {
+      // Correct Move!
+      try {
+        const nextInstance = new Chess(chessInstance.fen())
+        const result = nextInstance.move({
+          from: move.from,
+          to: move.to,
+          promotion: move.promotion || 'q',
+        })
+
+        if (result) {
+          setChessInstance(nextInstance)
+          setPosition(nextInstance.fen())
+          setLastMove({ from: move.from, to: move.to })
+          setHintMove(null)
+
+          const nextIdx = currentMoveIdx + 1
+          if (nextIdx >= moveList.length) {
+            // Puzzle fully solved!
+            setPuzzleStatus('success')
+            setFeedback('🎉 Correct! Puzzle solved successfully.')
+            updateStatsInDB(true, 15, activeMode === 'streak')
+          } else {
+            // Opponent response (next move in the list)
+            const opponentMoveStr = moveList[nextIdx]
+            const oppFrom = opponentMoveStr.slice(0, 2)
+            const oppTo = opponentMoveStr.slice(2, 4)
+            const oppPromo = opponentMoveStr.slice(4, 5) || undefined
+
+            setTimeout(() => {
+              try {
+                const oppMoveResult = nextInstance.move({
+                  from: oppFrom,
+                  to: oppTo,
+                  promotion: oppPromo,
+                })
+
+                if (oppMoveResult) {
+                  setChessInstance(nextInstance)
+                  setPosition(nextInstance.fen())
+                  setLastMove({ from: oppFrom, to: oppTo })
+                  setCurrentMoveIdx(nextIdx + 1)
+                  if (nextIdx + 1 >= moveList.length) {
+                    setPuzzleStatus('success')
+                    setFeedback('🎉 Correct! Puzzle solved successfully.')
+                    updateStatsInDB(true, 15, activeMode === 'streak')
+                  } else {
+                    setFeedback('Your turn. Keep going!')
+                  }
+                }
+              } catch (err) {
+                console.error('Failed opponent move response:', err)
+              }
+            }, 800)
+          }
+        }
+      } catch (err) {
+        console.warn('Move execution error:', err)
+      }
+    } else {
+      // Incorrect Move!
+      setPuzzleStatus('failed')
+      setFeedback('❌ Incorrect move. Study the board and try again.')
+      updateStatsInDB(false, -10, activeMode === 'streak')
+    }
   }
 
   const puzzleStats = [
-    { label: 'Puzzle Rating', value: userRating.toString(), icon: Award },
-    { label: 'Solved', value: solvedCount.toString(), icon: CheckCircle },
-    { label: 'Failed', value: failedCount.toString(), icon: HelpCircle },
-    { label: 'Best Streak', value: bestStreak.toString(), icon: Trophy },
+    { label: 'Puzzle Rating', value: `${userRating} Elo`, icon: Trophy, testId: 'puzzle-rating' },
+    { label: 'Puzzles Solved', value: solvedCount, icon: CheckCircle, testId: 'solved' },
+    { label: 'Best Streak', value: bestStreak, icon: Award, testId: 'best-streak' },
+    { label: 'Active Streak', value: `${dailyStreak} days`, icon: Award, testId: 'active-streak' },
   ]
 
-  // 1. Loading screen
+  // 1. Rendering Loading State
   if (loading) {
     return (
-      <div className="min-h-[50vh] flex flex-col items-center justify-center space-y-4 max-w-md mx-auto text-center animate-pulse">
-        <div className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
-        <h2 className="text-xl font-bold text-white">Loading puzzle...</h2>
-        <p className="text-slate-400 text-sm">Fetching position data from Supabase.</p>
+      <div className="min-h-[50vh] flex flex-col items-center justify-center space-y-4 max-w-md mx-auto text-center">
+        <div className="w-12 h-12 border-4 border-chess-green border-t-transparent rounded-full animate-spin"></div>
+        <h2 className="text-xl font-black text-white">Loading puzzle...</h2>
+        <p className="text-[#bababa] text-xs leading-relaxed">Fetching position data from Supabase.</p>
       </div>
     )
   }
@@ -407,23 +406,26 @@ export function Puzzles() {
   // 2. Solving state interface
   if (activeMode !== 'hub' && currentPuzzle) {
     return (
-      <div className="space-y-6 max-w-4xl mx-auto py-4">
-        <DocumentTitle title="Solving Puzzle" description="Improve your chess tactics by solving this interactive chess puzzle on Chessmaster Pro." />
+      <div className="space-y-6 max-w-4xl mx-auto py-2">
+        <DocumentTitle
+          title="Solving Puzzle"
+          description="Improve your chess tactics by solving this interactive chess puzzle on Chessmaster Pro."
+        />
 
         {/* Back and Status Bar */}
-        <div className="flex justify-between items-center bg-slate-900 border border-slate-800 p-4 rounded-xl shadow-lg">
+        <div className="flex justify-between items-center bg-chess-dark border border-[#3c3a37] p-4 rounded-xl shadow">
           <button
             data-testid="btn-exit-puzzles"
             onClick={handleExitToHub}
-            className="text-xs font-bold text-slate-400 hover:text-white flex items-center gap-1.5 transition-all cursor-pointer"
+            className="text-xs font-bold text-[#bababa] hover:text-white flex items-center gap-1.5 transition-all cursor-pointer"
           >
             <ArrowLeft className="w-3.5 h-3.5" /> Back to Puzzles Hub
           </button>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             {activeMode === 'streak' && (
               <span
                 data-testid="streak-counter"
-                className="text-xs font-mono font-bold bg-amber-950/40 text-amber-400 px-3 py-1 rounded border border-amber-900/30 flex items-center gap-1"
+                className="text-xs font-mono font-bold bg-chess-darker text-amber-500 px-3 py-1 rounded border border-[#3c3a37] flex items-center gap-1 shadow"
               >
                 🔥 Streak: {currentStreak}
               </span>
@@ -431,18 +433,18 @@ export function Puzzles() {
             {activeMode === 'rated' && (
               <span
                 data-testid="user-puzzle-rating"
-                className="text-xs font-mono font-bold bg-purple-950/40 text-purple-400 px-3 py-1 rounded border border-purple-900/30 flex items-center gap-1"
+                className="text-xs font-mono font-bold bg-chess-darker text-chess-green px-3 py-1 rounded border border-[#3c3a37] flex items-center gap-1 shadow"
               >
                 ⚡ Rating: {userRating}
               </span>
             )}
-            <span className="text-xs font-semibold text-slate-400 bg-slate-950 px-2.5 py-1 rounded border border-slate-800 uppercase">
+            <span className="text-xs font-bold text-[#bababa] bg-chess-darker px-3 py-1 rounded border border-[#3c3a37] uppercase tracking-wider">
               Difficulty: {currentPuzzle.rating}
             </span>
           </div>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-8 justify-center items-start">
+        <div className="flex flex-col lg:flex-row gap-6 justify-center items-start">
           {/* Chessboard Column */}
           <div className="w-full max-w-[480px] mx-auto flex flex-col items-center space-y-4">
             <ChessBoard
@@ -456,10 +458,10 @@ export function Puzzles() {
           </div>
 
           {/* Panel Column */}
-          <div className="w-full lg:w-[320px] bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-6 flex flex-col justify-between self-stretch">
+          <div className="w-full lg:w-[320px] bg-chess-dark border border-[#3c3a37] rounded-xl p-5 space-y-5 flex flex-col justify-between self-stretch shadow-lg">
             <div className="space-y-4">
-              <h3 className="text-md font-bold text-white border-b border-slate-800 pb-3 flex items-center gap-2">
-                <Activity className="w-4 h-4 text-purple-400" /> Solve Challenge
+              <h3 className="text-md font-black text-white border-b border-[#3c3a37] pb-3 flex items-center gap-2">
+                <Activity className="w-4 h-4 text-chess-green" /> Solve Challenge
               </h3>
 
               {/* Theme tags */}
@@ -467,7 +469,7 @@ export function Puzzles() {
                 {currentPuzzle.themes?.map((theme) => (
                   <span
                     key={theme}
-                    className="text-[10px] font-semibold font-mono bg-slate-950 text-slate-400 px-2 py-0.5 rounded border border-slate-850"
+                    className="text-[9px] font-bold font-mono bg-chess-darker text-[#bababa] px-2 py-0.5 rounded border border-[#3c3a37]"
                   >
                     #{theme}
                   </span>
@@ -477,12 +479,12 @@ export function Puzzles() {
               {/* Feedback Alert Panel */}
               <div
                 data-testid="puzzle-feedback"
-                className={`p-4 rounded-xl border text-sm font-semibold leading-relaxed transition-all ${
+                className={`p-4 rounded-xl border text-xs font-bold leading-relaxed transition-all ${
                   puzzleStatus === 'success'
-                    ? 'bg-emerald-950/30 border-emerald-500/20 text-emerald-400 animate-pulse'
+                    ? 'bg-chess-green/10 border-chess-green/20 text-chess-green animate-pulse'
                     : puzzleStatus === 'failed'
-                      ? 'bg-red-950/30 border-red-500/20 text-red-400'
-                      : 'bg-slate-950/40 border-slate-850 text-slate-300'
+                      ? 'bg-red-955/15 border-red-500/20 text-red-400'
+                      : 'bg-chess-darker border-[#3c3a37] text-white'
                 }`}
               >
                 {feedback}
@@ -490,12 +492,12 @@ export function Puzzles() {
             </div>
 
             {/* Controls */}
-            <div className="space-y-3 pt-4 border-t border-slate-800">
+            <div className="space-y-2.5 pt-4 border-t border-[#3c3a37]">
               {puzzleStatus === 'solving' && (
                 <button
                   data-testid="btn-hint"
                   onClick={handleGetHint}
-                  className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold rounded-lg shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="chess-btn-green w-full py-3 rounded-lg text-xs flex items-center justify-center gap-1.5"
                 >
                   <Sparkles className="w-4 h-4" /> Reveal Suggested Move
                 </button>
@@ -505,9 +507,9 @@ export function Puzzles() {
                 <button
                   data-testid="btn-retry-puzzle"
                   onClick={handleRetry}
-                  className="w-full py-2.5 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold rounded-lg shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer animate-fade-in"
+                  className="chess-btn-grey w-full py-3 rounded-lg text-xs text-white flex items-center justify-center gap-1.5 cursor-pointer animate-fade-in"
                 >
-                  <RotateCcw className="w-4 h-4" /> Try Position Again
+                  <RotateCcw className="w-4 h-4 text-chess-green" /> Try Position Again
                 </button>
               )}
 
@@ -515,7 +517,7 @@ export function Puzzles() {
                 <button
                   data-testid="btn-next-puzzle"
                   onClick={() => loadPuzzle(activeMode)}
-                  className="w-full py-2.5 bg-purple-650 hover:bg-purple-550 text-white text-xs font-bold rounded-lg shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer animate-fade-in"
+                  className="chess-btn-green w-full py-3 rounded-lg text-xs flex items-center justify-center gap-1.5 animate-fade-in shadow"
                 >
                   Load Next Puzzle <ArrowRight className="w-4 h-4" />
                 </button>
@@ -525,7 +527,7 @@ export function Puzzles() {
                 <button
                   data-testid="btn-next-puzzle"
                   onClick={handleExitToHub}
-                  className="w-full py-2.5 bg-purple-650 hover:bg-purple-550 text-white text-xs font-bold rounded-lg shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer animate-fade-in"
+                  className="chess-btn-green w-full py-3 rounded-lg text-xs flex items-center justify-center gap-1.5 animate-fade-in shadow"
                 >
                   Return to Puzzles Hub <ArrowRight className="w-4 h-4" />
                 </button>
@@ -539,15 +541,17 @@ export function Puzzles() {
 
   // 3. Render Hub Screen
   return (
-    <div className="space-y-8 max-w-5xl mx-auto py-6">
-      <DocumentTitle title="Chess Puzzles" description="Train your tactical calculation skills with daily puzzles, rated chess training, and high-difficulty puzzle streak challenges on Chessmaster Pro." />
+    <div className="space-y-6 max-w-5xl mx-auto py-6">
+      <DocumentTitle
+        title="Chess Puzzles"
+        description="Train your tactical calculation skills with daily puzzles, rated chess training, and high-difficulty puzzle streak challenges on Chessmaster Pro."
+      />
 
       {/* Header section */}
-      <section className="text-center space-y-3">
-        <h1 className="text-3xl font-extrabold tracking-tight text-white">Tactical Puzzles Hub</h1>
-        <p className="text-slate-400 max-w-xl mx-auto text-sm leading-relaxed">
-          Improve your tactical chess calculations with database puzzles. Choose a training mode
-          that matches your goals.
+      <section className="text-center space-y-2">
+        <h1 className="text-3xl font-black tracking-tight text-white">Tactical Puzzles Hub</h1>
+        <p className="text-[#bababa] max-w-xl mx-auto text-xs leading-relaxed">
+          Improve your tactical chess calculations with database puzzles. Choose a training mode that matches your goals.
         </p>
       </section>
 
@@ -558,15 +562,15 @@ export function Puzzles() {
           return (
             <div
               key={idx}
-              className="border border-slate-850 bg-slate-900/40 p-4 sm:p-5 rounded-xl flex items-center space-x-3.5"
-              data-testid={`puzzle-stat-${stat.label.toLowerCase().replace(' ', '-')}`}
+              className="border border-[#3c3a37] bg-chess-dark p-4 rounded-xl flex items-center space-x-3.5 shadow"
+              data-testid={`puzzle-stat-${stat.testId}`}
             >
-              <div className="p-2 bg-slate-800 text-purple-400 rounded-lg">
+              <div className="p-2.5 bg-chess-darker text-chess-green rounded-lg">
                 <Icon className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-slate-400 text-xs font-medium">{stat.label}</p>
-                <h4 className="text-lg sm:text-xl font-bold text-white mt-0.5">{stat.value}</h4>
+                <p className="text-[#bababa] text-[10px] font-bold uppercase tracking-wider">{stat.label}</p>
+                <h4 className="text-lg font-black text-white mt-0.5">{stat.value}</h4>
               </div>
             </div>
           )
@@ -578,20 +582,19 @@ export function Puzzles() {
         {/* Daily Puzzle Card */}
         <div
           data-testid="puzzle-card-daily"
-          className="border border-slate-800 bg-gradient-to-b from-blue-955/10 to-slate-900 p-6 rounded-2xl flex flex-col justify-between shadow-xl space-y-4 hover:scale-[1.02] transition-transform duration-300"
+          className="border border-[#3c3a37] bg-chess-dark p-6 rounded-xl flex flex-col justify-between shadow space-y-4 hover:scale-[1.01] transition-transform duration-150"
         >
-          <div className="space-y-3">
-            <span className="text-3xl">🗓️</span>
-            <h3 className="text-xl font-extrabold text-white">Daily Tactical Challenge</h3>
-            <p className="text-slate-400 text-xs leading-relaxed">
-              Solve the curated puzzle of the day. Consistent daily solving builds strong tactical
-              memory and consecutive day streaks.
+          <div className="space-y-2.5">
+            <span className="text-3xl block">🗓️</span>
+            <h3 className="text-lg font-black text-white">Daily Tactical Challenge</h3>
+            <p className="text-[#bababa] text-xs leading-relaxed">
+              Solve the curated puzzle of the day. Consistent daily solving builds strong tactical memory and consecutive day streaks.
             </p>
           </div>
           <button
             data-testid="btn-play-daily"
             onClick={() => handleStartMode('daily')}
-            className="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow"
+            className="chess-btn-green w-full py-2.5 rounded-lg text-xs flex items-center justify-center gap-1.5 shadow"
           >
             Start Daily Challenge <ArrowRight className="w-3.5 h-3.5" />
           </button>
@@ -600,20 +603,19 @@ export function Puzzles() {
         {/* Rated Training Card */}
         <div
           data-testid="puzzle-card-rated"
-          className="border border-slate-800 bg-gradient-to-b from-purple-955/10 to-slate-900 p-6 rounded-2xl flex flex-col justify-between shadow-xl space-y-4 hover:scale-[1.02] transition-transform duration-300"
+          className="border border-[#3c3a37] bg-chess-dark p-6 rounded-xl flex flex-col justify-between shadow space-y-4 hover:scale-[1.01] transition-transform duration-150"
         >
-          <div className="space-y-3">
-            <span className="text-3xl">⚡</span>
-            <h3 className="text-xl font-extrabold text-white">Rated Training</h3>
-            <p className="text-slate-400 text-xs leading-relaxed">
-              Solve puzzles matching your current rating. Correct answers raise your rating, while
-              incorrect answers drop it.
+          <div className="space-y-2.5">
+            <span className="text-3xl block">⚡</span>
+            <h3 className="text-lg font-black text-white">Rated Training</h3>
+            <p className="text-[#bababa] text-xs leading-relaxed">
+              Solve puzzles matching your current rating. Correct answers raise your rating, while incorrect answers drop it.
             </p>
           </div>
           <button
             data-testid="btn-play-rated"
             onClick={() => handleStartMode('rated')}
-            className="w-full py-2 bg-purple-650 hover:bg-purple-550 text-white text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow"
+            className="chess-btn-green w-full py-2.5 rounded-lg text-xs flex items-center justify-center gap-1.5 shadow"
           >
             Start Rated Training <ArrowRight className="w-3.5 h-3.5" />
           </button>
@@ -622,20 +624,19 @@ export function Puzzles() {
         {/* Streak Challenge Card */}
         <div
           data-testid="puzzle-card-streak"
-          className="border border-slate-800 bg-gradient-to-b from-amber-955/10 to-slate-900 p-6 rounded-2xl flex flex-col justify-between shadow-xl space-y-4 hover:scale-[1.02] transition-transform duration-300"
+          className="border border-[#3c3a37] bg-chess-dark p-6 rounded-xl flex flex-col justify-between shadow space-y-4 hover:scale-[1.01] transition-transform duration-150"
         >
-          <div className="space-y-3">
-            <span className="text-3xl">🔥</span>
-            <h3 className="text-xl font-extrabold text-white">Streak Challenge</h3>
-            <p className="text-slate-400 text-xs leading-relaxed">
-              How many puzzles can you solve in a row without making a single mistake? The
-              difficulty increases with every success!
+          <div className="space-y-2.5">
+            <span className="text-3xl block">🔥</span>
+            <h3 className="text-lg font-black text-white">Streak Challenge</h3>
+            <p className="text-[#bababa] text-xs leading-relaxed">
+              How many puzzles can you solve in a row without making a single mistake? The difficulty increases with every success!
             </p>
           </div>
           <button
             data-testid="btn-play-streak"
             onClick={() => handleStartMode('streak')}
-            className="w-full py-2 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow"
+            className="chess-btn-green w-full py-2.5 rounded-lg text-xs flex items-center justify-center gap-1.5 shadow"
           >
             Start Streak Challenge <ArrowRight className="w-3.5 h-3.5" />
           </button>

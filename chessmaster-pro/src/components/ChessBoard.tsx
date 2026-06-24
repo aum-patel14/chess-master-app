@@ -13,20 +13,6 @@ export interface ChessBoardProps {
   highlightHint?: { from: string; to: string } | null
 }
 
-const pieceSymbols: { [key: string]: string } = {
-  k: '♚',
-  q: '♛',
-  r: '♜',
-  b: '♝',
-  n: '♞',
-  p: '♟',
-  K: '♔',
-  Q: '♕',
-  R: '♖',
-  B: '♗',
-  N: '♘',
-  P: '♙',
-}
 
 export function ChessBoard({
   position,
@@ -237,7 +223,7 @@ export function ChessBoard({
   }
 
   return (
-    <div className="relative w-full aspect-square bg-slate-900 rounded-lg overflow-hidden border-2 border-slate-800 shadow-2xl select-none">
+    <div className="relative w-full aspect-square bg-[#211f1d] rounded-lg overflow-hidden border-2 border-[#2b2927] shadow-2xl select-none">
       {/* Chess Grid */}
       <div className="grid grid-cols-8 grid-rows-8 h-full w-full">
         {boardRanks.map((rank, rIdx) =>
@@ -261,9 +247,9 @@ export function ChessBoard({
                 onDrop={(e) => handleDrop(e, square)}
                 onClick={() => handleSquareClick(square)}
                 className={`relative aspect-square flex items-center justify-center cursor-pointer transition-all duration-150 ${
-                  isDark ? 'bg-amber-850/60' : 'bg-amber-100/90'
+                  isDark ? 'bg-board-dark' : 'bg-board-light'
                 } ${isSelected ? 'ring-4 ring-purple-500 ring-inset bg-purple-500/20' : ''} ${
-                  isLastSrc || isLastDst ? 'bg-yellow-500/15' : ''
+                  isLastSrc || isLastDst ? 'bg-[#f7f785]/35' : ''
                 } ${
                   isHintSrc || isHintDst
                     ? 'ring-4 ring-emerald-500 ring-inset bg-emerald-500/10'
@@ -274,7 +260,7 @@ export function ChessBoard({
                 {fIdx === 0 && (
                   <span
                     className={`absolute top-0.5 left-1 text-[9px] font-bold ${
-                      isDark ? 'text-amber-200/30' : 'text-amber-800/40'
+                      isDark ? 'text-[#eeeed2]/50' : 'text-[#769656]/60'
                     }`}
                   >
                     {rank}
@@ -285,7 +271,7 @@ export function ChessBoard({
                 {rIdx === 7 && (
                   <span
                     className={`absolute bottom-0.5 right-1 text-[9px] font-bold ${
-                      isDark ? 'text-amber-200/30' : 'text-amber-800/40'
+                      isDark ? 'text-[#eeeed2]/50' : 'text-[#769656]/60'
                     }`}
                   >
                     {file}
@@ -298,24 +284,22 @@ export function ChessBoard({
                     data-testid={`legal-indicator-${square}`}
                     className={`absolute rounded-full pointer-events-none z-10 ${
                       piece
-                        ? 'w-10 h-10 border-4 border-emerald-500/60 bg-transparent'
-                        : 'w-4 h-4 bg-emerald-500/60'
+                        ? 'w-10 h-10 border-4 border-black/15 bg-transparent'
+                        : 'w-4 h-4 bg-black/15'
                     }`}
                   />
                 )}
 
-                {/* Render Chess Piece */}
+                {/* Render Chess Piece SVG */}
                 {piece && (
-                  <div
+                  <img
+                    src={`${import.meta.env.BASE_URL}pieces/cburnett/${piece === piece.toUpperCase() ? 'w' : 'b'}${piece.toUpperCase()}.svg`}
+                    alt={piece}
                     draggable={!readOnly}
                     onDragStart={(e) => handleDragStart(e, square)}
                     data-testid={`piece-${square}-${piece}`}
-                    className={`text-3.5xl sm:text-4.5xl font-medium filter drop-shadow-md select-none transform hover:scale-105 active:scale-95 transition-transform z-20 ${
-                      piece === piece.toLowerCase() ? 'text-slate-900' : 'text-white'
-                    }`}
-                  >
-                    {pieceSymbols[piece]}
-                  </div>
+                    className="w-[85%] h-[85%] object-contain select-none transform hover:scale-105 active:scale-95 transition-transform z-20"
+                  />
                 )}
               </div>
             )
@@ -327,29 +311,33 @@ export function ChessBoard({
       {promotionPending && (
         <div
           data-testid="promotion-modal"
-          className="absolute inset-0 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in"
+          className="absolute inset-0 bg-[#211f1d]/85 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in"
         >
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-2xl max-w-xs w-full text-center space-y-4">
+          <div className="bg-[#262421] border border-[#3c3a37] rounded-xl p-6 shadow-2xl max-w-xs w-full text-center space-y-4">
             <h4 className="text-white font-bold text-lg">Pawn Promotion</h4>
-            <p className="text-slate-400 text-xs">Choose the piece to promote your pawn into:</p>
+            <p className="text-[#bababa] text-xs">Choose the piece to promote your pawn into:</p>
             <div className="grid grid-cols-4 gap-2">
               {[
-                { code: 'q', label: 'Queen', symWhite: '♕', symBlack: '♛' },
-                { code: 'r', label: 'Rook', symWhite: '♖', symBlack: '♜' },
-                { code: 'b', label: 'Bishop', symWhite: '♗', symBlack: '♝' },
-                { code: 'n', label: 'Knight', symWhite: '♘', symBlack: '♞' },
+                { code: 'q', label: 'Queen', symWhite: 'wQ.svg', symBlack: 'bQ.svg' },
+                { code: 'r', label: 'Rook', symWhite: 'wR.svg', symBlack: 'bR.svg' },
+                { code: 'b', label: 'Bishop', symWhite: 'wB.svg', symBlack: 'bB.svg' },
+                { code: 'n', label: 'Knight', symWhite: 'wN.svg', symBlack: 'bN.svg' },
               ].map((opt) => {
                 const turn = chess.turn()
-                const symbol = turn === 'w' ? opt.symWhite : opt.symBlack
+                const imgName = turn === 'w' ? opt.symWhite : opt.symBlack
                 return (
                   <button
                     key={opt.code}
                     data-testid={`promotion-choice-${opt.code}`}
                     onClick={() => handleSelectPromotion(opt.code)}
-                    className="p-3 bg-slate-800 hover:bg-purple-650 hover:text-white rounded-lg border border-slate-700 hover:border-purple-500 text-slate-200 text-3xl transition-all shadow"
+                    className="p-2 bg-[#3c3a37] hover:bg-[#81b64c] rounded-lg border border-[#2b2927] hover:border-[#81b64c] flex items-center justify-center transition-all shadow"
                     title={opt.label}
                   >
-                    {symbol}
+                    <img
+                      src={`${import.meta.env.BASE_URL}pieces/cburnett/${imgName}`}
+                      alt={opt.label}
+                      className="w-12 h-12 object-contain"
+                    />
                   </button>
                 )
               })}
@@ -357,7 +345,7 @@ export function ChessBoard({
             <button
               data-testid="btn-promotion-cancel"
               onClick={handleCancelPromotion}
-              className="w-full py-2 bg-slate-800 hover:bg-slate-750 text-slate-350 text-xs font-semibold rounded-lg transition-all"
+              className="w-full py-2 bg-[#3c3a37] hover:bg-[#4b4845] text-[#bababa] hover:text-white text-xs font-semibold rounded-lg transition-all"
             >
               Cancel Move
             </button>

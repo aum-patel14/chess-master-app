@@ -310,45 +310,41 @@ export function Play() {
   // 1. Render Bot Selection Screen
   if (selectedDifficulty === null) {
     return (
-      <div className="space-y-8 max-w-4xl mx-auto py-6">
+      <div className="space-y-6 max-w-4xl mx-auto py-6">
         <DocumentTitle title="Select AI Opponent" description="Challenge adaptive Stockfish AI bots ranging from Beginner (1000 Elo) to Master (1800 Elo) on Chessmaster Pro." />
 
-        <div className="text-center space-y-3">
-          <h1 className="text-3xl font-extrabold tracking-tight text-white">
+        <div className="text-center space-y-2">
+          <h1 className="text-3xl font-black tracking-tight text-white">
             Choose Your Engine Opponent
           </h1>
-          <p className="text-slate-400 max-w-xl mx-auto">
-            Challenge Stockfish, the world's strongest neural network chess engine. Select a level
-            matching your playing strength.
+          <p className="text-[#bababa] text-sm max-w-xl mx-auto leading-relaxed">
+            Challenge Stockfish, the world's strongest neural network chess engine. Select a level matching your playing strength.
           </p>
         </div>
 
         {/* Play Online Multiplayer Banner */}
-        <div className="bg-purple-950/20 border border-purple-500/20 p-4 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-4">
-          <span className="text-purple-300 font-semibold text-sm">
+        <div className="bg-chess-dark border border-[#3c3a37] p-5 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow">
+          <span className="text-[#bababa] font-bold text-sm">
             🌐 Want to play against real people? Play Online Multiplayer
           </span>
           <Link
             to="/play/online"
             data-testid="link-play-online-banner"
-            className="px-4 py-2 bg-purple-650 hover:bg-purple-550 text-white font-bold rounded-lg text-xs transition-all shadow-md"
+            className="chess-btn-green px-5 py-2.5 rounded-lg text-xs transition-all shadow"
           >
             Play Online
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 pt-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 pt-4">
           {(Object.keys(DIFFICULTY_PRESETS) as DifficultyLevel[]).map((level) => {
             const preset = DIFFICULTY_PRESETS[level]
-            const colors: Record<DifficultyLevel, string> = {
-              beginner:
-                'from-blue-600/10 to-blue-600/5 hover:from-blue-600/20 border-blue-500/20 hover:border-blue-500/50 text-blue-400',
-              easy: 'from-emerald-600/10 to-emerald-600/5 hover:from-emerald-600/20 border-emerald-500/20 hover:border-emerald-500/50 text-emerald-400',
-              medium:
-                'from-amber-600/10 to-amber-600/5 hover:from-amber-600/20 border-amber-500/20 hover:border-amber-500/50 text-amber-400',
-              hard: 'from-orange-600/10 to-orange-600/5 hover:from-orange-600/20 border-orange-500/20 hover:border-orange-500/50 text-orange-400',
-              master:
-                'from-red-600/10 to-red-600/5 hover:from-red-600/20 border-red-500/20 hover:border-red-500/50 text-red-400',
+            const icons: Record<DifficultyLevel, string> = {
+              beginner: '👶',
+              easy: '🤠',
+              medium: '🧠',
+              hard: '🔥',
+              master: '👑',
             }
 
             return (
@@ -356,20 +352,16 @@ export function Play() {
                 key={level}
                 data-testid={`bot-select-${level}`}
                 onClick={() => handleStartGame(level)}
-                className={`border bg-gradient-to-b ${colors[level]} p-6 rounded-xl flex flex-col items-center justify-between text-center transition-all duration-300 hover:scale-[1.03] shadow-lg h-60 cursor-pointer`}
+                className="bg-chess-dark border border-[#3c3a37] hover:border-chess-green p-6 rounded-xl flex flex-col items-center justify-between text-center transition-all duration-150 hover:scale-[1.02] shadow h-64 cursor-pointer"
               >
-                <div className="space-y-3">
-                  <span className="text-2xl">
-                    {level === 'beginner' && '👶'}
-                    {level === 'easy' && '🤠'}
-                    {level === 'medium' && '🧠'}
-                    {level === 'hard' && '🔥'}
-                    {level === 'master' && '👑'}
+                <div className="space-y-2.5">
+                  <span className="text-3xl block">
+                    {icons[level]}
                   </span>
-                  <h3 className="font-extrabold text-white text-lg tracking-wide capitalize">
+                  <h3 className="font-black text-white text-lg tracking-wide capitalize">
                     {level}
                   </h3>
-                  <p className="text-slate-400 text-xs leading-relaxed">
+                  <p className="text-[#bababa] text-xs leading-relaxed">
                     {level === 'beginner' &&
                       'Makes casual mistakes, ideal for learning basic rules.'}
                     {level === 'easy' && 'Standard tactical play. Ideal for casual club players.'}
@@ -379,7 +371,7 @@ export function Play() {
                     {level === 'master' && 'Grandmaster level calculation. Near perfect play.'}
                   </p>
                 </div>
-                <div className="w-full mt-4 bg-slate-950/60 py-1.5 rounded-lg border border-slate-800 text-[10px] font-mono text-slate-400">
+                <div className="w-full mt-4 bg-chess-darker py-1.5 rounded-lg border border-[#3c3a37] text-[10px] font-mono font-bold text-[#bababa]">
                   Depth: {preset.depth} | Skill: {preset.skillLevel}
                 </div>
               </button>
@@ -397,9 +389,9 @@ export function Play() {
         data-testid="engine-loading-alert"
         className="min-h-[50vh] flex flex-col items-center justify-center space-y-4 max-w-md mx-auto text-center"
       >
-        <div className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
-        <h2 className="text-xl font-bold text-white">Engine loading...</h2>
-        <p className="text-slate-405 text-sm">
+        <div className="w-12 h-12 border-4 border-chess-green border-t-transparent rounded-full animate-spin"></div>
+        <h2 className="text-xl font-black text-white">Engine loading...</h2>
+        <p className="text-[#bababa] text-xs leading-relaxed">
           Downloading and initializing Stockfish WebAssembly engine. This only happens once.
         </p>
       </div>
@@ -409,48 +401,49 @@ export function Play() {
   // 3. Render Game Screen
   return (
     <div className="space-y-6">
-      <DocumentTitle title={`VS AI (${selectedDifficulty})`} description={`Play an active chess match against the ${selectedDifficulty} Stockfish engine bot on Chessmaster Pro.`} />
-
-      {/* Lobby button */}
+      <DocumentTitle
+        title={`VS AI (${selectedDifficulty})`}
+        description={`Play an active chess match against the ${selectedDifficulty} Stockfish engine bot on Chessmaster Pro.`}
+      />
       <div className="flex justify-between items-center">
         <button
           data-testid="btn-exit-lobby"
           onClick={handleExitToLobby}
-          className="text-xs font-semibold text-slate-400 hover:text-white flex items-center gap-1 transition-all"
+          className="text-xs font-bold text-[#bababa] hover:text-white flex items-center gap-1 transition-all"
         >
           ← Change Opponent Bot
         </button>
-        <span className="text-xs font-mono text-slate-500">
+        <span className="text-xs font-mono font-bold text-[#bababa]">
           Opponent: Stockfish ({selectedDifficulty})
         </span>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-8 items-start justify-center">
+      <div className="flex flex-col lg:flex-row gap-6 items-start justify-center">
         {/* Chessboard Column */}
-        <div className="flex flex-col items-center space-y-4 w-full max-w-[500px]">
+        <div className="flex flex-col items-center space-y-3 w-full max-w-[500px]">
           {/* Opponent Panel */}
-          <div className="flex items-center justify-between w-full bg-slate-900 border border-slate-800 p-3 rounded-lg">
+          <div className="flex items-center justify-between w-full bg-chess-dark border border-[#3c3a37] p-3 rounded-lg shadow">
             <div className="flex items-center space-x-3">
-              <div className="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center text-slate-350 border border-slate-700 font-bold">
+              <div className="w-9 h-9 rounded-md bg-chess-darker flex items-center justify-center text-white border border-[#3c3a37] font-bold text-lg">
                 🤖
               </div>
               <div>
-                <h4 className="font-semibold text-white text-sm capitalize">
+                <h4 className="font-bold text-white text-sm capitalize">
                   Stockfish {selectedDifficulty}
                 </h4>
-                <p className="text-xs text-slate-400">
+                <p className="text-[10px] font-bold text-[#bababa]">
                   Depth: {DIFFICULTY_PRESETS[selectedDifficulty].depth}
                 </p>
               </div>
             </div>
             {isEngineThinking && (
-              <div className="flex items-center space-x-1 bg-purple-950/30 border border-purple-800/35 px-2 py-0.5 rounded text-xs text-purple-400 font-bold animate-pulse">
+              <div className="flex items-center space-x-1 bg-chess-green/10 border border-chess-green/20 px-2.5 py-0.5 rounded text-[10px] text-chess-green font-bold animate-pulse uppercase tracking-wider">
                 Thinking...
               </div>
             )}
-            <div className="flex items-center space-x-1.5 bg-slate-950 px-2.5 py-1 rounded border border-slate-850 text-slate-350 font-mono text-sm">
-              <Clock className="w-3.5 h-3.5 text-slate-550" />
-              <span>09:30</span>
+            <div className="flex items-center space-x-1.5 bg-chess-darker px-3 py-1.5 rounded border border-[#3c3a37] text-white font-mono font-bold text-sm shadow">
+              <Clock className="w-3.5 h-3.5 text-[#bababa]" />
+              <span>10:00</span>
             </div>
           </div>
 
@@ -467,22 +460,22 @@ export function Play() {
           />
 
           {/* User Panel */}
-          <div className="flex items-center justify-between w-full bg-slate-900 border border-slate-800 p-3 rounded-lg">
+          <div className="flex items-center justify-between w-full bg-chess-dark border border-[#3c3a37] p-3 rounded-lg shadow">
             <div className="flex items-center space-x-3">
-              <div className="w-9 h-9 rounded-full bg-purple-650 flex items-center justify-center text-white border border-purple-400 font-bold">
+              <div className="w-9 h-9 rounded-md bg-chess-green flex items-center justify-center text-white border-b-2 border-chess-green-dark font-extrabold text-sm">
                 GM
               </div>
               <div>
-                <h4 className="font-semibold text-white text-sm">You</h4>
-                <p className="text-xs text-slate-400">Rating: 1540</p>
+                <h4 className="font-bold text-white text-sm">You</h4>
+                <p className="text-[10px] font-bold text-[#bababa]">Rating: 1540</p>
               </div>
             </div>
-            <div className="flex items-center space-x-1.5 bg-slate-950 px-2.5 py-1 rounded border border-slate-850 text-slate-300 font-mono text-sm">
+            <div className="flex items-center space-x-1.5 bg-chess-darker px-3 py-1.5 rounded border border-[#3c3a37] text-white font-mono font-bold text-sm shadow">
               <Clock
-                className={`w-3.5 h-3.5 ${game.turn() === 'w' ? 'text-purple-400 animate-pulse' : 'text-slate-550'}`}
+                className={`w-3.5 h-3.5 ${game.turn() === 'w' ? 'text-chess-green animate-pulse' : 'text-[#bababa]'}`}
               />
               <span
-                className={game.turn() === 'w' ? 'text-purple-300 font-bold' : 'text-slate-350'}
+                className={game.turn() === 'w' ? 'text-chess-green' : 'text-white'}
               >
                 10:00
               </span>
@@ -491,9 +484,9 @@ export function Play() {
         </div>
 
         {/* Info & Side Panel Column */}
-        <div className="w-full lg:w-[320px] bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-6 flex flex-col justify-between">
+        <div className="w-full lg:w-[320px] bg-chess-dark border border-[#3c3a37] rounded-xl p-5 space-y-5 flex flex-col justify-between shadow-lg">
           <div className="space-y-4">
-            <h3 className="text-lg font-bold text-white flex items-center gap-2 border-b border-slate-800 pb-3">
+            <h3 className="text-lg font-black text-white flex items-center gap-2 border-b border-[#3c3a37] pb-3">
               <span>⚔️</span> Match Status
             </h3>
 
@@ -502,7 +495,7 @@ export function Play() {
               {isCheckmate && (
                 <div
                   data-testid="alert-checkmate"
-                  className="p-3 bg-red-950/20 text-red-400 border border-red-500/20 rounded-lg text-sm font-semibold"
+                  className="p-3 bg-red-950/20 text-red-400 border border-red-500/20 rounded-lg text-xs font-bold"
                 >
                   🚨 Checkmate! Game Over.
                 </div>
@@ -510,7 +503,7 @@ export function Play() {
               {isDraw && (
                 <div
                   data-testid="alert-draw"
-                  className="p-3 bg-slate-800/50 text-slate-350 border border-slate-700/55 rounded-lg text-sm font-semibold"
+                  className="p-3 bg-chess-darker text-[#bababa] border border-[#3c3a37] rounded-lg text-xs font-bold"
                 >
                   🤝 Draw! Stalemate or Material Insufficiency.
                 </div>
@@ -518,7 +511,7 @@ export function Play() {
               {isCheck && !isCheckmate && (
                 <div
                   data-testid="alert-check"
-                  className="p-3 bg-amber-950/20 text-amber-400 border border-amber-500/20 rounded-lg text-sm font-semibold"
+                  className="p-3 bg-amber-950/20 text-amber-400 border border-amber-500/20 rounded-lg text-xs font-bold animate-pulse"
                 >
                   ⚠️ Check! King is under attack.
                 </div>
@@ -526,21 +519,21 @@ export function Play() {
               {resignStatus && (
                 <div
                   data-testid="alert-resigned"
-                  className="p-3 bg-red-950/20 text-red-400 border border-red-500/20 rounded-lg text-sm font-semibold"
+                  className="p-3 bg-red-950/20 text-red-400 border border-red-500/20 rounded-lg text-xs font-bold"
                 >
                   🏳️ Game Over by Resignation.
                 </div>
               )}
             </div>
 
-            <div className="space-y-2.5">
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-400">Opponent Bot:</span>
-                <span className="font-semibold text-white capitalize">{selectedDifficulty}</span>
+            <div className="space-y-2 text-xs font-semibold">
+              <div className="flex justify-between">
+                <span className="text-[#bababa]">Opponent Bot:</span>
+                <span className="font-bold text-white capitalize">{selectedDifficulty}</span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-400">Game State:</span>
-                <span className="font-bold text-purple-400 uppercase tracking-wide text-xs">
+              <div className="flex justify-between">
+                <span className="text-[#bababa]">Game State:</span>
+                <span className="font-black text-chess-green tracking-wider text-[11px]">
                   {statusText}
                 </span>
               </div>
@@ -560,15 +553,15 @@ export function Play() {
                 (orientation === 'white' && game.turn() === 'b') ||
                 (orientation === 'black' && game.turn() === 'w')
               }
-              className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:from-slate-800 disabled:to-slate-800 text-white text-xs font-bold rounded-lg shadow transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              className="chess-btn-green w-full py-3 rounded-lg text-xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              <Sparkles className="w-3.5 h-3.5 animate-pulse" />
-              {isHintLoading ? 'Calculating Suggestion...' : 'Get Engine Hint'}
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>{isHintLoading ? 'Calculating Suggestion...' : 'Get Engine Hint'}</span>
             </button>
 
             {/* Navigation history controls */}
             <div className="space-y-2">
-              <div className="text-slate-500 text-xs font-mono font-semibold">
+              <div className="text-[#bababa] text-[10px] font-bold uppercase tracking-wider">
                 History Navigator
               </div>
               <div className="grid grid-cols-4 gap-1.5">
@@ -576,7 +569,7 @@ export function Play() {
                   data-testid="btn-history-first"
                   onClick={handleHistoryFirst}
                   disabled={history.length <= 1}
-                  className="py-1.5 bg-slate-800 hover:bg-slate-750 text-slate-350 rounded border border-slate-750 transition-all flex items-center justify-center disabled:opacity-40"
+                  className="py-1.5 bg-[#3c3a37] hover:bg-[#4b4845] text-white rounded border border-[#2b2927] transition-all flex items-center justify-center disabled:opacity-45"
                 >
                   <ChevronsLeft className="w-4 h-4" />
                 </button>
@@ -584,7 +577,7 @@ export function Play() {
                   data-testid="btn-history-prev"
                   onClick={handleHistoryPrev}
                   disabled={historyIndex === 0}
-                  className="py-1.5 bg-slate-800 hover:bg-slate-750 text-slate-350 rounded border border-slate-750 transition-all flex items-center justify-center disabled:opacity-40"
+                  className="py-1.5 bg-[#3c3a37] hover:bg-[#4b4845] text-white rounded border border-[#2b2927] transition-all flex items-center justify-center disabled:opacity-45"
                 >
                   <ArrowLeft className="w-4 h-4" />
                 </button>
@@ -592,7 +585,7 @@ export function Play() {
                   data-testid="btn-history-next"
                   onClick={handleHistoryNext}
                   disabled={historyIndex === history.length - 1}
-                  className="py-1.5 bg-slate-800 hover:bg-slate-750 text-slate-350 rounded border border-slate-750 transition-all flex items-center justify-center disabled:opacity-40"
+                  className="py-1.5 bg-[#3c3a37] hover:bg-[#4b4845] text-white rounded border border-[#2b2927] transition-all flex items-center justify-center disabled:opacity-45"
                 >
                   <ArrowRight className="w-4 h-4" />
                 </button>
@@ -600,7 +593,7 @@ export function Play() {
                   data-testid="btn-history-last"
                   onClick={handleHistoryLast}
                   disabled={historyIndex === history.length - 1}
-                  className="py-1.5 bg-slate-800 hover:bg-slate-750 text-slate-350 rounded border border-slate-750 transition-all flex items-center justify-center disabled:opacity-40"
+                  className="py-1.5 bg-[#3c3a37] hover:bg-[#4b4845] text-white rounded border border-[#2b2927] transition-all flex items-center justify-center disabled:opacity-45"
                 >
                   <ChevronsRight className="w-4 h-4" />
                 </button>
@@ -610,9 +603,9 @@ export function Play() {
             {/* Move List */}
             <div
               data-testid="moves-history"
-              className="bg-slate-950/70 border border-slate-850 rounded-lg p-3 h-24 overflow-y-auto space-y-1 font-mono text-xs"
+              className="bg-chess-darker border border-[#3c3a37] rounded-lg p-3 h-28 overflow-y-auto space-y-1 font-mono text-[11px]"
             >
-              <div className="text-slate-500 border-b border-slate-850 pb-1 mb-2 font-bold uppercase tracking-wider text-[10px]">
+              <div className="text-[#bababa] border-b border-[#3c3a37] pb-1 mb-2 font-bold uppercase tracking-wider text-[9px]">
                 Notation Moves
               </div>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1">
@@ -628,17 +621,17 @@ export function Play() {
                   .map((pair, idx) => (
                     <div
                       key={idx}
-                      className="flex justify-between text-slate-300 text-xs col-span-2"
+                      className="flex justify-between text-slate-350 text-xs col-span-2"
                     >
-                      <span className="text-slate-500 font-bold">{idx + 1}.&nbsp;</span>
+                      <span className="text-[#bababa]/50 font-bold">{idx + 1}.&nbsp;</span>
                       <span
-                        className={idx * 2 === historyIndex - 1 ? 'text-purple-400 font-bold' : ''}
+                        className={idx * 2 === historyIndex - 1 ? 'text-chess-green font-bold' : 'text-slate-300'}
                       >
                         {pair.white}
                       </span>
                       <span
                         className={
-                          idx * 2 + 1 === historyIndex - 1 ? 'text-purple-400 font-bold' : ''
+                          idx * 2 + 1 === historyIndex - 1 ? 'text-chess-green font-bold' : 'text-[#bababa]'
                         }
                       >
                         {pair.black || '...'}
@@ -647,18 +640,18 @@ export function Play() {
                   ))}
               </div>
               {moveList.length === 0 && (
-                <div className="text-slate-650 text-center py-4">No moves registered yet</div>
+                <div className="text-[#bababa]/40 text-center py-4">No moves registered yet</div>
               )}
             </div>
           </div>
 
           {/* Game Action Controls */}
-          <div className="space-y-3 pt-4 border-t border-slate-800">
+          <div className="space-y-3 pt-4 border-t border-[#3c3a37]">
             <div className="grid grid-cols-2 gap-2">
               <button
                 data-testid="btn-flip"
                 onClick={() => setOrientation((prev) => (prev === 'white' ? 'black' : 'white'))}
-                className="py-2 bg-slate-850 hover:bg-slate-800 text-slate-300 text-xs font-bold rounded-lg border border-slate-750 transition-all flex items-center justify-center gap-1.5"
+                className="py-2.5 bg-[#3c3a37] hover:bg-[#4b4845] text-white text-xs font-bold rounded-lg border border-[#2b2927] transition-all flex items-center justify-center gap-1.5"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
                 Flip Board
@@ -667,8 +660,8 @@ export function Play() {
               <button
                 data-testid="btn-undo"
                 onClick={handleUndo}
-                disabled={history.length <= 2}
-                className="py-2 bg-slate-850 hover:bg-slate-800 text-slate-300 text-xs font-bold rounded-lg border border-slate-750 transition-all flex items-center justify-center gap-1.5 disabled:opacity-40"
+                disabled={history.length <= 1}
+                className="py-2.5 bg-[#3c3a37] hover:bg-[#4b4845] text-white text-xs font-bold rounded-lg border border-[#2b2927] transition-all flex items-center justify-center gap-1.5 disabled:opacity-45"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 Undo Move
@@ -679,7 +672,7 @@ export function Play() {
               data-testid="btn-resign"
               onClick={handleResign}
               disabled={isCheckmate || isDraw || resignStatus || isEngineThinking}
-              className="w-full py-2 border border-red-500/20 bg-red-950/5 hover:bg-red-950/25 text-red-400/80 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 disabled:opacity-40 cursor-pointer"
+              className="w-full py-2.5 border border-red-500/20 bg-red-950/10 hover:bg-red-950/20 text-red-400 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 disabled:opacity-40 cursor-pointer"
             >
               <AlertTriangle className="w-3.5 h-3.5" />
               Resign Match
@@ -688,7 +681,7 @@ export function Play() {
             <button
               data-testid="btn-new-game"
               onClick={handleReset}
-              className="w-full py-2 bg-purple-650 hover:bg-purple-550 text-white text-xs font-semibold rounded-lg shadow-md transition-all flex items-center justify-center gap-1.5"
+              className="chess-btn-green w-full py-3 rounded-lg text-xs flex items-center justify-center gap-1.5"
             >
               <RotateCcw className="w-4 h-4" />
               Restart Match

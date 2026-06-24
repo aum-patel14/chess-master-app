@@ -148,182 +148,167 @@ export function LessonPlayer() {
         if (res) {
           setBoardPosition(game.fen())
         }
-      } catch {
-        // Invalid move
+      } catch (e) {
+        console.warn(e)
       }
       return
     }
 
     const expectedMove = movesList[solutionMoveIdx]
-    const uciMove = `${move.from}${move.to}${move.promotion || ''}`
+    const playerMoveStr = `${move.from}${move.to}`
 
-    if (uciMove === expectedMove) {
-      // Correct Move!
+    if (playerMoveStr.toLowerCase() === expectedMove.toLowerCase().slice(0, 4)) {
+      // Correct player move!
       try {
         const game = new Chess(boardPosition)
-        game.move({ from: move.from, to: move.to, promotion: move.promotion })
-        const nextFen = game.fen()
-        setBoardPosition(nextFen)
+        const res = game.move({
+          from: move.from,
+          to: move.to,
+          promotion: move.promotion || 'q',
+        })
 
-        const nextMoveIdx = solutionMoveIdx + 1
-        setSolutionMoveIdx(nextMoveIdx)
+        if (res) {
+          const nextFen = game.fen()
+          setBoardPosition(nextFen)
+          const nextIdx = solutionMoveIdx + 1
 
-        if (nextMoveIdx >= movesList.length) {
-          // Completed the challenge step!
-          setStepCompleted(true)
-          setStatusMsg({ text: 'Correct! Well done.', type: 'success' })
-        } else {
-          setStatusMsg({ text: 'Good move! Keep going...', type: 'info' })
-        }
-      } catch (e) {
-        console.error('Failed to apply valid move FEN:', e)
-      }
-    } else {
-      // Incorrect Move!
-      setStatusMsg({ text: 'Incorrect move. Try again!', type: 'error' })
-      // Flash board back to previous state shortly
-      setTimeout(() => {
-        // Reset to FEN before this step
-        if (solutionMoveIdx === 0) {
-          setBoardPosition(currentStep.fen)
-        } else {
-          // Find FEN for current step by simulating previous correct moves
-          try {
-            const game = new Chess(currentStep.fen)
-            for (let i = 0; i < solutionMoveIdx; i++) {
-              const prevMove = movesList[i]
-              game.move({
-                from: prevMove.slice(0, 2),
-                to: prevMove.slice(2, 4),
-                promotion: prevMove.length > 4 ? prevMove[4] : undefined,
-              })
-            }
-            setBoardPosition(game.fen())
-          } catch {
-            setBoardPosition(currentStep.fen)
+          if (nextIdx >= movesList.length) {
+            // Completed step!
+            setStepCompleted(true)
+            setStatusMsg({ text: 'Correct! Well done.', type: 'success' })
+            triggerStepCompletionInDB()
+          } else {
+            // Opponent move (next move in the sequence)
+            const oppMove = movesList[nextIdx]
+            const oppFrom = oppMove.slice(0, 2)
+            const oppTo = oppMove.slice(2, 4)
+            const oppPromo = oppMove.slice(4, 5) || undefined
+
+            setTimeout(() => {
+              try {
+                const oppRes = game.move({ from: oppFrom, to: oppTo, promotion: oppPromo })
+                if (oppRes) {
+                  setBoardPosition(game.fen())
+                  const finalIdx = nextIdx + 1
+                  setSolutionMoveIdx(finalIdx)
+
+                  if (finalIdx >= movesList.length) {
+                    setStepCompleted(true)
+                    setStatusMsg({ text: 'Correct! Well done.', type: 'success' })
+                    triggerStepCompletionInDB()
+                  } else {
+                    setStatusMsg({ text: 'Good move! What is the follow-up?', type: 'info' })
+                  }
+                }
+              } catch (err) {
+                console.error('Opponent auto response error:', err)
+              }
+            }, 600)
           }
         }
-      }, 800)
+      } catch (err) {
+        console.error(err)
+      }
+    } else {
+      // Wrong move
+      setStatusMsg({ text: 'Incorrect move. Try again!', type: 'error' })
     }
   }
 
-  // Handle navigation
-  const handleNextStep = () => {
-    if (!stepCompleted) return
+  const triggerStepCompletionInDB = async () => {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user || !lessonId || !currentStep) return
 
+      await supabase.from('lesson_progress').upsert({
+        user_id: user.id,
+        lesson_id: lessonId,
+        step_id: currentStep.id,
+        completed_at: new Date().toISOString(),
+      })
+    } catch (err) {
+      console.warn('Failed to save lesson progress:', err)
+    }
+  }
+
+  const handleNextStep = () => {
     if (currentStepIdx + 1 < steps.length) {
       const nextIdx = currentStepIdx + 1
       setCurrentStepIdx(nextIdx)
       resetStepState(steps[nextIdx])
     } else {
-      // Finished the lesson!
-      handleFinishLesson()
+      // Completed the entire lesson
+      setLessonFinished(true)
     }
   }
 
   const handlePrevStep = () => {
     if (currentStepIdx > 0) {
-      const prevIdx = currentStepIdx - 1
-      setCurrentStepIdx(prevIdx)
-      resetStepState(steps[prevIdx])
-    }
-  }
-
-  const handleFinishLesson = async () => {
-    if (!lesson || !course) return
-
-    try {
-      if (session?.user?.id) {
-        // Persist to Supabase
-        await supabase.from('lesson_progress').upsert(
-          {
-            user_id: session.user.id,
-            lesson_id: lesson.id,
-            completed: true,
-            steps_completed: steps.length,
-          },
-          { onConflict: 'user_id,lesson_id' }
-        )
-      } else {
-        // Guest LocalStorage fallback
-        const localProgress = localStorage.getItem('chess_local_lesson_progress')
-        let completedList: string[] = []
-        if (localProgress) {
-          try {
-            completedList = JSON.parse(localProgress)
-          } catch {
-            completedList = []
-          }
-        }
-        if (!completedList.includes(lesson.id)) {
-          completedList.push(lesson.id)
-          localStorage.setItem('chess_local_lesson_progress', JSON.stringify(completedList))
-        }
-      }
-      setLessonFinished(true)
-    } catch (err) {
-      console.error('Failed to save progress:', err)
-      // Display finished status regardless so user isn't stuck
-      setLessonFinished(true)
+      const nextIdx = currentStepIdx - 1
+      setCurrentStepIdx(nextIdx)
+      resetStepState(steps[nextIdx])
     }
   }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px] text-purple-400">
-        <span className="animate-spin text-3xl">♞</span>
-        <span className="ml-3 text-lg font-semibold">Loading lesson player...</span>
+      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-3">
+        <div className="w-10 h-10 border-4 border-chess-green border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-[#bababa] text-sm font-bold">Loading Lesson Player...</p>
       </div>
     )
   }
 
-  if (!lesson || !course || steps.length === 0) {
+  if (!course || !lesson || steps.length === 0 || !currentStep) {
     return (
-      <div className="text-center py-12 space-y-4">
-        <h2 className="text-2xl font-bold text-red-400">Lesson Not Found</h2>
-        <p className="text-slate-400">We could not load the steps for this lesson.</p>
-        <Link
-          to={`/courses/${courseId}`}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-sm font-semibold"
+      <div className="text-center py-12 max-w-md mx-auto space-y-4">
+        <HelpCircle className="w-12 h-12 text-[#bababa]/30 mx-auto" />
+        <p className="text-[#bababa] font-bold text-sm">Failed to load lesson position data.</p>
+        <button
+          onClick={() => navigate('/courses')}
+          className="chess-btn-grey px-4 py-2 rounded-lg text-xs text-white"
         >
-          <ArrowLeft className="w-4 h-4" /> Back to Syllabus
-        </Link>
+          Return to Courses
+        </button>
       </div>
     )
   }
 
+  // Lesson finished congratulations screen
   if (lessonFinished) {
     return (
-      <div className="max-w-md mx-auto py-12 text-center space-y-8 animate-fade-in">
-        <DocumentTitle title="Lesson Completed! | Chess Academy" description="Congratulations on completing the chess lesson! Keep learning and practice on Chessmaster Pro." />
+      <div className="max-w-md mx-auto py-12 text-center space-y-8 bg-chess-dark border border-[#3c3a37] rounded-xl p-8 shadow-2xl">
+        <DocumentTitle title="Lesson Completed" description="Congratulations on completing this Chess Academy lesson!" />
 
-        <div className="inline-flex p-6 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-xl shadow-emerald-500/5">
+        <div className="inline-flex p-6 rounded-xl bg-chess-darker text-chess-green border border-[#3c3a37] shadow shadow-chess-green/5">
           <Award className="w-16 h-16" />
         </div>
 
-        <div className="space-y-3">
-          <h1 className="text-3xl font-extrabold text-white">Lesson Completed!</h1>
-          <p className="text-slate-400 text-base leading-relaxed">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-black text-white">Lesson Completed!</h1>
+          <p className="text-[#bababa] text-sm leading-relaxed">
             Congratulations! You completed all the interactive challenges for **{lesson.title}**.
           </p>
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-purple-500/15 border border-purple-500/30 rounded-full text-purple-300 font-bold text-sm">
-            <Sparkles className="w-4 h-4 fill-current" /> +20 XP Earned
+          <div className="inline-flex items-center gap-1.5 px-4 py-1 bg-chess-darker border border-[#3c3a37] rounded-full text-chess-green font-bold text-xs">
+            <Sparkles className="w-3.5 h-3.5" /> +20 XP Earned
           </div>
         </div>
 
         {!session && (
-          <div className="bg-slate-900/60 border border-slate-850 p-4 rounded-xl flex items-center justify-between gap-4 text-left">
+          <div className="bg-chess-darker border border-[#3c3a37] p-4 rounded-xl flex items-center justify-between gap-4 text-left shadow-inner">
             <div className="space-y-1">
               <p className="text-white text-xs font-bold flex items-center gap-1">
-                <LogIn className="w-3.5 h-3.5 text-purple-400" /> Save Progress Permanently
+                <LogIn className="w-3.5 h-3.5 text-chess-green" /> Save Progress Permanently
               </p>
-              <p className="text-slate-450 text-[11px] leading-normal">
+              <p className="text-[#bababa] text-[10px] leading-normal">
                 Your progress is saved locally, but sign in or create an account to sync it permanently.
               </p>
             </div>
             <Link
               to="/play/online"
-              className="py-1.5 px-3 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-lg transition-all"
+              className="chess-btn-green py-2 px-3 rounded-lg text-xs"
             >
               Sign In
             </Link>
@@ -334,7 +319,7 @@ export function LessonPlayer() {
           <button
             onClick={() => navigate(`/courses/${course.id}`)}
             data-testid="btn-lesson-finished-continue"
-            className="w-full py-3 bg-purple-650 hover:bg-purple-550 text-white font-bold rounded-xl transition-all shadow-lg shadow-purple-600/20"
+            className="chess-btn-green w-full py-3.5 rounded-xl text-sm"
           >
             Continue Syllabus
           </button>
@@ -348,22 +333,22 @@ export function LessonPlayer() {
       <DocumentTitle title={`${lesson.title} - Step ${currentStepIdx + 1} | Chess Academy`} description={`Step ${currentStepIdx + 1} of the lesson "${lesson.title}" in the ${course.title} course at Chessmaster Pro's Chess Academy.`} />
 
       {/* Header Info */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-900 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#3c3a37]/50 pb-4">
         <div className="space-y-1">
           <Link
-            to={`/courses/${course?.id || ''}`}
+            to={`/courses/${course.id}`}
             data-testid="btn-lesson-back"
-            aria-label={course?.title ? `Back to ${course.title}` : 'Back to Course'}
-            className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 font-semibold transition-colors"
+            aria-label={`Back to ${course.title}`}
+            className="inline-flex items-center gap-1.5 text-xs text-[#bababa] hover:text-white font-bold transition-colors"
           >
-            <ArrowLeft className="w-3 h-3" /> {course?.title || 'Back to Course'}
+            <ArrowLeft className="w-3 h-3" /> {course.title}
           </Link>
-          <h1 className="text-2xl font-bold text-white leading-tight">{lesson.title}</h1>
+          <h1 className="text-2xl font-black text-white leading-tight">{lesson.title}</h1>
         </div>
 
         {/* Steps Progress Indicator */}
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-500 font-bold font-mono">
+          <span className="text-xs text-[#bababa] font-bold font-mono">
             Step {currentStepIdx + 1} of {steps.length}
           </span>
           <div className="flex gap-1.5">
@@ -373,12 +358,12 @@ export function LessonPlayer() {
               return (
                 <div
                   key={idx}
-                  className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
+                  className={`w-2.5 h-2.5 rounded-full transition-all duration-150 ${
                     isCompleted
-                      ? 'bg-emerald-500 shadow-md shadow-emerald-500/20'
+                      ? 'bg-chess-green shadow'
                       : isCurrent
-                        ? 'bg-purple-500 ring-2 ring-purple-400 ring-offset-2 ring-offset-slate-950 scale-110'
-                        : 'bg-slate-800'
+                        ? 'bg-chess-green ring-2 ring-white scale-110'
+                        : 'bg-chess-darker border border-[#3c3a37]'
                   }`}
                 />
               )
@@ -388,7 +373,7 @@ export function LessonPlayer() {
       </div>
 
       {/* Player Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Side — Interactive Board */}
         <div className="lg:col-span-7 flex flex-col items-center">
           <div className="w-full max-w-[480px]">
@@ -404,16 +389,16 @@ export function LessonPlayer() {
 
         {/* Right Side — Panel */}
         <div className="lg:col-span-5 space-y-6">
-          <div className="bg-slate-900/35 border border-slate-850 rounded-2xl p-6 flex flex-col min-h-[380px] justify-between">
+          <div className="bg-chess-dark border border-[#3c3a37] rounded-xl p-6 flex flex-col min-h-[380px] justify-between shadow-lg">
             {/* Step Content */}
             <div className="space-y-4">
-              <span className="px-2 py-0.5 text-[10px] border border-purple-500/20 bg-purple-500/10 text-purple-400 rounded-full font-bold uppercase tracking-wider">
+              <span className="px-3 py-0.5 text-[9px] bg-chess-darker border border-[#3c3a37] text-chess-green rounded-full font-bold uppercase tracking-wider">
                 {currentStep.type} Step
               </span>
-              <h2 className="text-xl font-bold text-white leading-snug" data-testid="step-title">
+              <h2 className="text-xl font-black text-white leading-snug" data-testid="step-title">
                 {currentStep.title}
               </h2>
-              <div className="text-slate-300 text-sm leading-relaxed whitespace-pre-line space-y-2">
+              <div className="text-[#bababa] text-xs leading-relaxed whitespace-pre-line space-y-2 font-medium">
                 {currentStep.content}
               </div>
 
@@ -421,15 +406,15 @@ export function LessonPlayer() {
               {currentStep.hint && (
                 <div className="pt-2">
                   {showHint ? (
-                    <div className="p-3 bg-slate-950/40 border border-slate-850 rounded-lg text-xs text-amber-300 leading-normal flex items-start gap-2 animate-fade-in" data-testid="step-hint-text">
-                      <HelpCircle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
-                      <span>{currentStep.hint}</span>
+                    <div className="p-3 bg-chess-darker border border-[#3c3a37] rounded-lg text-xs text-amber-500 leading-normal flex items-start gap-2 shadow-inner" data-testid="step-hint-text">
+                      <HelpCircle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                      <span className="font-bold">{currentStep.hint}</span>
                     </div>
                   ) : (
                     <button
                       onClick={() => setShowHint(true)}
                       data-testid="btn-show-hint"
-                      className="inline-flex items-center gap-1.5 text-xs text-amber-500 hover:text-amber-400 font-semibold transition-colors"
+                      className="inline-flex items-center gap-1.5 text-xs text-amber-500 hover:text-amber-400 font-bold transition-colors"
                     >
                       <HelpCircle className="w-3.5 h-3.5" /> Need a hint?
                     </button>
@@ -439,17 +424,17 @@ export function LessonPlayer() {
             </div>
 
             {/* Status Feedback and Actions */}
-            <div className="space-y-4 pt-6 border-t border-slate-850">
+            <div className="space-y-4 pt-6 border-t border-[#3c3a37]">
               {/* Feedback messages */}
               {statusMsg.type && (
                 <div
                   data-testid="step-status-message"
-                  className={`p-3 rounded-lg text-xs font-semibold flex items-center gap-2 animate-fade-in ${
+                  className={`p-3 rounded-lg text-xs font-bold flex items-center gap-2 ${
                     statusMsg.type === 'success'
-                      ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
+                      ? 'bg-chess-green/10 border border-chess-green/20 text-chess-green'
                       : statusMsg.type === 'error'
-                        ? 'bg-red-500/10 border border-red-500/20 text-red-400'
-                        : 'bg-blue-500/10 border border-blue-500/20 text-blue-400'
+                        ? 'bg-red-955/15 border border-red-500/20 text-red-400'
+                        : 'bg-chess-darker border border-[#3c3a37] text-white'
                   }`}
                 >
                   {statusMsg.type === 'success' && <CheckCircle className="w-4 h-4" />}
@@ -459,8 +444,8 @@ export function LessonPlayer() {
 
               {/* Explanation after step completion */}
               {stepCompleted && currentStep.explanation && (
-                <div className="p-3.5 bg-slate-950/60 border border-slate-850 text-xs text-slate-350 leading-relaxed rounded-xl animate-fade-in">
-                  <p className="font-bold text-white mb-1">Explanation:</p>
+                <div className="p-3.5 bg-chess-darker border border-[#3c3a37] text-xs text-[#bababa] leading-relaxed rounded-xl shadow-inner font-medium">
+                  <p className="font-black text-white mb-1">Explanation:</p>
                   <p>{currentStep.explanation}</p>
                 </div>
               )}
@@ -471,7 +456,7 @@ export function LessonPlayer() {
                   onClick={handlePrevStep}
                   disabled={currentStepIdx === 0}
                   data-testid="btn-prev-step"
-                  className="px-3.5 py-3 bg-slate-800 hover:bg-slate-750 disabled:bg-slate-900 disabled:opacity-40 disabled:cursor-not-allowed text-slate-300 rounded-xl transition-all border border-slate-750"
+                  className="px-3.5 py-3 bg-[#3c3a37] hover:bg-[#4b4845] disabled:bg-chess-darker disabled:opacity-45 disabled:cursor-not-allowed text-white rounded-xl transition-all border border-[#2b2927]"
                   aria-label="Previous Step"
                 >
                   <ChevronLeft className="w-5 h-5" />
@@ -481,16 +466,16 @@ export function LessonPlayer() {
                   <button
                     onClick={() => resetStepState(currentStep)}
                     data-testid="btn-reset-step"
-                    className="flex-1 py-3 bg-slate-850 hover:bg-slate-800 border border-slate-750 text-slate-300 font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all"
+                    className="flex-1 py-3 bg-[#3c3a37] hover:bg-[#4b4845] border border-[#2b2927] text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all"
                   >
-                    <RefreshCw className="w-3.5 h-3.5" /> Reset Board
+                    <RefreshCw className="w-3.5 h-3.5 text-chess-green" /> Reset Board
                   </button>
                 ) : (
                   <button
                     onClick={handleNextStep}
                     disabled={!stepCompleted}
                     data-testid="btn-next-step"
-                    className="flex-1 py-3 bg-purple-650 hover:bg-purple-550 disabled:bg-slate-900 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md shadow-purple-650/10"
+                    className="chess-btn-green flex-1 py-3 rounded-xl text-xs flex items-center justify-center gap-1.5 disabled:opacity-45"
                   >
                     <span>
                       {currentStepIdx + 1 === steps.length ? 'Complete Lesson' : 'Next Step'}

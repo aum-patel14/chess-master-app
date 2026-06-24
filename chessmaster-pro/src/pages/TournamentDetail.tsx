@@ -118,7 +118,7 @@ export function TournamentDetail() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px] text-purple-400">
+      <div className="flex items-center justify-center min-h-[400px] text-chess-green">
         <span className="animate-spin text-3xl">♞</span>
         <span className="ml-3 text-lg font-semibold">Loading tournament details...</span>
       </div>
@@ -132,7 +132,7 @@ export function TournamentDetail() {
         <p className="text-slate-400">The tournament you are looking for does not exist or has been removed.</p>
         <Link
           to="/tournaments"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-sm font-semibold"
+          className="inline-flex items-center gap-2 px-4 py-2.5 chess-btn-grey rounded-lg text-sm font-semibold cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" /> Back to Tournaments
         </Link>
@@ -214,29 +214,29 @@ export function TournamentDetail() {
         <Link
           to="/tournaments"
           data-testid="btn-back-tournaments"
-          className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm font-semibold"
+          className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm font-bold uppercase tracking-wider cursor-pointer"
         >
-          <ArrowLeft className="w-4 h-4" /> Back to Tournaments
+          <ArrowLeft className="w-4 h-4 text-chess-green" /> Back to Tournaments
         </Link>
       </div>
 
       {/* Header Info */}
-      <section className="bg-slate-900/40 border border-slate-850 rounded-2xl p-6 sm:p-8 flex flex-col md:flex-row justify-between gap-6 relative overflow-hidden">
+      <section className="bg-chess-dark border-b-4 border-chess-darker rounded-xl p-6 sm:p-8 flex flex-col md:flex-row justify-between gap-6 relative overflow-hidden">
         <div className="space-y-4 flex-1">
           <div className="flex flex-wrap items-center gap-2.5">
-            <span className="px-2.5 py-0.5 text-xs border border-purple-500/20 bg-purple-500/10 text-purple-400 rounded-full font-semibold capitalize font-mono">
+            <span className="px-2.5 py-0.5 text-xs border border-chess-green/20 bg-chess-green/10 text-chess-green rounded-full font-bold capitalize font-mono">
               {tournament.format} Format
             </span>
-            <span className="px-2.5 py-0.5 text-xs bg-slate-800 border border-slate-700 text-slate-350 rounded-full font-mono font-semibold">
+            <span className="px-2.5 py-0.5 text-xs bg-chess-light-grey border border-chess-darker text-slate-300 rounded-full font-mono font-bold uppercase tracking-wider">
               {tournament.time_control} time control
             </span>
             <span
-              className={`px-2.5 py-0.5 text-xs rounded-full font-bold uppercase ${
+              className={`px-2.5 py-0.5 text-xs rounded-full font-extrabold uppercase ${
                 tournament.status === 'active'
                   ? 'bg-red-500/20 border border-red-500/20 text-red-400'
                   : tournament.status === 'completed'
-                    ? 'bg-slate-800 text-slate-400'
-                    : 'bg-purple-500/20 border border-purple-500/20 text-purple-400'
+                    ? 'bg-[#3c3a37] text-slate-400'
+                    : 'bg-chess-green/20 border border-chess-green/25 text-chess-green'
               }`}
             >
               {tournament.status === 'active' ? '🔴 Live Now' : tournament.status}
@@ -246,16 +246,16 @@ export function TournamentDetail() {
           <h1 className="text-3xl font-extrabold text-white leading-tight" data-testid="tournament-title">
             {tournament.title}
           </h1>
-          <p className="text-slate-450 text-sm leading-relaxed max-w-2xl">{tournament.description}</p>
+          <p className="text-slate-400 text-sm font-semibold leading-relaxed max-w-2xl">{tournament.description}</p>
 
-          <div className="flex space-x-6 text-sm text-slate-500 pt-2 font-mono">
+          <div className="flex space-x-6 text-sm text-slate-400 pt-2 font-mono font-bold">
             <span className="flex items-center gap-1.5">
-              <Users className="w-4 h-4 text-purple-400" />
+              <Users className="w-4 h-4 text-chess-green" />
               {tournament.player_count} joined / {tournament.max_players} max
             </span>
             {tournament.prize_badge_name && (
               <span className="flex items-center gap-1.5 text-amber-400 font-semibold">
-                <Trophy className="w-4 h-4 fill-amber-500/15" />
+                <Trophy className="w-4 h-4 fill-amber-500/15 text-amber-500" />
                 Badge: {tournament.prize_badge_emoji} {tournament.prize_badge_name}
               </span>
             )}
@@ -263,20 +263,20 @@ export function TournamentDetail() {
         </div>
 
         {/* Action Button Section */}
-        <div className="w-full md:w-72 bg-slate-950/50 border border-slate-800/80 rounded-xl p-5 flex flex-col justify-center space-y-4">
+        <div className="w-full md:w-72 bg-chess-darker border border-chess-light-grey rounded-xl p-5 flex flex-col justify-center space-y-4">
           <div className="text-center space-y-2.5">
             {tournament.status === 'completed' ? (
               <div className="py-2 text-slate-400 flex flex-col items-center gap-2">
-                <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+                <CheckCircle2 className="w-8 h-8 text-chess-green" />
                 <p className="font-bold text-sm">Tournament Finished</p>
-                <p className="text-[11px] leading-normal">This event has concluded. View the final standings below.</p>
+                <p className="text-[11px] leading-normal font-semibold">This event has concluded. View the final standings below.</p>
               </div>
             ) : (
               <>
                 <h3 className="text-white font-bold text-sm">
                   {isRegistered ? 'Registered' : 'Join Tournament'}
                 </h3>
-                <p className="text-slate-400 text-xs leading-normal">
+                <p className="text-slate-400 text-xs leading-normal font-semibold">
                   {isRegistered
                     ? 'You are registered for this event. Withdraw if you cannot participate.'
                     : 'Claim your spot to participate and climb the leaderboard!'}
@@ -285,10 +285,10 @@ export function TournamentDetail() {
                   onClick={handleRegister}
                   disabled={joining}
                   data-testid="btn-register-tournament"
-                  className={`w-full py-2.5 font-bold text-xs rounded-lg transition-all shadow-lg ${
+                  className={`w-full py-2.5 text-xs font-extrabold uppercase tracking-wider rounded-lg cursor-pointer ${
                     isRegistered
-                      ? 'bg-slate-800 hover:bg-slate-700 text-slate-200'
-                      : 'bg-purple-650 hover:bg-purple-550 text-white shadow-purple-650/20'
+                      ? 'chess-btn-grey'
+                      : 'chess-btn-green'
                   }`}
                 >
                   {joining ? 'Processing...' : isRegistered ? 'Withdraw' : 'Register Now'}
@@ -301,14 +301,14 @@ export function TournamentDetail() {
 
       {/* Bracket / Standings tabs */}
       <section className="space-y-6">
-        <div className="flex border-b border-slate-850">
+        <div className="flex border-b border-chess-darker">
           <button
             onClick={() => setActiveSubTab('standings')}
             data-testid="tab-tournament-standings"
-            className={`px-6 py-3 font-semibold text-sm capitalize border-b-2 -mb-[2px] ${
+            className={`px-6 py-3 font-extrabold text-sm capitalize border-b-2 -mb-[2px] cursor-pointer ${
               activeSubTab === 'standings'
-                ? 'border-purple-500 text-purple-300'
-                : 'border-transparent text-slate-450 hover:text-slate-200'
+                ? 'border-chess-green text-chess-green'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
             }`}
           >
             🏆 Leaderboard
@@ -317,10 +317,10 @@ export function TournamentDetail() {
             <button
               onClick={() => setActiveSubTab('pairings')}
               data-testid="tab-tournament-bracket"
-              className={`px-6 py-3 font-semibold text-sm capitalize border-b-2 -mb-[2px] ${
+              className={`px-6 py-3 font-extrabold text-sm capitalize border-b-2 -mb-[2px] cursor-pointer ${
                 activeSubTab === 'pairings'
-                  ? 'border-purple-500 text-purple-300'
-                  : 'border-transparent text-slate-450 hover:text-slate-200'
+                  ? 'border-chess-green text-chess-green'
+                  : 'border-transparent text-slate-400 hover:text-slate-200'
               }`}
             >
               🌳 Pairings / Bracket
@@ -331,9 +331,9 @@ export function TournamentDetail() {
         {/* Tab Contents */}
         {activeSubTab === 'standings' ? (
           /* Standings Leaderboard */
-          <div className="bg-slate-900/10 border border-slate-850 rounded-2xl overflow-hidden">
+          <div className="bg-chess-dark border-b-4 border-chess-darker rounded-xl overflow-hidden">
             <table className="w-full text-left text-sm" data-testid="table-standings">
-              <thead className="bg-slate-950/70 border-b border-slate-850 text-slate-400 font-mono text-xs uppercase">
+              <thead className="bg-chess-darker border-b border-chess-light-grey text-slate-400 font-bold text-xs uppercase">
                 <tr>
                   <th className="px-6 py-3.5 w-16">Rank</th>
                   <th className="px-6 py-3.5">Player</th>
@@ -343,10 +343,10 @@ export function TournamentDetail() {
                   <th className="px-6 py-3.5 text-right pr-8">Score</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-850 bg-slate-900/5">
+              <tbody className="divide-y divide-chess-light-grey">
                 {players.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="text-center py-10 text-slate-500">
+                    <td colSpan={6} className="text-center py-10 text-slate-500 font-semibold">
                       No players have registered for this tournament yet.
                     </td>
                   </tr>
@@ -356,8 +356,8 @@ export function TournamentDetail() {
                       key={p.id}
                       className={
                         p.user_id === session?.user?.id
-                          ? 'bg-purple-950/10 text-purple-200 font-semibold'
-                          : 'hover:bg-slate-900/30'
+                          ? 'bg-chess-green/10 text-chess-green font-bold'
+                          : 'hover:bg-chess-light-grey/20 transition-colors'
                       }
                     >
                       <td className="px-6 py-4 font-mono font-bold text-slate-350">{idx + 1}</td>
@@ -368,10 +368,10 @@ export function TournamentDetail() {
                           {idx === 0 && <Award className="w-4 h-4 text-amber-400 fill-amber-450/10" />}
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-center text-slate-450">{p.wins}</td>
-                      <td className="px-6 py-4 text-center text-slate-450">{p.draws}</td>
-                      <td className="px-6 py-4 text-center text-slate-450">{p.losses}</td>
-                      <td className="px-6 py-4 text-right pr-8 font-mono font-bold text-purple-400">
+                      <td className="px-6 py-4 text-center text-slate-400 font-semibold">{p.wins}</td>
+                      <td className="px-6 py-4 text-center text-slate-400 font-semibold">{p.draws}</td>
+                      <td className="px-6 py-4 text-center text-slate-400 font-semibold">{p.losses}</td>
+                      <td className="px-6 py-4 text-right pr-8 font-mono font-bold text-chess-green">
                         {p.score}
                       </td>
                     </tr>
@@ -384,36 +384,36 @@ export function TournamentDetail() {
           /* Swiss Bracket Pairings */
           <div className="space-y-6" data-testid="swiss-pairings-container">
             {rounds.length === 0 ? (
-              <div className="text-center py-12 border border-dashed border-slate-800 rounded-xl bg-slate-900/10">
-                <ShieldAlert className="w-10 h-10 text-slate-650 mx-auto mb-3" />
-                <p className="text-slate-450 font-medium">No matches scheduled yet for this tournament.</p>
+              <div className="text-center py-12 border border-dashed border-chess-darker rounded-xl bg-chess-dark/20">
+                <ShieldAlert className="w-10 h-10 text-slate-500 mx-auto mb-3" />
+                <p className="text-slate-400 font-semibold">No matches scheduled yet for this tournament.</p>
               </div>
             ) : (
               rounds.map((r) => {
                 const roundPairings = pairings.filter((p) => p.round === r)
                 return (
                   <div key={r} className="space-y-3">
-                    <h4 className="text-slate-350 font-bold text-sm font-mono uppercase">Round {r}</h4>
+                    <h4 className="text-slate-400 font-extrabold text-sm font-mono uppercase">Round {r}</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {roundPairings.map((p) => (
                         <div
                           key={p.id}
-                          className="p-4 border border-slate-850 bg-slate-900/10 rounded-xl flex items-center justify-between gap-4"
+                          className="p-4 bg-chess-dark border-b-4 border-chess-darker rounded-xl flex items-center justify-between gap-4"
                         >
                           <div className="space-y-1">
-                            <p className="text-xs text-slate-500 font-mono">Board Match</p>
+                            <p className="text-xs text-slate-500 font-mono font-semibold">Board Match</p>
                             <p className="text-sm font-bold">
-                              <span className={p.result === 'white' ? 'text-purple-400' : 'text-white'}>
+                              <span className={p.result === 'white' ? 'text-chess-green' : 'text-white'}>
                                 {p.white_username || 'White'}
                               </span>
-                              <span className="text-slate-600 px-2">vs</span>
-                              <span className={p.result === 'black' ? 'text-purple-400' : 'text-white'}>
+                              <span className="text-slate-500 px-2 font-mono">vs</span>
+                              <span className={p.result === 'black' ? 'text-chess-green' : 'text-white'}>
                                 {p.black_id ? p.black_username || 'Black' : 'BYE'}
                               </span>
                             </p>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-xs bg-slate-850 border border-slate-800 px-2.5 py-1 text-slate-350 rounded font-bold font-mono">
+                            <span className="text-xs bg-chess-light-grey border border-chess-darker px-2.5 py-1 text-slate-300 rounded font-bold font-mono">
                               {p.result === 'pending'
                                 ? '⚔️ playing'
                                 : p.result === 'bye'
@@ -425,7 +425,7 @@ export function TournamentDetail() {
                             {p.result === 'pending' && (p.white_id === session?.user?.id || p.black_id === session?.user?.id) && (
                               <button
                                 onClick={() => navigate('/play')}
-                                className="p-1.5 bg-purple-650 hover:bg-purple-550 text-white rounded-lg transition-all"
+                                className="p-2 chess-btn-green rounded-lg flex items-center justify-center cursor-pointer"
                                 title="Play Match"
                               >
                                 <Play className="w-4 h-4 fill-current" />

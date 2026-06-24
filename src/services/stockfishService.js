@@ -22,7 +22,7 @@ function resolveBase() {
 const STOCKFISH_SOURCES = [
   'https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js',
   'https://cdn.jsdelivr.net/npm/stockfish.js@10.0.2/stockfish.js',
-  `${resolveBase()}stockfish-engine.js`,  // local fallback (pure-JS version in your public/)
+  `${resolveBase()}stockfish.js`,  // local fallback (pure-JS version in your public/)
 ];
 
 let workerInstance = null;
@@ -134,6 +134,25 @@ export const getBestMove = (fen, level) => {
     setTimeout(() => {
       if (pendingReject) { pendingReject('timeout'); pendingResolve = null; pendingReject = null; }
     }, cfg.movetime + 5000);
+  });
+};
+
+export const getCustomBestMove = (fen, skillLevel, depth, moveTime) => {
+  return new Promise((resolve, reject) => {
+    if (!workerInstance || !workerReady) { reject('not_ready'); return; }
+
+    pendingResolve = resolve;
+    pendingReject = reject;
+
+    workerInstance.postMessage('stop');
+    workerInstance.postMessage('ucinewgame');
+    workerInstance.postMessage(`setoption name Skill Level value ${skillLevel}`);
+    workerInstance.postMessage(`position fen ${fen}`);
+    workerInstance.postMessage(`go depth ${depth} movetime ${moveTime}`);
+
+    setTimeout(() => {
+      if (pendingReject) { pendingReject('timeout'); pendingResolve = null; pendingReject = null; }
+    }, moveTime + 5000);
   });
 };
 

@@ -1,11 +1,24 @@
 @import 'tailwindcss';
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+
+@theme {
+  --color-chess-bg: #302e2b;
+  --color-chess-dark: #262421;
+  --color-chess-darker: #211f1d;
+  --color-chess-light-grey: #3c3a37;
+  --color-chess-green: #81b64c;
+  --color-chess-green-hover: #a3d16c;
+  --color-chess-green-dark: #5c8b2d;
+  --color-chess-button-grey: #3c3a37;
+  --color-chess-button-grey-hover: #4b4845;
+  --color-board-dark: #769656;
+  --color-board-light: #eeeed2;
+}
 
 body {
-  font-family: 'Outfit', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, Helvetica, Arial, sans-serif;
   margin: 0;
-  background-color: #020617; /* slate-950 */
-  color: #f1f5f9; /* slate-100 */
+  background-color: #302e2b; /* chess-bg */
+  color: #f1f5f9;
 }
 
 /* Custom scrollbars for a premium look */
@@ -15,14 +28,50 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #020617;
+  background: #211f1d;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
+  background: #3c3a37;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: #4b4845;
+}
+
+/* Custom button 3D styling utilities */
+.chess-btn-green {
+  background-color: #81b64c;
+  border-bottom: 4px solid #588233;
+  color: #fff;
+  font-weight: 800;
+  transition: all 0.1s ease;
+}
+
+.chess-btn-green:hover {
+  background-color: #a3d16c;
+}
+
+.chess-btn-green:active {
+  transform: translateY(2px);
+  border-bottom-width: 2px;
+}
+
+.chess-btn-grey {
+  background-color: #3c3a37;
+  border-bottom: 4px solid #2a2927;
+  color: #bababa;
+  font-weight: 800;
+  transition: all 0.1s ease;
+}
+
+.chess-btn-grey:hover {
+  background-color: #4b4845;
+  color: #bababa;
+}
+
+.chess-btn-grey:active {
+  transform: translateY(2px);
+  border-bottom-width: 2px;
 }

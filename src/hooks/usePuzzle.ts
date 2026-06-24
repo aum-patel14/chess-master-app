@@ -123,7 +123,7 @@ export function usePuzzle(puzzle: Puzzle | null, options?: { maxAttempts?: numbe
             fen: chess.fen(),
             lastMove: { from, to },
             checkSquare: chess.inCheck() ? findKingSquare(chess, chess.turn()) : null,
-            history: [{ from, to, color: move.color, captured: !!move.captured }],
+            history: [{ from, to, color: move.color, captured: move.captured || null }],
             solutionIndex: 1,
           }));
         }
@@ -177,7 +177,7 @@ export function usePuzzle(puzzle: Puzzle | null, options?: { maxAttempts?: numbe
           validMoves: [],
           lastMove: { from, to },
           checkSquare: chess.inCheck() ? findKingSquare(chess, chess.turn()) : null,
-          history: [...s.history, { from, to, color: move.color, captured: !!move.captured }],
+          history: [...s.history, { from, to, color: move.color, captured: move.captured || null }],
           solutionIndex: nextSolIdx,
           flash: 'correct',
           status: solved ? 'solved' : 'playing',
@@ -213,7 +213,7 @@ export function usePuzzle(puzzle: Puzzle | null, options?: { maxAttempts?: numbe
                 fen: chess.fen(),
                 lastMove: { from: oppFrom, to: oppTo },
                 checkSquare: chess.inCheck() ? findKingSquare(chess, chess.turn()) : null,
-                history: [...s.history, { from: oppFrom, to: oppTo, color: oppMove.color, captured: !!oppMove.captured }],
+                history: [...s.history, { from: oppFrom, to: oppTo, color: oppMove.color, captured: oppMove.captured || null }],
                 solutionIndex: postOppSolIdx,
                 status: postOppSolved ? 'solved' : 'playing',
               }));
@@ -363,7 +363,7 @@ export function usePuzzle(puzzle: Puzzle | null, options?: { maxAttempts?: numbe
             fen: chess.fen(),
             lastMove: { from, to },
             checkSquare: chess.inCheck() ? findKingSquare(chess, chess.turn()) : null,
-            history: [...s.history, { from, to, color: move.color, captured: !!move.captured }],
+            history: [...s.history, { from, to, color: move.color, captured: move.captured || null }],
             solutionIndex: currentIndex + 1,
           }));
 

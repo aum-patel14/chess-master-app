@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import StockfishWorker from '../workers/stockfish.worker?worker';
 import { BotConfig } from '../config/bots';
+// @ts-ignore
+import { initStockfish, getCustomBestMove, getStockfishReady } from '../services/stockfishService';
+import { getBestMove as fallbackGetBestMove } from '../engine/customEngine';
 
 export interface StockfishHook {
   isThinking: boolean;
@@ -9,114 +11,58 @@ export interface StockfishHook {
 
 export const useStockfish = (): StockfishHook => {
   const [isThinking, setIsThinking] = useState(false);
-  const workerRef = useRef<Worker | null>(null);
-  const resolveRef = useRef<((value: string) => void) | null>(null);
-  const rejectRef = useRef<((reason: any) => void) | null>(null);
-  // ✅ TRACK: Track isThinking in a ref so useCallback never goes stale
+  const [useWasm, setUseWasm] = useState(false);
   const isThinkingRef = useRef(false);
 
   useEffect(() => {
-    let worker: Worker;
-    try {
-      worker = new StockfishWorker();
-      workerRef.current = worker;
-    } catch (e) {
-      console.error('Failed to spawn Stockfish Web Worker:', e);
-      return;
-    }
-
-    worker.onmessage = (event) => {
-      const data = event.data;
-      if (!data) return;
-
-      // ✅ IGNORE: Ignore the 'ready' message — don't treat it as a bestmove
-      if (data.type === 'ready') return;
-
-      if (data.type === 'bestmove') {
-        setIsThinking(false);
-        isThinkingRef.current = false;
-
-        if (resolveRef.current) {
-          // ✅ RESOLVE: Resolve with empty string (not null) so caller gets a string
-          resolveRef.current(data.move ?? '');
-          resolveRef.current = null;
-          rejectRef.current = null;
-        }
-      }
-    };
-
-    worker.onerror = (err) => {
-      console.error('Stockfish worker error:', err);
-      setIsThinking(false);
-      isThinkingRef.current = false;
-      if (rejectRef.current) {
-        rejectRef.current(err);
-        resolveRef.current = null;
-        rejectRef.current = null;
-      }
-    };
-
+    let mounted = true;
+    initStockfish().then((ok: boolean) => {
+      if (!mounted) return;
+      setUseWasm(ok);
+      console.log(ok ? '🚀 useStockfish: using WebAssembly Stockfish Engine' : '⚠️ useStockfish: using local fallback JS Engine');
+    });
     return () => {
-      worker.terminate();
-      workerRef.current = null;
+      mounted = false;
     };
   }, []);
 
-  // ✅ CALLBACK: Empty dependency array [] — this function NEVER changes reference.
-  // We use isThinkingRef.current instead of the isThinking state variable
-  // so the callback is always fresh without needing to be recreated.
-  const getBestMove = useCallback((fen: string, config: BotConfig): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      if (!workerRef.current) {
-        reject(new Error('Stockfish worker is not initialized.'));
-        return;
-      }
+  const getBestMove = useCallback(async (fen: string, config: BotConfig): Promise<string> => {
+    setIsThinking(true);
+    isThinkingRef.current = true;
 
-      // Cancel any in-flight calculation
-      if (isThinkingRef.current) {
-        workerRef.current.postMessage({ type: 'stop' });
-        if (rejectRef.current) {
-          rejectRef.current(new Error('AI calculation aborted by a new request.'));
-          resolveRef.current = null;
-          rejectRef.current = null;
+    try {
+      if (useWasm && getStockfishReady()) {
+        const skill = config.skillLevel ?? 10;
+        const depth = config.depth ?? 8;
+        const moveTime = config.moveTimeMs ?? 500;
+        const move = await getCustomBestMove(fen, skill, depth, moveTime);
+        return move;
+      } else {
+        // Fallback to pure JS minimax Custom Engine synchronously in a brief timeout to avoid locking the UI thread
+        await new Promise(r => setTimeout(r, 50));
+        const skill = Math.max(1, Math.min(20, Math.round(Number(config.skillLevel) || 10)));
+        const bestMove = fallbackGetBestMove(fen, skill);
+        if (bestMove) {
+          return bestMove.from + bestMove.to + (bestMove.promotion || '');
         }
+        return '';
       }
-
-      setIsThinking(true);
-      isThinkingRef.current = true;
-      resolveRef.current = resolve;
-      rejectRef.current = reject;
-
-      // Send position
-      workerRef.current.postMessage({ type: 'setPosition', fen });
-
-      // Trigger calculation
-      workerRef.current.postMessage({
-        type: 'go',
-        depth: config.depth,
-        skill: config.skillLevel,
-        moveTime: config.moveTimeMs,
-      });
-
-      // ✅ TIMEOUT: Safety timeout — if worker hangs, reject cleanly
-      const timeout = setTimeout(() => {
-        if (rejectRef.current === reject) {
-          rejectRef.current(new Error('AI move timeout'));
-          resolveRef.current = null;
-          rejectRef.current = null;
-          setIsThinking(false);
-          isThinkingRef.current = false;
-        }
-      }, (config.moveTimeMs || 1000) + 3000);
-
-      // Clear timeout if promise resolves before it fires
-      const originalResolve = resolve;
-      resolveRef.current = (val: string) => {
-        clearTimeout(timeout);
-        originalResolve(val);
-      };
-    });
-  }, []); // ✅ Empty deps — stable reference forever
+    } catch (e) {
+      console.warn('AI getBestMove calculation failed, using random fallback:', e);
+      // Final emergency fallback using Chess.js
+      const { Chess } = await import('chess.js');
+      const game = new Chess(fen);
+      const moves = game.moves({ verbose: true });
+      if (moves.length > 0) {
+        const m = moves[Math.floor(Math.random() * moves.length)];
+        return m.from + m.to + (m.promotion ?? '');
+      }
+      return '';
+    } finally {
+      setIsThinking(false);
+      isThinkingRef.current = false;
+    }
+  }, [useWasm]);
 
   return { isThinking, getBestMove };
 };

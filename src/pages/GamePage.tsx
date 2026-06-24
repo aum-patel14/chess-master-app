@@ -242,6 +242,16 @@ export default function GamePage() {
   const [analysisResults, setAnalysisResults] = useState<any[] | null>(null);
   const [bestMoveArrow, setBestMoveArrow] = useState<{ from: string; to: string } | null>(null);
   const [retryBoardProps, setRetryBoardProps] = useState<any>(null);
+  const activeMoveRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (activeMoveRef.current) {
+      activeMoveRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+      });
+    }
+  }, [reviewIndex, state.history.length]);
 
   const handleAnalysisComplete = (results: any[]) => {
     setAnalysisResults(results);
@@ -297,6 +307,9 @@ export default function GamePage() {
       });
       setIsPlaying(true);
       setGameState('playing');
+    } else if (paramMode === 'ai') {
+      setIsPlaying(false);
+      setGameState('selection');
     } else if (paramMode === 'local') {
       startNewGame({ mode: 'local' });
       setIsPlaying(true);
@@ -528,61 +541,17 @@ export default function GamePage() {
   const playerPieceIcon = state.playerColor === 'w' ? '♙' : '♟';
   const opponentPieceIcon = state.playerColor === 'w' ? '♟' : '♙';
   const isOpponentTurn = state.playerColor === 'w' ? (chess.turn() === 'b') : (chess.turn() === 'w'); // simplified ticking
-
   return (
     <PageShell>
-      <div
-        style={{
-          background: '#302e2b',
-          minHeight: '100vh',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: isDesktop ? 'center' : 'flex-start',
-          padding: isDesktop ? '40px 20px' : '0',
-        }}
-      >
+      <div className="game-page-container">
         {state.gameMode === 'online' && !state.roomCode ? (
-          <div
-            style={{
-              width: '100%',
-              maxWidth: '430px',
-              background: '#2b2b2b',
-              borderRadius: '12px',
-              padding: '24px',
-              color: '#ffffff',
-              boxShadow: '0 8px 30px rgba(0,0,0,0.5)',
-            }}
-          >
+          <div className="lobby-card">
             <MultiplayerLobby />
           </div>
         ) : (
-          <div
-            style={{
-              width: '100%',
-              maxWidth: isDesktop ? '1100px' : '430px',
-              background: isDesktop ? 'transparent' : '#2b2b2b',
-              display: 'flex',
-              flexDirection: isDesktop ? 'row' : 'column',
-              position: 'relative',
-              boxShadow: isDesktop ? 'none' : '0 0 30px rgba(0,0,0,0.5)',
-              gap: isDesktop ? '30px' : '0',
-              alignItems: isDesktop ? 'stretch' : 'unset',
-            }}
-          >
+          <div className="game-layout-grid">
             {/* Left Column: Board and Player Bars */}
-            <div
-              style={{
-                flex: isDesktop ? '1 1 60%' : 'unset',
-                width: isDesktop ? '60%' : '100%',
-                maxWidth: isDesktop ? '620px' : '100%',
-                background: '#2b2b2b',
-                display: 'flex',
-                flexDirection: 'column',
-                borderRadius: isDesktop ? '12px' : '0',
-                overflow: 'hidden',
-                boxShadow: isDesktop ? '0 10px 30px rgba(0,0,0,0.5)' : 'none',
-              }}
-            >
+            <div className="board-column">
               {state.gameMode === 'vsAI' && (
                 <EngineDifficultyBar
                   value={state.aiDifficulty}
@@ -592,49 +561,40 @@ export default function GamePage() {
               )}
 
               {/* 1. OPPONENT INFO BAR */}
-              <div
-                style={{
-                  background: '#1a1a1a',
-                  padding: '12px 16px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  borderBottom: '1px solid #333',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div className={`player-bar-container ${isOpponentTurn ? 'active-turn' : ''}`}>
+                <div className="player-bar-info">
                   {/* Avatar circle (40px) */}
                   <div
                     style={{
                       width: '40px',
                       height: '40px',
                       borderRadius: '50%',
-                      background: state.gameMode === 'vsAI' ? 
-                        ((activeBot.colorClass === 'gray' && 'linear-gradient(135deg, #707070, #4a4a4a)') ||
-                         (activeBot.colorClass === 'teal' && 'linear-gradient(135deg, #0d9488, #0f766e)') ||
-                         (activeBot.colorClass === 'blue' && 'linear-gradient(135deg, #2563eb, #1d4ed8)') ||
-                         (activeBot.colorClass === 'purple' && 'linear-gradient(135deg, #7c3aed, #6d28d9)') ||
-                         (activeBot.colorClass === 'amber' && 'linear-gradient(135deg, #d97706, #b45309)') ||
-                         (activeBot.colorClass === 'coral' && 'linear-gradient(135deg, #ff7f50, #e05c3c)') ||
-                         (activeBot.colorClass === 'pink' && 'linear-gradient(135deg, #db2777, #be185d)') ||
-                         (activeBot.colorClass === 'red' && 'linear-gradient(135deg, #dc2626, #b91c1c)') || '#3a3a3a') : '#3a3a3a',
+                      background: state.gameMode === 'vsAI' 
+                        ? 'linear-gradient(135deg, #d97706, #b45309)' // Warm amber for AI
+                        : 'linear-gradient(135deg, #707070, #4a4a4a)', // Warm gray for player
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      fontSize: state.gameMode === 'vsAI' ? '14px' : '22px',
-                      fontWeight: state.gameMode === 'vsAI' ? 'bold' : 'normal',
+                      fontSize: '16px',
+                      fontWeight: 'bold',
                       color: '#ffffff',
-                      border: '2px solid #555',
+                      border: '1px solid rgba(255, 255, 255, 0.15)',
                     }}
                   >
-                    {state.gameMode === 'vsAI' ? opponentPieceIcon : '👤'}
+                    {(() => {
+                      const opponentName = state.gameMode === 'vsAI' ? activeBot.name : state.gameMode === 'online' ? state.opponentName : 'Local Opponent';
+                      return opponentName ? opponentName.trim().charAt(0).toUpperCase() : '👤';
+                    })()}
                   </div>
                   <div>
                     {/* Bot name & ELO */}
-                    <div style={{ color: '#ffffff', fontWeight: 700, fontSize: '15px' }}>
-                      {state.gameMode === 'vsAI' ? activeBot.name : state.gameMode === 'online' ? state.opponentName : 'Local Opponent'}
-                      <span style={{ color: '#aaaaaa', fontWeight: 500, fontSize: '12px', marginLeft: '6px' }}>
-                        ({state.gameMode === 'vsAI' ? activeBot.elo : state.gameMode === 'online' ? state.opponentRating : '1200'})
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span className="player-name-text">
+                        {state.gameMode === 'vsAI' ? activeBot.name : state.gameMode === 'online' ? state.opponentName : 'Local Opponent'}
+                      </span>
+                      {isOpponentTurn && <span className="active-dot-indicator" />}
+                      <span className="player-elo-badge">
+                        {state.gameMode === 'vsAI' ? activeBot.elo : state.gameMode === 'online' ? state.opponentRating : '1200'}
                       </span>
                     </div>
                     {/* Pulsing dots under name */}
@@ -664,25 +624,17 @@ export default function GamePage() {
                 </div>
  
                 {/* Opponent Clock Display */}
-                {state.timeControl && (
-                  <div
-                    style={{
-                      fontSize: '18px',
-                      fontWeight: 700,
-                      fontFamily: 'monospace',
-                      background: 'rgba(0,0,0,0.3)',
-                      padding: '6px 12px',
-                      borderRadius: '4px',
-                      color: getClockColor(
-                        state.playerColor === 'w' ? state.blackTime : state.whiteTime,
-                        state.playerColor === 'w' ? (chess.turn() === 'b') : (chess.turn() === 'w')
-                      ),
-                      opacity: (state.playerColor === 'w' ? (chess.turn() === 'b') : (chess.turn() === 'w')) ? 1 : 0.55,
-                    }}
-                  >
-                    {formatTime(state.playerColor === 'w' ? state.blackTime : state.whiteTime)}
-                  </div>
-                )}
+                {state.timeControl && (() => {
+                  const oppTime = state.playerColor === 'w' ? state.blackTime : state.whiteTime;
+                  const isOppUrgent = oppTime < 10;
+                  return (
+                    <div
+                      className={`game-clock-display ${isOpponentTurn ? 'active' : 'inactive'} ${isOppUrgent ? 'urgency-clock' : ''}`}
+                    >
+                      {formatTime(oppTime)}
+                    </div>
+                  );
+                })()}
               </div>
  
               {/* 2. CHESS BOARD + EVAL BAR */}
@@ -710,40 +662,35 @@ export default function GamePage() {
               />
 
               {/* 3. PLAYER INFO BAR */}
-              <div
-                style={{
-                  background: '#1a1a1a',
-                  padding: '12px 16px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  borderTop: '1px solid #333',
-                  borderBottom: isDesktop ? 'none' : '1px solid #333',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div className={`player-bar-container ${!isOpponentTurn ? 'active-turn' : ''}`}>
+                <div className="player-bar-info">
                   {/* Avatar circle (40px) */}
                   <div
                     style={{
                       width: '40px',
                       height: '40px',
                       borderRadius: '50%',
-                      background: '#3a3a3a',
+                      background: 'linear-gradient(135deg, #81b64c, #5f8d37)', // Warm green for player
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      fontSize: '22px',
-                      border: '2px solid #6bbd44',
+                      fontSize: '16px',
+                      fontWeight: 'bold',
+                      color: '#ffffff',
+                      border: '1px solid rgba(255, 255, 255, 0.15)',
                     }}
                   >
-                    {state.gameMode === 'vsAI' ? playerPieceIcon : '♟'}
+                    Y
                   </div>
                   <div>
                     {/* User name & ELO */}
-                    <div style={{ color: '#ffffff', fontWeight: 700, fontSize: '15px' }}>
-                      You
-                      <span style={{ color: '#aaaaaa', fontWeight: 500, fontSize: '12px', marginLeft: '6px' }}>
-                        ({userRating})
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span className="player-name-text">
+                        You
+                      </span>
+                      {!isOpponentTurn && <span className="active-dot-indicator" />}
+                      <span className="player-elo-badge">
+                        {userRating}
                       </span>
                     </div>
                     {/* Captured pieces + material diff */}
@@ -757,48 +704,26 @@ export default function GamePage() {
                     </div>
                   </div>
                 </div>
-
+ 
                 {/* Player Clock Display */}
-                {state.timeControl && (
-                  <div
-                    style={{
-                      fontSize: '18px',
-                      fontWeight: 700,
-                      fontFamily: 'monospace',
-                      background: 'rgba(0,0,0,0.3)',
-                      padding: '6px 12px',
-                      borderRadius: '4px',
-                      color: getClockColor(
-                        state.playerColor === 'w' ? state.whiteTime : state.blackTime,
-                        state.playerColor === 'w' ? (chess.turn() === 'w') : (chess.turn() === 'b')
-                      ),
-                      opacity: (state.playerColor === 'w' ? (chess.turn() === 'w') : (chess.turn() === 'b')) ? 1 : 0.55,
-                    }}
-                  >
-                    {formatTime(state.playerColor === 'w' ? state.whiteTime : state.blackTime)}
-                  </div>
-                )}
+                {state.timeControl && (() => {
+                  const isPlayerActive = state.playerColor === 'w' ? (chess.turn() === 'w') : (chess.turn() === 'b');
+                  const playerTime = state.playerColor === 'w' ? state.whiteTime : state.blackTime;
+                  const isPlayerUrgent = playerTime < 10;
+                  return (
+                    <div
+                      className={`game-clock-display ${isPlayerActive ? 'active' : 'inactive'} ${isPlayerUrgent ? 'urgency-clock' : ''}`}
+                    >
+                      {formatTime(playerTime)}
+                    </div>
+                  );
+                })()}
               </div>
             </div>
 
             {/* Right Column: Sidebar (Desktop) or Action controls (Mobile) */}
             {isDesktop ? (
-              <div
-                style={{
-                  flex: '1 1 40%',
-                  background: '#1a1a1a',
-                  borderRadius: '12px',
-                  padding: showAnalysis ? '0px' : '24px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  border: '1px solid #333',
-                  boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
-                  minWidth: '340px',
-                  maxHeight: '620px',
-                  overflow: 'hidden',
-                }}
-              >
+              <div className="sidebar-panel">
                 {showAnalysis ? (
                   <AnalysisPanel
                     history={state.history}
@@ -818,29 +743,29 @@ export default function GamePage() {
                 ) : (
                   <>
                     {/* Game / Opponent Header */}
-                    <div style={{ borderBottom: '1px solid #333', paddingBottom: '14px', marginBottom: '16px', textAlign: 'left' }}>
-                      <h3 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: '#fff' }}>
+                    <div style={{ borderBottom: '1px solid var(--border)', paddingBottom: '14px', marginBottom: '16px', textAlign: 'left' }}>
+                      <h3 className="panel-header-title">
                         {state.gameMode === 'vsAI' ? `🤖 vs ${activeBot.name}` : state.gameMode === 'online' ? `⚔️ vs ${state.opponentName || 'Online'}` : state.gameMode === 'analysis' ? '🔬 Game Analysis' : '👥 Local Game'}
                       </h3>
-                      <p style={{ fontSize: '12px', color: '#aaaaaa', marginTop: '4px', margin: '4px 0 0 0', lineHeight: '1.4' }}>
+                      <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px', margin: '4px 0 0 0', lineHeight: '1.4' }}>
                         {state.gameMode === 'vsAI' ? activeBot.description : state.gameMode === 'analysis' ? 'Analyze positions, review mistakes and explore optimal moves.' : 'Analyze positions, review mistakes and play in real time.'}
                       </p>
                     </div>
 
                     {/* Move List Section */}
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: '220px' }}>
-                      <h4 style={{ fontSize: '13px', fontWeight: 800, color: '#888', margin: '0 0 8px 0', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'left' }}>
+                    <div className="move-list-section">
+                      <h4 style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text-muted)', margin: '0 0 8px 0', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'left' }}>
                         Moves
                       </h4>
-                      <div style={{ flex: 1, background: '#111111', borderRadius: '6px', border: '1px solid #2d2d2d', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '50px 1fr 1fr', padding: '8px 12px', background: '#202020', fontSize: '11px', color: '#888', fontWeight: 700, borderBottom: '1px solid #2d2d2d', textAlign: 'left' }}>
+                      <div className="move-list-container">
+                        <div className="move-list-grid-header">
                           <div>#</div>
                           <div>White</div>
                           <div>Black</div>
                         </div>
-                        <div style={{ flex: 1, overflowY: 'auto', maxHeight: '240px' }}>
+                        <div className="move-list-scroll">
                           {state.history.length === 0 ? (
-                            <div style={{ padding: '24px 12px', color: '#555', textAlign: 'center', fontSize: '13px' }}>
+                            <div style={{ padding: '24px 12px', color: 'var(--text-muted)', textAlign: 'center', fontSize: '13px' }}>
                               No moves played yet.
                             </div>
                           ) : (
@@ -856,77 +781,83 @@ export default function GamePage() {
                                   blackIdx: i + 1,
                                 });
                               }
-                              return rows.map((row) => (
-                                <div
-                                  key={row.turnNum}
-                                  style={{
-                                    display: 'grid',
-                                    gridTemplateColumns: '50px 1fr 1fr',
-                                    padding: '8px 12px',
-                                    borderBottom: '1px solid #222',
-                                    fontSize: '13px',
-                                    fontFamily: 'monospace',
-                                    textAlign: 'left',
-                                  }}
-                                >
-                                  <div style={{ color: '#555' }}>{row.turnNum}</div>
+                              
+                              const currentActiveIdx = reviewIndex !== null ? reviewIndex : (state.history.length - 1);
+
+                              return rows.map((row) => {
+                                const isWhiteActive = currentActiveIdx === row.whiteIdx;
+                                const isBlackActive = currentActiveIdx === row.blackIdx;
+                                const isRowActive = isWhiteActive || isBlackActive;
+
+                                return (
                                   <div
-                                    onClick={() => handleMoveClick(row.whiteIdx)}
-                                    style={{
-                                      color: reviewIndex === row.whiteIdx ? '#6bbd44' : '#ffffff',
-                                      cursor: 'pointer',
-                                      fontWeight: reviewIndex === row.whiteIdx ? 700 : 400,
-                                    }}
+                                    key={row.turnNum}
+                                    ref={isRowActive ? activeMoveRef : undefined}
+                                    className={`move-list-row ${isRowActive ? 'active-row' : ''}`}
                                   >
-                                    {row.white.san}
+                                    <div style={{ color: 'var(--text-muted)' }}>{row.turnNum}</div>
+                                    <div
+                                      onClick={() => handleMoveClick(row.whiteIdx)}
+                                      className={`move-list-item-san ${isWhiteActive ? 'active-move' : ''}`}
+                                    >
+                                      {row.white.san}
+                                    </div>
+                                    <div
+                                      onClick={() => row.black && handleMoveClick(row.blackIdx)}
+                                      className={`move-list-item-san ${row.black && isBlackActive ? 'active-move' : ''}`}
+                                    >
+                                      {row.black ? row.black.san : ''}
+                                    </div>
                                   </div>
-                                  <div
-                                    onClick={() => row.black && handleMoveClick(row.blackIdx)}
-                                    style={{
-                                      color: row.black && reviewIndex === row.blackIdx ? '#6bbd44' : '#ffffff',
-                                      cursor: 'pointer',
-                                      fontWeight: row.black && reviewIndex === row.blackIdx ? 700 : 400,
-                                    }}
-                                  >
-                                    {row.black ? row.black.san : ''}
-                                  </div>
-                                </div>
-                              ));
+                                );
+                              });
                             })()
                           )}
                         </div>
                       </div>
-
+ 
                       {/* Navigation Arrows under list */}
                       <div style={{ display: 'flex', justifyContent: 'center', gap: '14px', alignItems: 'center', marginTop: '12px' }}>
-                        <button onClick={handleFirstMove} style={navArrowStyle} title="First Move" aria-label="First Move">
+                        <button onClick={handleFirstMove} className="nav-arrow-btn" title="First Move" aria-label="First Move">
                           <ChevronsLeft size={16} />
                         </button>
-                        <button onClick={handlePrevMove} style={navArrowStyle} title="Previous Move" aria-label="Previous Move">
+                        <button onClick={handlePrevMove} className="nav-arrow-btn" title="Previous Move" aria-label="Previous Move">
                           <ArrowLeft size={16} />
                         </button>
-                        <button onClick={handleNextMove} style={navArrowStyle} title="Next Move" aria-label="Next Move">
+                        <button onClick={handleNextMove} className="nav-arrow-btn" title="Next Move" aria-label="Next Move">
                           <ArrowRight size={16} />
                         </button>
-                        <button onClick={handleLastMove} style={navArrowStyle} title="Last Move" aria-label="Last Move">
+                        <button onClick={handleLastMove} className="nav-arrow-btn" title="Last Move" aria-label="Last Move">
                           <ChevronsRight size={16} />
                         </button>
                       </div>
                     </div>
-
+ 
                     {/* Primary Game Action Row */}
                     <div style={{ display: 'flex', gap: '8px', margin: '20px 0 12px 0' }}>
-                      <button onClick={undoMove} style={historySubBtnStyle} aria-label="Undo move">
-                        <Undo2 size={13} style={{ marginRight: '4px' }} /> Undo
+                      <button
+                        onClick={undoMove}
+                        className="btn-game-control"
+                        aria-label="Undo move"
+                      >
+                        <Undo2 size={13} /> Undo
                       </button>
-                      <button onClick={handleHint} style={historySubBtnStyle} aria-label="Show hint">
+                      <button
+                        onClick={handleHint}
+                        className="btn-game-hint"
+                        aria-label="Show hint"
+                      >
                         💡 Hint
                       </button>
-                      <button onClick={handleFlip} style={historySubBtnStyle} aria-label="Flip board">
-                        <RefreshCw size={13} style={{ marginRight: '4px' }} /> Flip
+                      <button
+                        onClick={handleFlip}
+                        className="btn-game-control"
+                        aria-label="Flip board"
+                      >
+                        <RefreshCw size={13} /> Flip
                       </button>
                     </div>
-
+ 
                     {/* Secondary actions + Resign */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       <div style={{ display: 'flex', gap: '8px' }}>
@@ -939,7 +870,8 @@ export default function GamePage() {
                               showToast('No moves to export', 'warning');
                             }
                           }}
-                          style={historySubBtnStyle}
+                          className="btn-game-control"
+                          style={{ height: '36px', fontSize: '12px' }}
                         >
                           <Download size={12} style={{ marginRight: '3px' }} /> PGN
                         </button>
@@ -952,7 +884,8 @@ export default function GamePage() {
                               showToast('No moves to copy', 'warning');
                             }
                           }}
-                          style={historySubBtnStyle}
+                          className="btn-game-control"
+                          style={{ height: '36px', fontSize: '12px' }}
                         >
                           <Share2 size={12} style={{ marginRight: '3px' }} /> Copy PGN
                         </button>
@@ -962,34 +895,18 @@ export default function GamePage() {
                             setGameState('selection');
                             navigate('/game', { state: { mode: 'ai' } });
                           }}
-                          style={{ ...historySubBtnStyle, background: '#6bbd44', color: '#fff', borderColor: '#6bbd44' }}
+                          className="btn-game-hint"
+                          style={{ height: '36px', fontSize: '12px' }}
                         >
                           New Game
                         </button>
                       </div>
-
+ 
                       <button
                         onClick={resign}
-                        style={{
-                          height: '44px',
-                          borderRadius: '6px',
-                          background: '#8b1a1a',
-                          border: 'none',
-                          color: '#ffffff',
-                          fontSize: '14px',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '6px',
-                          marginTop: '8px',
-                          transition: 'background 0.2s',
-                        }}
-                        onMouseEnter={(e) => (e.currentTarget.style.background = '#a62424')}
-                        onMouseLeave={(e) => (e.currentTarget.style.background = '#8b1a1a')}
+                        className="btn-game-resign"
                       >
-                        <Flag size={14} fill="#ffffff" /> Resign
+                        <Flag size={14} fill="#E24B4A" stroke="#E24B4A" /> Resign
                       </button>
                     </div>
                   </>
@@ -998,7 +915,7 @@ export default function GamePage() {
             ) : (
               // Mobile Bottom controls
               showAnalysis ? (
-                <div style={{ background: '#1a1a1a', padding: '16px', borderTop: '1px solid #333', overflowY: 'auto', maxHeight: '420px', width: '100%', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ background: 'var(--bg-sidebar)', padding: '16px', borderTop: '1px solid var(--border)', overflowY: 'auto', maxHeight: '420px', width: '100%', display: 'flex', flexDirection: 'column' }}>
                   <AnalysisPanel
                     history={state.history}
                     onJumpToMove={handleMoveClick}
@@ -1018,100 +935,39 @@ export default function GamePage() {
               ) : (
                 <>
                   {/* 4. ACTION BUTTONS */}
-                  <div
-                    style={{
-                      background: '#222222',
-                      padding: '10px 16px',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      gap: '8px',
-                      borderBottom: '1px solid #333',
-                    }}
-                  >
+                  <div className="mobile-actions-wrapper">
                     <button
                       onClick={undoMove}
-                      style={{
-                        flex: 1,
-                        height: '42px',
-                        borderRadius: '20px',
-                        background: '#3a3a3a',
-                        border: 'none',
-                        color: '#ffffff',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '6px',
-                        fontSize: '13px',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                      }}
+                      className="btn-game-control"
+                      style={{ height: '36px', padding: '10px 12px' }}
                     >
-                      <Undo2 size={16} /> Undo
+                      <Undo2 size={14} /> Undo
                     </button>
                     <button
                       onClick={handleHint}
-                      style={{
-                        flex: 1,
-                        height: '42px',
-                        borderRadius: '20px',
-                        background: '#3a3a3a',
-                        border: 'none',
-                        color: '#ffffff',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '6px',
-                        fontSize: '13px',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                      }}
+                      className="btn-game-hint"
+                      style={{ height: '36px', padding: '10px 12px' }}
                     >
                       💡 Hint
                     </button>
                     <button
                       onClick={handleFlip}
-                      style={{
-                        flex: 1,
-                        height: '42px',
-                        borderRadius: '20px',
-                        background: '#3a3a3a',
-                        border: 'none',
-                        color: '#ffffff',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '6px',
-                        fontSize: '13px',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                      }}
+                      className="btn-game-control"
+                      style={{ height: '36px', padding: '10px 12px' }}
                     >
-                      <RefreshCw size={16} /> Flip
+                      <RefreshCw size={14} /> Flip
                     </button>
                     <button
                       onClick={() => setHistoryExpanded(prev => !prev)}
-                      style={{
-                        flex: 1,
-                        height: '42px',
-                        borderRadius: '20px',
-                        background: '#3a3a3a',
-                        border: 'none',
-                        color: '#ffffff',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '6px',
-                        fontSize: '13px',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                      }}
+                      className="btn-game-control"
+                      style={{ height: '36px', padding: '10px 12px' }}
                     >
                       ☰ Options
                     </button>
                   </div>
 
                   {/* 5. MOVE HISTORY (collapsible panel) */}
-                  <div style={{ background: '#1c1c1c', borderBottom: '1px solid #333' }}>
+                  <div style={{ background: 'var(--bg-sidebar)', borderBottom: '1px solid var(--border)' }}>
                     <button
                       onClick={() => setHistoryExpanded(p => !p)}
                       style={{
@@ -1119,7 +975,7 @@ export default function GamePage() {
                         height: '36px',
                         background: 'transparent',
                         border: 'none',
-                        color: '#aaaaaa',
+                        color: 'var(--text-secondary)',
                         fontSize: '13px',
                         fontWeight: 600,
                         cursor: 'pointer',
@@ -1139,24 +995,25 @@ export default function GamePage() {
                           style={{
                             maxHeight: '100px',
                             overflowY: 'auto',
-                            background: '#111',
+                            background: 'rgba(0,0,0,0.2)',
                             borderRadius: '6px',
                             padding: '8px 12px',
                             fontSize: '13px',
-                            fontFamily: 'monospace',
-                            color: '#4ade80',
+                            fontFamily: 'var(--font-mono)',
+                            color: 'var(--green)',
+                            border: '1px solid var(--border)',
                             lineHeight: 1.5,
                             textAlign: 'left',
                           }}
                         >
                           {state.history.length === 0 ? (
-                            <span style={{ color: '#555' }}>No moves made yet.</span>
+                            <span style={{ color: 'var(--text-muted)' }}>No moves made yet.</span>
                           ) : (
                             state.history.map((m: any, idx: number) => {
                               const isWhiteMove = idx % 2 === 0;
                               const turnNum = Math.floor(idx / 2) + 1;
                               return (
-                                <span key={idx} style={{ marginRight: '8px', color: reviewIndex === idx ? '#ffcc00' : '#ffffff' }}>
+                                <span key={idx} style={{ marginRight: '8px', color: reviewIndex === idx ? 'var(--green)' : 'var(--text-primary)', fontWeight: reviewIndex === idx ? 700 : 400 }}>
                                   {isWhiteMove && `${turnNum}. `}
                                   {m.san}
                                 </span>
@@ -1167,16 +1024,16 @@ export default function GamePage() {
 
                         {/* Navigation arrows */}
                         <div style={{ display: 'flex', justifyContent: 'center', gap: '14px', alignItems: 'center' }}>
-                          <button onClick={handleFirstMove} style={navArrowStyle} title="First Move" aria-label="First Move">
+                          <button onClick={handleFirstMove} className="nav-arrow-btn" title="First Move" aria-label="First Move">
                             <ChevronsLeft size={16} />
                           </button>
-                          <button onClick={handlePrevMove} style={navArrowStyle} title="Previous Move" aria-label="Previous Move">
+                          <button onClick={handlePrevMove} className="nav-arrow-btn" title="Previous Move" aria-label="Previous Move">
                             <ArrowLeft size={16} />
                           </button>
-                          <button onClick={handleNextMove} style={navArrowStyle} title="Next Move" aria-label="Next Move">
+                          <button onClick={handleNextMove} className="nav-arrow-btn" title="Next Move" aria-label="Next Move">
                             <ArrowRight size={16} />
                           </button>
-                          <button onClick={handleLastMove} style={navArrowStyle} title="Last Move" aria-label="Last Move">
+                          <button onClick={handleLastMove} className="nav-arrow-btn" title="Last Move" aria-label="Last Move">
                             <ChevronsRight size={16} />
                           </button>
                         </div>
@@ -1192,7 +1049,8 @@ export default function GamePage() {
                                 showToast('No moves to export', 'warning');
                               }
                             }}
-                            style={historySubBtnStyle}
+                            className="btn-game-control"
+                            style={{ height: '32px', fontSize: '12px' }}
                           >
                             <Download size={12} style={{ marginRight: '3px' }} /> PGN
                           </button>
@@ -1205,7 +1063,8 @@ export default function GamePage() {
                                 showToast('No moves to copy', 'warning');
                               }
                             }}
-                            style={historySubBtnStyle}
+                            className="btn-game-control"
+                            style={{ height: '32px', fontSize: '12px' }}
                           >
                             <Share2 size={12} style={{ marginRight: '3px' }} /> Copy PGN
                           </button>
@@ -1215,7 +1074,8 @@ export default function GamePage() {
                               setGameState('selection');
                               navigate('/game', { state: { mode: 'ai' } });
                             }}
-                            style={historySubBtnStyle}
+                            className="btn-game-hint"
+                            style={{ height: '32px', fontSize: '12px' }}
                           >
                             + New
                           </button>
@@ -1227,26 +1087,10 @@ export default function GamePage() {
                   {/* 6. RESIGNATION BUTTON */}
                   <button
                     onClick={resign}
-                    style={{
-                      width: '100%',
-                      height: '48px',
-                      background: '#8b1a1a', // Chess.com dark resign red
-                      color: '#ffffff',
-                      border: 'none',
-                      fontSize: '15px',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px',
-                      transition: 'background 0.2s',
-                      marginTop: 'auto',
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = '#a62424')}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = '#8b1a1a')}
+                    className="btn-game-resign"
+                    style={{ height: '48px', marginTop: 'auto', borderRadius: '0' }}
                   >
-                    <Flag size={16} fill="#ffffff" /> Resign
+                    <Flag size={16} fill="var(--red)" /> Resign
                   </button>
                 </>
               )
@@ -1263,28 +1107,4 @@ export default function GamePage() {
   );
 }
 
-// Styling descriptors for move history subcontrols
-const navArrowStyle = {
-  width: '36px',
-  height: '36px',
-  borderRadius: '50%',
-  background: '#3a3a3a',
-  border: 'none',
-  color: '#ffffff',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  cursor: 'pointer',
-};
 
-const historySubBtnStyle = {
-  flex: 1,
-  height: '32px',
-  borderRadius: '4px',
-  background: '#2c2c2c',
-  border: '1px solid #444',
-  color: '#aaaaaa',
-  fontSize: '12px',
-  fontWeight: 600,
-  cursor: 'pointer',
-};

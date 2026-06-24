@@ -85,10 +85,27 @@ export default function LandingPage() {
 
   return (
     <div className="lp-page">
+      {/* Cinematic Ambient Glow Blobs */}
+      <div className="ambient-glow glow-top-left" />
+      <div className="ambient-glow glow-bottom-right" />
+      <div className="ambient-glow glow-center" />
+
+      {/* Decorative Floating Chess Pieces in Background */}
+      <div className="floating-bg-piece piece-1">♞</div>
+      <div className="floating-bg-piece piece-2">♟</div>
+      <div className="floating-bg-piece piece-3">♛</div>
+      <div className="floating-bg-piece piece-4">♜</div>
+      <div className="floating-bg-piece piece-5">♝</div>
+      <div className="floating-bg-piece piece-6">♞</div>
+
       {/* HERO — matches chess.com headline */}
       <section className="hero">
         <div className="hero-text">
-          <h1>Play Chess Online<br />on the #1 Site!</h1>
+          <h1>
+            Play Chess <span className="text-highlight">Online</span>
+            <br />
+            on the <span className="text-gradient">#1 Site!</span>
+          </h1>
           
           <div className="landing-stats">
             <div className="stat-item">
@@ -97,7 +114,9 @@ export default function LandingPage() {
             </div>
             <div className="stat-divider" />
             <div className="stat-item">
-              <span className="stat-count">2,300+</span>
+              <span className="stat-count">
+                <span className="live-pulse" /> 2,300+
+              </span>
               <span className="stat-label">Playing Now</span>
             </div>
           </div>

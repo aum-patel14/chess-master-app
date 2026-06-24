@@ -56,7 +56,7 @@ const mapDifficultyToStockfishLevel = (difficulty) => {
 const GameContext = createContext(null);
 
 const BOARD_THEMES = {
-  classic:  { light: '#eeeed2', dark: '#769656', name: 'Classic', accent: '#81b64c' },
+  classic:  { light: '#F0D9B5', dark: '#B58863', name: 'Classic', accent: '#81b64c' },
   ocean:    { light: '#dee3e6', dark: '#8ca2ad', name: 'Ocean',   accent: '#4a728a' },
   wood:     { light: '#f0c070', dark: '#8a4f2a', name: 'Wood',    accent: '#734122' },
   midnight: { light: '#6f8fa4', dark: '#2e4057', name: 'Midnight',accent: '#8866ff' },

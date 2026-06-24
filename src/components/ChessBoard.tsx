@@ -113,6 +113,39 @@ export default function ChessBoard({
   const [touchActiveId, setTouchActiveId] = useState<string | null>(null);
   const touchStartPos = useRef({ x: 0, y: 0 });
 
+  const [capturedPieceAnim, setCapturedPieceAnim] = useState<{
+    square: string;
+    type: string;
+    color: string;
+    id: string;
+  } | null>(null);
+
+  const lastActiveMoveRef = useRef<any>(null);
+  useEffect(() => {
+    if (!animationsEnabled) return;
+    
+    const currentActiveMove = (currentReviewIndex !== null && currentReviewIndex !== undefined) 
+      ? history[currentReviewIndex] 
+      : history[history.length - 1];
+      
+    if (currentActiveMove && currentActiveMove !== lastActiveMoveRef.current) {
+      if (currentActiveMove.captured) {
+        setCapturedPieceAnim({
+          square: currentActiveMove.to,
+          type: currentActiveMove.captured,
+          color: currentActiveMove.color === 'w' ? 'b' : 'w',
+          id: `cap_${Date.now()}`
+        });
+        
+        const timer = setTimeout(() => {
+          setCapturedPieceAnim(null);
+        }, 200);
+        return () => clearTimeout(timer);
+      }
+    }
+    lastActiveMoveRef.current = currentActiveMove;
+  }, [history, currentReviewIndex, animationsEnabled]);
+
   // Play slide/move effects on history change
   useEffect(() => {
     if (!boardRef.current) return;
@@ -297,11 +330,12 @@ export default function ChessBoard({
       aria-label="Chess board"
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
+      className={`chess-board ${isAIThinking ? 'ai-thinking' : ''}`}
       style={{
         position: 'relative',
         width: '100%',
         aspectRatio: '1',
-        background: '#769656', // Chess.com dark squares
+        background: '#B58863', // Chess.com dark squares
         display: 'grid',
         gridTemplateColumns: 'repeat(8, 1fr)',
         gridTemplateRows: 'repeat(8, 1fr)',
@@ -309,14 +343,13 @@ export default function ChessBoard({
         touchAction: 'none',
         borderRadius: '4px',
         overflow: 'hidden',
-        boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
       }}
     >
       {/* Squares Rendering */}
       {renderedSquares.map(({ row, col, rankLabel, fileLabel, squareName, cell }) => {
         // Determine square coordinate color and active state colors
         const isLight = (row + col) % 2 !== 0; // standard alternation
-        const defaultBg = isLight ? '#eeeed2' : '#769656';
+        const defaultBg = isLight ? '#F0D9B5' : '#B58863';
         
         const isSelected = selectedSquare === squareName;
         const isLastMove = lastMove && (lastMove.from === squareName || lastMove.to === squareName);
@@ -324,18 +357,6 @@ export default function ChessBoard({
         const isHint = hintSquares && (hintSquares.from === squareName || hintSquares.to === squareName);
         const isDragOver = dragOver === squareName;
         
-        // Compute background color overrides
-        let sqBg = defaultBg;
-        if (isCheck) {
-          sqBg = '#FF6B6B';
-        } else if (isSelected) {
-          sqBg = '#7FC97F';
-        } else if (isLastMove) {
-          sqBg = isLight ? '#F6F669' : '#BACA2B';
-        } else if (isHint || isDragOver) {
-          sqBg = isLight ? 'rgba(127, 201, 127, 0.55)' : 'rgba(127, 201, 127, 0.45)';
-        }
-
         const isValidTarget = !readOnly && validMoves.includes(squareName);
         const highlight = highlights?.find(h => h.square === squareName);
         
@@ -362,7 +383,7 @@ export default function ChessBoard({
             style={{
               gridRow,
               gridColumn: gridCol,
-              background: sqBg,
+              background: defaultBg,
               position: 'relative',
               width: '100%',
               height: '100%',
@@ -373,6 +394,60 @@ export default function ChessBoard({
               transition: 'background-color 100ms ease',
             }}
           >
+            {/* Last Move Overlay */}
+            {isLastMove && (
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  backgroundColor: 'rgba(20, 85, 30, 0.2)',
+                  pointerEvents: 'none',
+                  zIndex: 1,
+                }}
+              />
+            )}
+
+            {/* Selection Overlay */}
+            {isSelected && (
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  backgroundColor: 'rgba(20, 85, 30, 0.5)',
+                  boxShadow: 'inset 0 0 0 2px rgb(20, 85, 30)',
+                  pointerEvents: 'none',
+                  zIndex: 1,
+                }}
+              />
+            )}
+
+            {/* Check overlay with red flash */}
+            {isCheck && (
+              <div
+                className="check-flash-overlay"
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  backgroundColor: 'rgba(226, 75, 74, 0.5)',
+                  pointerEvents: 'none',
+                  zIndex: 1,
+                }}
+              />
+            )}
+
+            {/* Hint / Dragover Overlay */}
+            {(isHint || isDragOver) && (
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  backgroundColor: isLight ? 'rgba(127, 201, 127, 0.35)' : 'rgba(127, 201, 127, 0.25)',
+                  pointerEvents: 'none',
+                  zIndex: 1,
+                }}
+              />
+            )}
+
             {/* Highlight Overlay */}
             {highlight && (
               <div
@@ -395,7 +470,7 @@ export default function ChessBoard({
                   left: '4px',
                   fontSize: '11px',
                   fontWeight: 700,
-                  color: isLight ? '#769656' : '#eeeed2',
+                  color: isLight ? '#B58863' : '#F0D9B5',
                   opacity: 0.55,
                   pointerEvents: 'none',
                   zIndex: 2,
@@ -414,7 +489,7 @@ export default function ChessBoard({
                   right: '4px',
                   fontSize: '11px',
                   fontWeight: 700,
-                  color: isLight ? '#769656' : '#eeeed2',
+                  color: isLight ? '#B58863' : '#F0D9B5',
                   opacity: 0.55,
                   pointerEvents: 'none',
                   zIndex: 2,
@@ -428,10 +503,10 @@ export default function ChessBoard({
             {isValidTarget && !cell && (
               <div
                 style={{
-                  width: '24%',
-                  height: '24%',
+                  width: '16px',
+                  height: '16px',
                   borderRadius: '50%',
-                  background: isLight ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.35)',
+                  backgroundColor: 'rgba(20, 85, 30, 0.4)',
                   pointerEvents: 'none',
                   zIndex: 3,
                 }}
@@ -441,9 +516,10 @@ export default function ChessBoard({
               <div
                 style={{
                   position: 'absolute',
-                  inset: 0,
-                  border: '5px solid rgba(107, 189, 68, 0.45)', // Green capture ring
-                  borderRadius: '4px',
+                  width: '80%',
+                  height: '80%',
+                  border: '4px solid rgba(20, 85, 30, 0.4)',
+                  borderRadius: '50%',
                   pointerEvents: 'none',
                   zIndex: 3,
                 }}
@@ -488,11 +564,45 @@ export default function ChessBoard({
         );
       })}
 
+      {/* Captured Fading Piece Overlay */}
+      {capturedPieceAnim && (
+        <div
+          key={capturedPieceAnim.id}
+          style={{
+            position: 'absolute',
+            width: '12.5%',
+            height: '12.5%',
+            ...getSquareOffset(capturedPieceAnim.square),
+            zIndex: 3,
+            pointerEvents: 'none',
+          }}
+        >
+          <div style={{ width: '100%', height: '100%', pointerEvents: 'none' }}>
+            <ChessPiece
+              piece={{ color: capturedPieceAnim.color, type: typeof capturedPieceAnim.type === 'string' ? capturedPieceAnim.type : 'p' }}
+              square={capturedPieceAnim.square}
+              isSelected={false}
+              animationsEnabled={false}
+              animStyle={{ animation: 'pieceFadeOut 200ms linear forwards' }}
+              flippedView={isFlipped}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Absolute Pieces Layer */}
       {pieces.map((p) => {
         const isSelected = selectedSquare === p.square;
         const isLanding = movingPiece === p.square;
         const isActiveTouch = touchActiveId === p.id;
+        
+        // Find if this piece is the attacker in a capture
+        const currentActiveMove = (currentReviewIndex !== null && currentReviewIndex !== undefined) 
+          ? history[currentReviewIndex] 
+          : history[history.length - 1];
+        const isCaptureAttacker = animationsEnabled && currentActiveMove && 
+          currentActiveMove.to === p.square && currentActiveMove.captured;
+
         return (
           <div
             key={p.id}
@@ -521,6 +631,7 @@ export default function ChessBoard({
                 onClick={readOnly ? undefined : () => handleSquareClickWithOnMove(p.square)}
                 animStyle={{ animation: isLanding ? 'slideIn 0.2s ease' : 'none' }}
                 flippedView={isFlipped}
+                isCaptureAttacker={isCaptureAttacker}
               />
             </div>
           </div>

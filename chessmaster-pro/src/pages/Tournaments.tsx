@@ -153,12 +153,12 @@ export function Tournaments() {
       <DocumentTitle title="Tournaments" description="Join competitive chess Arenas and Swiss events on Chessmaster Pro, track live standings, or host your own customized tournament." />
 
       {/* Header and Create Button */}
-      <section className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-900 pb-5">
+      <section className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-chess-darker pb-5">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight text-white mb-2" data-testid="tournaments-header-title">
             Live Tournaments
           </h1>
-          <p className="text-slate-400 text-sm">
+          <p className="text-slate-400 text-sm font-semibold">
             Join competitive Arenas and Swiss events to challenge matching players globally.
           </p>
         </div>
@@ -166,7 +166,7 @@ export function Tournaments() {
           <button
             onClick={() => setIsModalOpen(true)}
             data-testid="btn-create-tournament"
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-purple-650 hover:bg-purple-550 text-white font-bold text-sm rounded-xl shadow-lg shadow-purple-600/10 hover:shadow-purple-550/20 transition-all border border-purple-500/20"
+            className="inline-flex items-center gap-2 px-5 py-2.5 chess-btn-green rounded-xl text-xs uppercase tracking-wider font-extrabold cursor-pointer"
           >
             <PlusCircle className="w-4 h-4" /> Create Tournament
           </button>
@@ -175,16 +175,16 @@ export function Tournaments() {
 
       {/* Tabs */}
       <section className="space-y-6">
-        <div className="flex border-b border-slate-850">
+        <div className="flex border-b border-chess-darker">
           {(['active', 'upcoming', 'finished'] as const).map((tab) => (
             <button
               key={tab}
               data-testid={`tab-tournaments-${tab}`}
               onClick={() => setActiveTab(tab)}
-              className={`px-6 py-3 font-semibold text-sm capitalize transition-all border-b-2 -mb-[2px] ${
+              className={`px-6 py-3 font-extrabold text-sm capitalize transition-all border-b-2 -mb-[2px] cursor-pointer ${
                 activeTab === tab
-                  ? 'border-purple-500 text-purple-300'
-                  : 'border-transparent text-slate-450 hover:text-slate-200'
+                  ? 'border-chess-green text-chess-green'
+                  : 'border-transparent text-slate-400 hover:text-slate-200'
               }`}
             >
               {tab === 'active' ? '🔴 Live now' : tab}
@@ -194,7 +194,7 @@ export function Tournaments() {
 
         {/* Tournaments List */}
         {loading ? (
-          <div className="flex items-center justify-center py-16 text-purple-400">
+          <div className="flex items-center justify-center py-16 text-chess-green">
             <span className="animate-spin text-2xl">♞</span>
             <span className="ml-3 font-semibold">Loading tournament matches...</span>
           </div>
@@ -206,11 +206,11 @@ export function Tournaments() {
                   key={tour.id}
                   data-testid={`tournament-card-${tour.id}`}
                   onClick={() => handleCardClick(tour.id)}
-                  className="border border-slate-800 bg-slate-900/20 hover:bg-slate-900/40 hover:border-slate-700 rounded-2xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 transition-all cursor-pointer group"
+                  className="bg-chess-dark border-b-4 border-chess-darker rounded-xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 transition-all cursor-pointer group hover:bg-chess-dark/85"
                 >
                   <div className="space-y-2 max-w-2xl">
                     <div className="flex flex-wrap items-center gap-2.5">
-                      <span className="px-2.5 py-0.5 text-[10px] bg-slate-850 border border-slate-800 text-slate-350 rounded font-bold font-mono uppercase">
+                      <span className="px-2.5 py-0.5 text-[10px] bg-chess-light-grey border border-chess-darker text-slate-300 rounded font-bold font-mono uppercase">
                         {tour.time_control} • {tour.format}
                       </span>
                       {tour.prize_badge_name && (
@@ -220,32 +220,32 @@ export function Tournaments() {
                         </span>
                       )}
                     </div>
-                    <h3 className="text-xl font-bold text-white leading-snug group-hover:text-purple-300 transition-colors">
+                    <h3 className="text-xl font-bold text-white leading-snug group-hover:text-chess-green transition-colors">
                       {tour.title}
                     </h3>
-                    <p className="text-slate-400 text-sm leading-relaxed">{tour.description}</p>
+                    <p className="text-slate-400 text-sm leading-relaxed font-semibold">{tour.description}</p>
                   </div>
 
-                  <div className="flex flex-row md:flex-col justify-between items-center md:items-end w-full md:w-auto gap-4 pt-4 md:pt-0 border-t md:border-t-0 border-slate-850">
-                    <div className="flex space-x-4 md:space-x-0 md:flex-col md:space-y-1 text-xs text-slate-500 font-mono">
+                  <div className="flex flex-row md:flex-col justify-between items-center md:items-end w-full md:w-auto gap-4 pt-4 md:pt-0 border-t md:border-t-0 border-chess-light-grey">
+                    <div className="flex space-x-4 md:space-x-0 md:flex-col md:space-y-1 text-xs text-slate-400 font-mono font-semibold">
                       <span className="flex items-center gap-1.5">
-                        <Users className="w-3.5 h-3.5" />
+                        <Users className="w-3.5 h-3.5 text-chess-green" />
                         {tour.player_count} players
                       </span>
                       <span className="flex items-center gap-1.5">
-                        <Clock className="w-3.5 h-3.5" />
+                        <Clock className="w-3.5 h-3.5 text-chess-green" />
                         {new Date(tour.starts_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
 
                     <button
                       data-testid={`btn-join-tournament-${tour.id}`}
-                      className={`px-5 py-2.5 text-xs font-bold rounded-lg transition-all ${
+                      className={`px-5 py-2.5 text-xs font-extrabold uppercase tracking-wider rounded-lg cursor-pointer transition-all ${
                         tour.status === 'active'
-                          ? 'bg-red-650 hover:bg-red-550 text-white shadow-md'
+                          ? 'bg-[#b33939] hover:bg-[#c23616] text-white shadow-md border-b-4 border-[#842626] active:translate-y-[2px] active:border-b-2'
                           : tour.status === 'upcoming' || tour.status === 'registration'
-                            ? 'bg-purple-650 hover:bg-purple-550 text-white'
-                            : 'bg-slate-800 hover:bg-slate-750 text-slate-350'
+                            ? 'chess-btn-green'
+                            : 'chess-btn-grey'
                       }`}
                     >
                       {tour.status === 'active'
@@ -258,9 +258,9 @@ export function Tournaments() {
                 </div>
               ))
             ) : (
-              <div className="text-center py-16 border border-dashed border-slate-800 rounded-2xl bg-slate-900/10">
-                <ShieldAlert className="w-12 h-12 text-slate-650 mx-auto mb-3" />
-                <p className="text-slate-450 font-semibold text-sm">
+              <div className="text-center py-16 border-2 border-dashed border-chess-darker rounded-xl bg-chess-dark/20">
+                <ShieldAlert className="w-12 h-12 text-slate-500 mx-auto mb-3" />
+                <p className="text-slate-400 font-bold text-sm">
                   No tournaments available in this category
                 </p>
               </div>
@@ -273,13 +273,13 @@ export function Tournaments() {
       {isModalOpen && (
         <div
           data-testid="create-tournament-modal"
-          className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in"
+          className="fixed inset-0 bg-[#000000]/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
         >
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-6 shadow-2xl relative">
+          <div className="bg-chess-dark border-b-4 border-chess-darker rounded-xl max-w-md w-full p-6 space-y-6 shadow-2xl relative">
             <div className="absolute top-4 right-4">
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-white"
+                className="text-slate-400 hover:text-white cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -287,7 +287,7 @@ export function Tournaments() {
 
             <div className="space-y-1">
               <h3 className="text-2xl font-extrabold text-white">Create Tournament</h3>
-              <p className="text-slate-400 text-xs leading-normal">
+              <p className="text-slate-400 text-xs leading-normal font-semibold">
                 Host a customized chess event for the community. Matches are scheduled automatically.
               </p>
             </div>
@@ -300,7 +300,7 @@ export function Tournaments() {
 
             <form onSubmit={handleCreateTournament} className="space-y-4 text-sm" data-testid="form-create-tournament">
               <div className="space-y-1.5">
-                <label className="text-slate-350 font-semibold text-xs">Event Title*</label>
+                <label className="text-slate-350 font-bold text-xs">Event Title*</label>
                 <input
                   type="text"
                   required
@@ -308,30 +308,30 @@ export function Tournaments() {
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   data-testid="input-title"
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 rounded-lg px-3 py-2 text-white outline-none"
+                  className="w-full bg-chess-darker border border-chess-light-grey focus:border-chess-green focus:ring-1 focus:ring-chess-green rounded-lg px-3 py-2 text-white outline-none"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-slate-350 font-semibold text-xs">Description</label>
+                <label className="text-slate-350 font-bold text-xs">Description</label>
                 <textarea
                   placeholder="e.g. Friendly Swiss tournament for members..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   data-testid="input-description"
                   rows={2}
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 rounded-lg px-3 py-2 text-white outline-none resize-none"
+                  className="w-full bg-chess-darker border border-chess-light-grey focus:border-chess-green focus:ring-1 focus:ring-chess-green rounded-lg px-3 py-2 text-white outline-none resize-none"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-slate-350 font-semibold text-xs">Format*</label>
+                  <label className="text-slate-350 font-bold text-xs">Format*</label>
                   <select
                     value={format}
                     onChange={(e) => setFormat(e.target.value as 'arena' | 'swiss')}
                     data-testid="select-format"
-                    className="w-full bg-slate-950 border border-slate-800 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 rounded-lg px-3 py-2 text-white outline-none cursor-pointer"
+                    className="w-full bg-chess-darker border border-chess-light-grey focus:border-chess-green focus:ring-1 focus:ring-chess-green rounded-lg px-3 py-2 text-white outline-none cursor-pointer"
                   >
                     <option value="arena">Arena</option>
                     <option value="swiss">Swiss</option>
@@ -339,12 +339,12 @@ export function Tournaments() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-slate-350 font-semibold text-xs">Time Control*</label>
+                  <label className="text-slate-350 font-bold text-xs">Time Control*</label>
                   <select
                     value={timeControl}
                     onChange={(e) => setTimeControl(e.target.value)}
                     data-testid="select-time-control"
-                    className="w-full bg-slate-950 border border-slate-800 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 rounded-lg px-3 py-2 text-white outline-none cursor-pointer"
+                    className="w-full bg-chess-darker border border-chess-light-grey focus:border-chess-green focus:ring-1 focus:ring-chess-green rounded-lg px-3 py-2 text-white outline-none cursor-pointer"
                   >
                     <option value="1+0">1+0 (Bullet)</option>
                     <option value="3+2">3+2 (Blitz)</option>
@@ -357,7 +357,7 @@ export function Tournaments() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-slate-350 font-semibold text-xs">Max Players</label>
+                  <label className="text-slate-350 font-bold text-xs">Max Players</label>
                   <input
                     type="number"
                     min={4}
@@ -365,19 +365,19 @@ export function Tournaments() {
                     value={maxPlayers}
                     onChange={(e) => setMaxPlayers(Number(e.target.value))}
                     data-testid="input-max-players"
-                    className="w-full bg-slate-950 border border-slate-800 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 rounded-lg px-3 py-2 text-white outline-none"
+                    className="w-full bg-chess-darker border border-chess-light-grey focus:border-chess-green focus:ring-1 focus:ring-chess-green rounded-lg px-3 py-2 text-white outline-none"
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-slate-350 font-semibold text-xs">Starts At*</label>
+                  <label className="text-slate-350 font-bold text-xs">Starts At*</label>
                   <input
                     type="datetime-local"
                     required
                     value={startsAt}
                     onChange={(e) => setStartsAt(e.target.value)}
                     data-testid="input-starts-at"
-                    className="w-full bg-slate-950 border border-slate-800 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 rounded-lg px-3 py-2 text-white outline-none"
+                    className="w-full bg-chess-darker border border-chess-light-grey focus:border-chess-green focus:ring-1 focus:ring-chess-green rounded-lg px-3 py-2 text-white outline-none"
                   />
                 </div>
               </div>
@@ -387,14 +387,14 @@ export function Tournaments() {
                   type="submit"
                   disabled={isSubmitting}
                   data-testid="btn-submit-tournament"
-                  className="flex-1 py-3 bg-purple-650 hover:bg-purple-550 disabled:bg-slate-900 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold rounded-xl shadow-lg shadow-purple-600/10 transition-all"
+                  className="flex-1 py-3 chess-btn-green disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl text-sm font-extrabold uppercase tracking-wider cursor-pointer"
                 >
                   {isSubmitting ? 'Creating...' : 'Create Event'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="py-3 px-5 bg-slate-800 hover:bg-slate-750 text-slate-300 font-semibold rounded-xl transition-all"
+                  className="py-3 px-5 chess-btn-grey rounded-xl text-sm font-extrabold uppercase tracking-wider cursor-pointer"
                 >
                   Cancel
                 </button>

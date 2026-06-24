@@ -694,21 +694,20 @@ export function Multiplayer() {
       <div className="max-w-md mx-auto py-12 space-y-6">
         <DocumentTitle title="Login Required" description="Sign in to Chessmaster Pro to access multiplayer matchmaking, custom lobbies, and competitive tournaments." />
 
-        <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl shadow-2xl space-y-6 text-center">
-          <div className="w-16 h-16 bg-purple-600/10 text-purple-400 rounded-full flex items-center justify-center mx-auto border border-purple-500/20">
+        <div className="bg-chess-dark border border-[#3c3a37] p-8 rounded-xl shadow-2xl space-y-6 text-center">
+          <div className="w-16 h-16 bg-chess-darker text-chess-green rounded-xl flex items-center justify-center mx-auto border border-[#3c3a37] text-3xl font-extrabold shadow-inner">
             ♚
           </div>
           <div className="space-y-2">
-            <h2 className="text-2xl font-extrabold text-white">Multiplayer Chess Gate</h2>
-            <p className="text-slate-400 text-xs leading-relaxed">
-              Login or register an account to access matchmaking, private game lobbies, and rating
-              ELO sync.
+            <h2 className="text-2xl font-black text-white">Multiplayer Chess Gate</h2>
+            <p className="text-[#bababa] text-xs leading-relaxed">
+              Login or register an account to access matchmaking, private game lobbies, and rating ELO sync.
             </p>
           </div>
 
           <form onSubmit={handleAuthSubmit} className="space-y-4 text-left pt-2">
             <div className="space-y-1.5">
-              <label className="text-xs font-mono text-slate-400 font-bold uppercase">
+              <label className="text-xs font-bold text-[#bababa] uppercase tracking-wider">
                 Email Address
               </label>
               <input
@@ -718,12 +717,12 @@ export function Multiplayer() {
                 placeholder="grandmaster@chess.com"
                 value={authEmail}
                 onChange={(e) => setAuthEmail(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 focus:border-purple-500 text-slate-200 px-3 py-2 rounded-lg text-sm outline-none transition-all"
+                className="w-full bg-chess-darker border border-[#3c3a37] focus:border-chess-green text-slate-200 px-3 py-2.5 rounded-lg text-sm outline-none transition-all"
               />
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-mono text-slate-400 font-bold uppercase">
+              <label className="text-xs font-bold text-[#bababa] uppercase tracking-wider">
                 Password
               </label>
               <input
@@ -733,14 +732,14 @@ export function Multiplayer() {
                 placeholder="••••••••"
                 value={authPassword}
                 onChange={(e) => setAuthPassword(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 focus:border-purple-500 text-slate-200 px-3 py-2 rounded-lg text-sm outline-none transition-all"
+                className="w-full bg-chess-darker border border-[#3c3a37] focus:border-chess-green text-slate-200 px-3 py-2.5 rounded-lg text-sm outline-none transition-all"
               />
             </div>
 
             {authError && (
               <div
                 data-testid="auth-error"
-                className="p-3 bg-red-950/20 border border-red-500/20 text-red-400 text-xs rounded-lg font-semibold"
+                className="p-3 bg-red-950/20 border border-red-500/20 text-red-400 text-xs rounded-lg font-bold"
               >
                 {authError}
               </div>
@@ -750,7 +749,7 @@ export function Multiplayer() {
               type="submit"
               disabled={authLoading}
               data-testid="btn-auth-submit"
-              className="w-full py-2.5 bg-purple-650 hover:bg-purple-550 text-white font-bold rounded-lg text-sm shadow cursor-pointer transition-all disabled:opacity-40"
+              className="chess-btn-green w-full py-3 rounded-lg text-sm shadow cursor-pointer transition-all disabled:opacity-40"
             >
               {authLoading
                 ? 'Authenticating...'
@@ -760,8 +759,8 @@ export function Multiplayer() {
             </button>
           </form>
 
-          <div className="border-t border-slate-850 pt-4 flex justify-between items-center text-xs">
-            <span className="text-slate-500">
+          <div className="border-t border-[#3c3a37] pt-4 flex justify-between items-center text-xs">
+            <span className="text-[#bababa]">
               {authMode === 'signin' ? "Don't have an account?" : 'Already registered?'}
             </span>
             <button
@@ -769,7 +768,7 @@ export function Multiplayer() {
                 setAuthMode((m) => (m === 'signin' ? 'signup' : 'signin'))
                 setAuthError(null)
               }}
-              className="text-purple-400 font-bold hover:text-purple-300 transition-colors cursor-pointer"
+              className="text-chess-green font-bold hover:text-chess-green-hover transition-colors cursor-pointer"
             >
               {authMode === 'signin' ? 'Sign Up' : 'Sign In'}
             </button>
@@ -782,19 +781,19 @@ export function Multiplayer() {
   // 7. Loading Match state
   if (isSearching) {
     return (
-      <div className="min-h-[50vh] flex flex-col items-center justify-center space-y-6 max-w-md mx-auto text-center animate-pulse">
+      <div className="min-h-[50vh] flex flex-col items-center justify-center space-y-6 max-w-md mx-auto text-center">
         <DocumentTitle title="SearchingOpponent" description="Searching for a matchmaking opponent on Chessmaster Pro..." />
-        <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+        <div className="w-12 h-12 border-4 border-chess-green border-t-transparent rounded-full animate-spin"></div>
         <div className="space-y-2">
-          <h2 className="text-xl font-bold text-white">Searching for opponent...</h2>
-          <p className="text-slate-400 text-xs font-mono">
-            Mode: {selectedTimeControl} | Elo: {userRating}
+          <h2 className="text-xl font-black text-white">Searching for opponent...</h2>
+          <p className="text-[#bababa] text-xs font-mono font-bold">
+            Mode: {selectedTimeControl.replace('_', ' ').toUpperCase()} | Elo: {userRating}
           </p>
         </div>
         <button
           data-testid="btn-cancel-match"
           onClick={handleCancelMatchmaking}
-          className="px-6 py-2 border border-slate-800 bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-bold rounded-lg transition-all cursor-pointer"
+          className="chess-btn-grey px-6 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer shadow"
         >
           Cancel Search
         </button>
@@ -805,17 +804,17 @@ export function Multiplayer() {
   // 8. Custom room waiting screen
   if (createdRoomCode && !currentGame) {
     return (
-      <div className="min-h-[50vh] flex flex-col items-center justify-center space-y-6 max-w-md mx-auto text-center animate-pulse">
+      <div className="min-h-[50vh] flex flex-col items-center justify-center space-y-6 max-w-md mx-auto text-center">
         <DocumentTitle title="Waiting for Player" description="Waiting for player to join the multiplayer room on Chessmaster Pro..." />
-        <div className="w-16 h-16 bg-blue-600/10 text-blue-400 border border-blue-500/25 rounded-full flex items-center justify-center mx-auto text-3xl font-extrabold animate-bounce">
-          🌐
+        <div className="w-16 h-16 bg-chess-dark text-chess-green border border-[#3c3a37] rounded-xl flex items-center justify-center mx-auto text-3xl font-extrabold animate-bounce shadow">
+          ♚
         </div>
         <div className="space-y-3">
-          <h2 className="text-xl font-bold text-white">Private Lobby Created</h2>
-          <p className="text-slate-400 text-xs">Share this code with your friend to connect:</p>
+          <h2 className="text-xl font-black text-white">Private Lobby Created</h2>
+          <p className="text-[#bababa] text-xs">Share this code with your friend to connect:</p>
           <div
             data-testid="room-code-display"
-            className="px-6 py-3 bg-slate-900 border border-slate-850 rounded-xl font-mono text-3xl font-extrabold tracking-widest text-purple-400 border-dashed"
+            className="px-6 py-3.5 bg-chess-darker border border-[#3c3a37] rounded-xl font-mono text-3xl font-black tracking-widest text-chess-green border-dashed shadow-inner"
           >
             {createdRoomCode}
           </div>
@@ -823,7 +822,7 @@ export function Multiplayer() {
         <button
           data-testid="btn-cancel-lobby"
           onClick={handleCancelPrivateLobby}
-          className="px-6 py-2 border border-slate-800 bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-bold rounded-lg transition-all cursor-pointer"
+          className="chess-btn-grey px-6 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer shadow"
         >
           Cancel Lobby
         </button>
@@ -860,9 +859,9 @@ export function Multiplayer() {
         <DocumentTitle title={`Match Vs ${oppName}`} description={`Playing an active real-time multiplayer chess match against ${oppName} on Chessmaster Pro.`} />
 
         {/* Status header bar */}
-        <div className="flex justify-between items-center bg-slate-900 border border-slate-800 p-3 rounded-lg text-xs">
-          <span className="font-mono text-slate-500">Room Code: {currentGame.room_code}</span>
-          <span className="font-bold text-purple-400 uppercase tracking-wider">
+        <div className="flex justify-between items-center bg-chess-dark border border-[#3c3a37] p-3 rounded-lg text-xs shadow">
+          <span className="font-mono font-bold text-[#bababa]">Room Code: {currentGame.room_code}</span>
+          <span className="font-black text-chess-green uppercase tracking-wider">
             {matchStatusText}
           </span>
         </div>
@@ -871,30 +870,30 @@ export function Multiplayer() {
         {!isOpponentOnline && !isGameOver && (
           <div
             data-testid="disconnect-warning"
-            className="p-3 bg-amber-950/20 text-amber-400 border border-amber-500/20 rounded-lg text-xs font-semibold flex items-center gap-2 animate-pulse"
+            className="p-3 bg-amber-955/20 text-amber-400 border border-amber-500/20 rounded-lg text-xs font-bold flex items-center gap-2 animate-pulse"
           >
             <Info className="w-4 h-4" /> Opponent disconnected! Game will be claimed in 30s.
           </div>
         )}
 
-        <div className="flex flex-col lg:flex-row gap-8 items-start justify-center">
+        <div className="flex flex-col lg:flex-row gap-6 items-start justify-center">
           {/* Board column */}
-          <div className="flex flex-col items-center space-y-4 w-full max-w-[480px]">
+          <div className="flex flex-col items-center space-y-3 w-full max-w-[480px]">
             {/* Opponent Panel */}
-            <div className="flex items-center justify-between w-full bg-slate-900 border border-slate-850 p-2.5 rounded-lg">
+            <div className="flex items-center justify-between w-full bg-chess-dark border border-[#3c3a37] p-2.5 rounded-lg shadow">
               <div className="flex items-center space-x-3">
                 <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${!isOpponentOnline ? 'bg-slate-800 text-slate-600 border border-slate-700' : 'bg-slate-950 text-slate-400 border border-slate-800'}`}
+                  className={`w-8 h-8 rounded-md flex items-center justify-center font-bold text-sm border ${!isOpponentOnline ? 'bg-chess-darker text-[#bababa]/30 border-[#3c3a37]' : 'bg-chess-darker text-white border-[#3c3a37]'}`}
                 >
                   {isWhite ? '♟' : '♙'}
                 </div>
                 <div>
                   <h4 className="font-bold text-white text-xs capitalize">{oppName}</h4>
-                  <p className="text-[10px] text-slate-500 font-mono">Rating: {oppRating}</p>
+                  <p className="text-[10px] text-[#bababa] font-mono">Rating: {oppRating}</p>
                 </div>
               </div>
-              <div className="flex items-center space-x-1.5 bg-slate-950 px-2.5 py-1 rounded border border-slate-850 text-slate-350 font-mono text-sm">
-                <Clock className="w-3.5 h-3.5 text-slate-550" />
+              <div className="flex items-center space-x-1.5 bg-chess-darker px-3 py-1.5 rounded border border-[#3c3a37] text-white font-mono font-bold text-sm shadow">
+                <Clock className="w-3.5 h-3.5 text-[#bababa]" />
                 <span>{isWhite ? formatTime(blackTime) : formatTime(whiteTime)}</span>
               </div>
             </div>
@@ -909,21 +908,21 @@ export function Multiplayer() {
             />
 
             {/* User Panel */}
-            <div className="flex items-center justify-between w-full bg-slate-900 border border-slate-850 p-2.5 rounded-lg">
+            <div className="flex items-center justify-between w-full bg-chess-dark border border-[#3c3a37] p-2.5 rounded-lg shadow">
               <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 rounded-full bg-purple-650 flex items-center justify-center text-white border border-purple-400 font-bold text-xs">
+                <div className="w-8 h-8 rounded-md bg-chess-green flex items-center justify-center text-white border-b-2 border-chess-green-dark font-extrabold text-sm">
                   {isWhite ? '♙' : '♟'}
                 </div>
                 <div>
                   <h4 className="font-bold text-white text-xs capitalize">{myName}</h4>
-                  <p className="text-[10px] text-slate-500 font-mono">Rating: {myRating}</p>
+                  <p className="text-[10px] text-[#bababa] font-mono">Rating: {myRating}</p>
                 </div>
               </div>
-              <div className="flex items-center space-x-1.5 bg-slate-950 px-2.5 py-1 rounded border border-slate-850 text-slate-300 font-mono text-sm">
+              <div className="flex items-center space-x-1.5 bg-chess-darker px-3 py-1.5 rounded border border-[#3c3a37] text-white font-mono font-bold text-sm shadow">
                 <Clock
-                  className={`w-3.5 h-3.5 ${myTurn ? 'text-purple-400 animate-pulse' : 'text-slate-550'}`}
+                  className={`w-3.5 h-3.5 ${myTurn ? 'text-chess-green animate-pulse' : 'text-[#bababa]'}`}
                 />
-                <span className={myTurn ? 'text-purple-300 font-bold' : 'text-slate-350'}>
+                <span className={myTurn ? 'text-chess-green font-bold' : 'text-white'}>
                   {isWhite ? formatTime(whiteTime) : formatTime(blackTime)}
                 </span>
               </div>
@@ -931,9 +930,9 @@ export function Multiplayer() {
           </div>
 
           {/* Controls Panel */}
-          <div className="w-full lg:w-[320px] bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-6 flex flex-col justify-between self-stretch">
+          <div className="w-full lg:w-[320px] bg-chess-dark border border-[#3c3a37] rounded-xl p-5 space-y-5 flex flex-col justify-between self-stretch shadow-lg">
             <div className="space-y-4">
-              <h3 className="text-md font-bold text-white border-b border-slate-800 pb-3 flex items-center gap-2">
+              <h3 className="text-md font-black text-white border-b border-[#3c3a37] pb-3 flex items-center gap-2">
                 ⚔️ Game Actions
               </h3>
 
@@ -941,23 +940,23 @@ export function Multiplayer() {
               {currentGame.draw_offered_by && currentGame.draw_offered_by !== session.user.id && (
                 <div
                   data-testid="draw-offer-alert"
-                  className="p-3 bg-purple-950/20 border border-purple-800/35 rounded-lg space-y-2"
+                  className="p-3 bg-chess-darker border border-[#3c3a37] rounded-lg space-y-2 shadow-inner"
                 >
-                  <p className="text-purple-300 text-xs font-semibold">
+                  <p className="text-chess-green text-xs font-bold">
                     Opponent offered a draw. Accept?
                   </p>
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       data-testid="btn-accept-draw"
                       onClick={handleAcceptDraw}
-                      className="py-1 bg-purple-600 hover:bg-purple-550 text-white text-xs font-bold rounded cursor-pointer transition-all"
+                      className="chess-btn-green py-2 rounded-lg text-xs"
                     >
                       Accept
                     </button>
                     <button
                       data-testid="btn-decline-draw"
                       onClick={handleDeclineDraw}
-                      className="py-1 bg-slate-800 hover:bg-slate-750 text-slate-300 text-xs font-bold rounded cursor-pointer transition-all border border-slate-700"
+                      className="chess-btn-grey py-2 rounded-lg text-xs text-white"
                     >
                       Decline
                     </button>
@@ -966,27 +965,27 @@ export function Multiplayer() {
               )}
 
               {currentGame.draw_offered_by === session.user.id && (
-                <div className="p-3 bg-slate-950/40 border border-slate-850 rounded-lg text-slate-400 text-xs font-semibold">
+                <div className="p-3 bg-chess-darker border border-[#3c3a37] rounded-lg text-[#bababa] text-xs font-bold">
                   ⏳ Draw offer pending...
                 </div>
               )}
             </div>
 
-            <div className="space-y-2 pt-4 border-t border-slate-850">
+            <div className="space-y-2.5 pt-4 border-t border-[#3c3a37]">
               {!isGameOver ? (
                 <>
                   <button
                     data-testid="btn-offer-draw"
                     onClick={handleOfferDraw}
                     disabled={!!currentGame.draw_offered_by}
-                    className="w-full py-2 bg-slate-850 hover:bg-slate-800 text-slate-300 text-xs font-bold rounded-lg border border-slate-750 transition-all cursor-pointer disabled:opacity-40"
+                    className="chess-btn-grey w-full py-2.5 rounded-lg text-xs text-white disabled:opacity-45"
                   >
                     Offer Draw
                   </button>
                   <button
                     data-testid="btn-resign"
                     onClick={handleResign}
-                    className="w-full py-2 border border-red-500/20 bg-red-950/5 hover:bg-red-950/25 text-red-400/80 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                    className="w-full py-2.5 border border-red-500/20 bg-red-950/10 hover:bg-red-950/20 text-red-400 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5"
                   >
                     <AlertTriangle className="w-3.5 h-3.5" /> Resign Match
                   </button>
@@ -995,7 +994,7 @@ export function Multiplayer() {
                 <button
                   data-testid="btn-return-to-lobby"
                   onClick={handleExitToHub}
-                  className="w-full py-2.5 bg-purple-650 hover:bg-purple-550 text-white text-xs font-bold rounded-lg shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                  className="chess-btn-green w-full py-3 rounded-lg text-xs flex items-center justify-center gap-1.5 shadow"
                 >
                   Return to Lobby
                 </button>
@@ -1009,62 +1008,61 @@ export function Multiplayer() {
 
   // 10. Default Lobby Page
   return (
-    <div className="space-y-8 max-w-5xl mx-auto py-6">
+    <div className="space-y-6 max-w-5xl mx-auto py-6">
       <DocumentTitle title="Online Matchmaking" description="Enter the real-time multiplayer lobby, start matchmaking, or create a private custom lobby on Chessmaster Pro." />
 
       {/* Header */}
-      <section className="flex justify-between items-center border-b border-slate-850 pb-4">
+      <section className="flex justify-between items-center border-b border-[#3c3a37]/50 pb-4">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-white mb-2">
+          <h1 className="text-3xl font-black tracking-tight text-white mb-1.5">
             Multiplayer Matchmaking
           </h1>
-          <p className="text-slate-400 text-sm">
+          <p className="text-[#bababa] text-xs">
             Play real-time chess matches against other users globally.
           </p>
         </div>
         <button
           onClick={handleLogout}
-          className="px-3 py-1.5 border border-slate-800 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white text-xs font-semibold rounded-lg flex items-center gap-1 transition-all cursor-pointer"
+          className="chess-btn-grey px-4 py-2 rounded-lg text-xs text-white flex items-center gap-1 shadow"
         >
           <LogOut className="w-3.5 h-3.5" /> Sign Out
         </button>
       </section>
 
       {/* Stats and lobby choices */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Left column: Profile Stats */}
         <div className="space-y-4">
-          <h3 className="text-lg font-bold text-white flex items-center gap-2">
+          <h3 className="text-lg font-black text-white flex items-center gap-2">
             <Trophy className="w-5 h-5 text-amber-500" /> Player Profile
           </h3>
-          <div className="bg-slate-900 border border-slate-850 rounded-xl p-5 space-y-4">
+          <div className="bg-chess-dark border border-[#3c3a37] rounded-xl p-5 space-y-4 shadow">
             <div className="flex justify-between items-center">
-              <span className="text-xs text-slate-400 uppercase font-mono">Ratings Elo:</span>
-              <span className="text-lg font-bold text-purple-400 font-mono">{userRating}</span>
+              <span className="text-xs text-[#bababa] uppercase font-bold tracking-wider">Ratings Elo:</span>
+              <span className="text-lg font-black text-chess-green font-mono">{userRating}</span>
             </div>
-            <div className="border-t border-slate-850 pt-3 grid grid-cols-3 gap-2 text-center">
+            <div className="border-t border-[#3c3a37] pt-3 grid grid-cols-3 gap-2 text-center">
               <div>
-                <p className="text-[10px] text-slate-500 uppercase font-mono">Wins</p>
-                <p className="text-sm font-bold text-emerald-450">{userStats.wins}</p>
+                <p className="text-[10px] text-[#bababa] uppercase font-bold tracking-wide">Wins</p>
+                <p className="text-sm font-extrabold text-chess-green">{userStats.wins}</p>
               </div>
               <div>
-                <p className="text-[10px] text-slate-500 uppercase font-mono">Losses</p>
-                <p className="text-sm font-bold text-red-450">{userStats.losses}</p>
+                <p className="text-[10px] text-[#bababa] uppercase font-bold tracking-wide">Losses</p>
+                <p className="text-sm font-extrabold text-red-400">{userStats.losses}</p>
               </div>
               <div>
-                <p className="text-[10px] text-slate-500 uppercase font-mono">Draws</p>
-                <p className="text-sm font-bold text-slate-400">{userStats.draws}</p>
+                <p className="text-[10px] text-[#bababa] uppercase font-bold tracking-wide">Draws</p>
+                <p className="text-sm font-extrabold text-[#bababa]">{userStats.draws}</p>
               </div>
             </div>
           </div>
 
-          <div className="p-4 bg-slate-900/40 border border-slate-850 rounded-xl space-y-2 text-xs">
+          <div className="p-4 bg-chess-dark border border-[#3c3a37] rounded-xl space-y-2 text-xs shadow">
             <h4 className="font-bold text-white flex items-center gap-1">
-              <PlayCircle className="w-3.5 h-3.5 text-purple-400" /> Active Presences
+              <PlayCircle className="w-3.5 h-3.5 text-chess-green" /> Active Presences
             </h4>
-            <p className="text-slate-450 leading-relaxed text-[11px]">
-              The multiplayer system uses Supabase Realtime replication and Presence channels to
-              sync moves, draw negotiations, and clock times.
+            <p className="text-[#bababa] leading-relaxed text-[11px]">
+              The multiplayer system uses Supabase Realtime replication and Presence channels to sync moves, draw negotiations, and clock times.
             </p>
           </div>
         </div>
@@ -1074,19 +1072,19 @@ export function Multiplayer() {
           {lobbyError && (
             <div
               data-testid="lobby-error"
-              className="p-3 bg-red-950/20 border border-red-500/20 text-red-400 text-xs rounded-lg font-semibold"
+              className="p-3 bg-red-955/20 border border-red-500/20 text-red-400 text-xs rounded-lg font-bold"
             >
               {lobbyError}
             </div>
           )}
 
           {/* Time control choice */}
-          <div className="bg-slate-900 border border-slate-850 rounded-2xl p-6 space-y-6 shadow-xl">
-            <div className="space-y-2">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <Compass className="w-5 h-5 text-purple-400" /> Matchmaking Queue
+          <div className="bg-chess-dark border border-[#3c3a37] rounded-xl p-6 space-y-5 shadow">
+            <div className="space-y-1">
+              <h3 className="text-lg font-black text-white flex items-center gap-2">
+                <Compass className="w-5 h-5 text-chess-green" /> Matchmaking Queue
               </h3>
-              <p className="text-slate-450 text-xs">
+              <p className="text-[#bababa] text-xs">
                 Select a time control to search for a compatible opponent in the ratings pool.
               </p>
             </div>
@@ -1101,14 +1099,14 @@ export function Multiplayer() {
                 <button
                   key={opt.code}
                   onClick={() => setSelectedTimeControl(opt.code)}
-                  className={`p-4 rounded-xl border flex flex-col items-center justify-center text-center gap-1 cursor-pointer transition-all duration-200 ${
+                  className={`p-4 rounded-xl border flex flex-col items-center justify-center text-center gap-1 cursor-pointer transition-all duration-150 ${
                     selectedTimeControl === opt.code
-                      ? 'bg-purple-600/10 border-purple-500 text-purple-300 font-bold'
-                      : 'bg-slate-950 border-slate-850 text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                      ? 'bg-chess-green/10 border-chess-green text-chess-green font-bold shadow'
+                      : 'bg-chess-darker border-[#3c3a37] text-[#bababa] hover:text-white hover:border-[#4b4845]'
                   }`}
                 >
                   <span className="text-xl">{opt.icon}</span>
-                  <span className="text-xs">{opt.label}</span>
+                  <span className="text-xs font-bold">{opt.label}</span>
                 </button>
               ))}
             </div>
@@ -1116,39 +1114,39 @@ export function Multiplayer() {
             <button
               data-testid="btn-find-match"
               onClick={handleStartMatchmaking}
-              className="w-full py-3 bg-purple-650 hover:bg-purple-550 text-white font-bold rounded-xl text-sm transition-all cursor-pointer shadow-lg hover:shadow-purple-500/10 flex items-center justify-center gap-2"
+              className="chess-btn-green w-full py-3.5 rounded-xl text-sm flex items-center justify-center gap-2 shadow"
             >
               🚀 Find Match Now
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Create Custom Room Card */}
-            <div className="bg-slate-900 border border-slate-850 rounded-2xl p-6 flex flex-col justify-between shadow-xl space-y-4">
-              <div className="space-y-2">
-                <h3 className="text-md font-bold text-white flex items-center gap-1.5">
-                  <LinkIcon className="w-4 h-4 text-blue-400" /> Create Custom Lobby
+            <div className="bg-chess-dark border border-[#3c3a37] rounded-xl p-6 flex flex-col justify-between shadow space-y-4">
+              <div className="space-y-1">
+                <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
+                  <LinkIcon className="w-4 h-4 text-chess-green" /> Create Custom Lobby
                 </h3>
-                <p className="text-slate-450 text-xs leading-relaxed">
+                <p className="text-[#bababa] text-xs leading-relaxed">
                   Generate a private room code. Friends can use this code to connect directly.
                 </p>
               </div>
               <button
                 data-testid="btn-create-lobby"
                 onClick={handleCreatePrivateLobby}
-                className="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition-all cursor-pointer shadow"
+                className="chess-btn-grey w-full py-2 rounded-lg text-xs text-white"
               >
                 Create Room
               </button>
             </div>
 
             {/* Join by Code Card */}
-            <div className="bg-slate-900 border border-slate-850 rounded-2xl p-6 flex flex-col justify-between shadow-xl space-y-4">
-              <div className="space-y-2">
-                <h3 className="text-md font-bold text-white flex items-center gap-1.5">
-                  <LinkIcon className="w-4 h-4 text-emerald-400" /> Join Room Code
+            <div className="bg-chess-dark border border-[#3c3a37] rounded-xl p-6 flex flex-col justify-between shadow space-y-4">
+              <div className="space-y-1">
+                <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
+                  <LinkIcon className="w-4 h-4 text-chess-green" /> Join Room Code
                 </h3>
-                <p className="text-slate-450 text-xs leading-relaxed">
+                <p className="text-[#bababa] text-xs leading-relaxed">
                   Enter a 6-character room code received from a friend to start the match.
                 </p>
               </div>
@@ -1160,12 +1158,12 @@ export function Multiplayer() {
                   placeholder="CODE12"
                   value={roomCodeInput}
                   onChange={(e) => setRoomCodeInput(e.target.value)}
-                  className="bg-slate-950 border border-slate-800 focus:border-emerald-500 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-mono font-bold tracking-widest outline-none uppercase w-full"
+                  className="bg-chess-darker border border-[#3c3a37] focus:border-chess-green text-slate-200 px-3 py-1.5 rounded-lg text-xs font-mono font-bold tracking-widest outline-none uppercase w-full"
                 />
                 <button
                   data-testid="btn-join-lobby"
                   onClick={handleJoinPrivateLobby}
-                  className="py-1.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition-all cursor-pointer shrink-0 shadow"
+                  className="chess-btn-green py-2 px-4 rounded-lg text-xs font-bold shrink-0"
                 >
                   Join
                 </button>

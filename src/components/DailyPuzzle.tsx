@@ -208,7 +208,7 @@ export default function DailyPuzzle() {
         .thumbnail-board {
           width: 100%;
           aspect-ratio: 1;
-          background: #769656;
+          background: #B58863;
           border-radius: 8px;
           overflow: hidden;
           display: grid;
@@ -226,11 +226,11 @@ export default function DailyPuzzle() {
         }
 
         .thumbnail-square.light {
-          background: #eeeed2;
+          background: #F0D9B5;
         }
 
         .thumbnail-square.dark {
-          background: #769656;
+          background: #B58863;
         }
 
         .thumbnail-piece {

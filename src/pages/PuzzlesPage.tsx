@@ -499,7 +499,7 @@ export default function PuzzlesPage() {
           style={{
             width: '100%',
             maxWidth: '430px',
-            background: '#2b2b2b',
+            background: 'var(--bg-card)',
             display: 'flex',
             flexDirection: 'column',
             color: '#ffffff',
@@ -511,14 +511,14 @@ export default function PuzzlesPage() {
           {screen === 'menu' && (
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               {/* Header */}
-              <div style={{ background: '#1a1a1a', padding: '20px 16px', borderBottom: '1px solid #333333', textAlign: 'left' }}>
+              <div style={{ background: 'var(--bg-sidebar)', padding: '20px 16px', borderBottom: '1px solid var(--border)', textAlign: 'left' }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '12px' }}>
                   <div>
                     <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#ffffff', margin: 0 }}>Puzzles</h1>
                     <p style={{ fontSize: '13px', color: '#aaaaaa', margin: '4px 0 0' }}>Sharpen your skills</p>
                   </div>
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <div style={{ fontSize: '12px', background: '#252525', border: '1px solid #333', padding: '6px 10px', borderRadius: '999px', color: '#e5e7eb', fontWeight: 700 }}>
+                    <div style={{ fontSize: '12px', background: 'var(--bg-card)', border: '1px solid var(--border)', padding: '6px 10px', borderRadius: '999px', color: '#e5e7eb', fontWeight: 700 }}>
                       🔥 {puzzleStreak} day streak
                     </div>
                   </div>
@@ -569,7 +569,7 @@ export default function PuzzlesPage() {
                   
                   {/* Streak and badge info */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
-                    <span style={{ background: '#2b2b2b', padding: '4px 8px', borderRadius: '6px', color: '#aaaaaa', fontSize: '11px', fontWeight: 700 }}>
+                    <span style={{ background: 'var(--bg-card)', padding: '4px 8px', borderRadius: '6px', color: 'var(--text-secondary)', fontSize: '11px', fontWeight: 700 }}>
                       {getDifficultyLabel(currentPuzzle.rating)} ({currentPuzzle.rating})
                     </span>
                     <span style={{ color: '#ff9f0a', fontWeight: 700 }}>
@@ -584,7 +584,7 @@ export default function PuzzlesPage() {
                       <span style={{ fontSize: '12px', color: '#888' }}>Fetching from Lichess...</span>
                     </div>
                   ) : (
-                    <div style={{ width: '100%', aspectRatio: '1', background: '#769656', borderRadius: '8px', overflow: 'hidden', pointerEvents: 'none', display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gridTemplateRows: 'repeat(8, 1fr)', boxShadow: 'inset 0 0 10px rgba(0,0,0,0.5)' }}>
+                    <div style={{ width: '100%', aspectRatio: '1', background: '#B58863', borderRadius: '8px', overflow: 'hidden', pointerEvents: 'none', display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gridTemplateRows: 'repeat(8, 1fr)', boxShadow: 'inset 0 0 10px rgba(0,0,0,0.5)' }}>
                       {board.map((row, rIdx) =>
                         row.map((cell, cIdx) => {
                           const isLight = (rIdx + cIdx) % 2 === 0;
@@ -592,7 +592,7 @@ export default function PuzzlesPage() {
                             <div
                               key={`${rIdx}-${cIdx}`}
                               style={{
-                                background: isLight ? '#eeeed2' : '#769656',
+                                background: isLight ? '#F0D9B5' : '#B58863',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
@@ -732,7 +732,7 @@ export default function PuzzlesPage() {
           {screen === 'solving' && (
             <div style={{ display: 'flex', flexDirection: 'column', minHeight: '80vh' }}>
               {/* Header Info */}
-              <div style={{ background: '#1a1a1a', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #333' }}>
+              <div style={{ background: 'var(--bg-sidebar)', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border)' }}>
                 <button
                   onClick={() => setScreen('menu')}
                   style={{ background: 'transparent', border: 'none', color: '#6bbd44', fontWeight: 700, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
@@ -773,7 +773,7 @@ export default function PuzzlesPage() {
                   style={{
                     width: '100%',
                     aspectRatio: '1',
-                    background: '#769656',
+                    background: '#B58863',
                     display: 'grid',
                     gridTemplateColumns: 'repeat(8, 1fr)',
                     gridTemplateRows: 'repeat(8, 1fr)',
@@ -802,8 +802,8 @@ export default function PuzzlesPage() {
                           onClick={() => handleSquareClick(square)}
                           style={{
                             background: isSelected
-                              ? 'rgba(235, 208, 5, 0.5)'
-                              : isLight ? '#eeeed2' : '#769656',
+                              ? 'rgba(20, 85, 30, 0.5)'
+                              : isLight ? '#F0D9B5' : '#B58863',
                             position: 'relative',
                             display: 'flex',
                             alignItems: 'center',
@@ -827,12 +827,12 @@ export default function PuzzlesPage() {
 
                           {/* Coordinates inside corner squares */}
                           {cIdx === 0 && (
-                            <span style={{ position: 'absolute', top: '2px', left: '4px', fontSize: '9px', opacity: 0.5, fontWeight: 700, color: isLight ? '#769656' : '#eeeed2', pointerEvents: 'none' }}>
+                            <span style={{ position: 'absolute', top: '2px', left: '4px', fontSize: '9px', opacity: 0.5, fontWeight: 700, color: isLight ? '#B58863' : '#F0D9B5', pointerEvents: 'none' }}>
                               {rank}
                             </span>
                           )}
                           {rIdx === 7 && (
-                            <span style={{ position: 'absolute', bottom: '2px', right: '4px', fontSize: '9px', opacity: 0.5, fontWeight: 700, color: isLight ? '#769656' : '#eeeed2', pointerEvents: 'none' }}>
+                            <span style={{ position: 'absolute', bottom: '2px', right: '4px', fontSize: '9px', opacity: 0.5, fontWeight: 700, color: isLight ? '#B58863' : '#F0D9B5', pointerEvents: 'none' }}>
                               {file}
                             </span>
                           )}
@@ -867,7 +867,7 @@ export default function PuzzlesPage() {
               {/* Bottom toolbar */}
               <div
                 style={{
-                  background: '#1a1a1a',
+                  background: 'var(--bg-sidebar)',
                   padding: '16px',
                   display: 'flex',
                   justifyContent: 'space-around',
@@ -905,10 +905,10 @@ export default function PuzzlesPage() {
           {screen === 'rush' && (
             <div style={{ display: 'flex', flexDirection: 'column', minHeight: '80vh' }}>
               {/* Header Info */}
-              <div style={{ background: '#1a1a1a', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #333' }}>
+              <div style={{ background: 'var(--bg-sidebar)', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <span style={{ fontWeight: 800, fontSize: '15px' }}>⚡ Puzzle Rush</span>
-                  <span style={{ fontSize: '12px', background: '#333', padding: '2px 8px', borderRadius: '4px' }}>
+                  <span style={{ fontSize: '12px', background: 'var(--bg-hover)', padding: '2px 8px', borderRadius: '4px' }}>
                     {rushModeType === 'survival' ? 'Survival' : `${rushModeType}`}
                   </span>
                 </div>
@@ -928,7 +928,7 @@ export default function PuzzlesPage() {
 
               {/* Timer Progress Bar */}
               {rushModeType !== 'survival' && (
-                <div style={{ width: '100%', height: '6px', background: '#1a1a1a' }}>
+                <div style={{ width: '100%', height: '6px', background: 'var(--bg-sidebar)' }}>
                   <div
                     style={{
                       width: `${getTimerPercentage()}%`,
@@ -968,7 +968,7 @@ export default function PuzzlesPage() {
                   style={{
                     width: '100%',
                     aspectRatio: '1',
-                    background: '#769656',
+                    background: '#B58863',
                     display: 'grid',
                     gridTemplateColumns: 'repeat(8, 1fr)',
                     gridTemplateRows: 'repeat(8, 1fr)',
@@ -997,8 +997,8 @@ export default function PuzzlesPage() {
                           onClick={() => handleSquareClick(square)}
                           style={{
                             background: isSelected
-                              ? 'rgba(235, 208, 5, 0.5)'
-                              : isLight ? '#eeeed2' : '#769656',
+                              ? 'rgba(20, 85, 30, 0.5)'
+                              : isLight ? '#F0D9B5' : '#B58863',
                             position: 'relative',
                             display: 'flex',
                             alignItems: 'center',
@@ -1022,12 +1022,12 @@ export default function PuzzlesPage() {
 
                           {/* Coordinates inside corner squares */}
                           {cIdx === 0 && (
-                            <span style={{ position: 'absolute', top: '2px', left: '4px', fontSize: '9px', opacity: 0.5, fontWeight: 700, color: isLight ? '#769656' : '#eeeed2', pointerEvents: 'none' }}>
+                            <span style={{ position: 'absolute', top: '2px', left: '4px', fontSize: '9px', opacity: 0.5, fontWeight: 700, color: isLight ? '#B58863' : '#F0D9B5', pointerEvents: 'none' }}>
                               {rank}
                             </span>
                           )}
                           {rIdx === 7 && (
-                            <span style={{ position: 'absolute', bottom: '2px', right: '4px', fontSize: '9px', opacity: 0.5, fontWeight: 700, color: isLight ? '#769656' : '#eeeed2', pointerEvents: 'none' }}>
+                            <span style={{ position: 'absolute', bottom: '2px', right: '4px', fontSize: '9px', opacity: 0.5, fontWeight: 700, color: isLight ? '#B58863' : '#F0D9B5', pointerEvents: 'none' }}>
                               {file}
                             </span>
                           )}
@@ -1040,7 +1040,7 @@ export default function PuzzlesPage() {
 
               {/* End of Game overlay options */}
               {!rushActive && (
-                <div style={{ textAlign: 'center', padding: '24px 16px', background: '#1a1a1a', borderTop: '2px solid #333' }}>
+                <div style={{ textAlign: 'center', padding: '24px 16px', background: 'var(--bg-sidebar)', borderTop: '2px solid var(--border)' }}>
                   <h3 style={{ fontSize: '20px', fontWeight: 800, marginBottom: '8px', color: '#ff9f0a' }}>⚡ Rush Completed!</h3>
                   <p style={{ fontSize: '14px', color: '#aaaaaa', marginBottom: '24px' }}>You successfully solved <b style={{ color: '#fff', fontSize: '18px' }}>{rushScore}</b> puzzles.</p>
                   

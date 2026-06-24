@@ -19,88 +19,129 @@ export function Layout() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
-      {/* Top Navigation */}
-      <header className="border-b border-slate-800 bg-slate-900/50 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center">
-              <Link
-                to="/"
-                className="flex items-center space-x-2 text-xl font-bold tracking-wider text-purple-400 hover:text-purple-300 transition-colors"
-                data-testid="logo-link"
-              >
-                <span>♚ CHESSMASTER PRO</span>
-              </Link>
-            </div>
+    <div className="min-h-screen bg-chess-bg text-slate-100 flex flex-col md:flex-row font-sans">
+      {/* ─── DESKTOP LEFT SIDEBAR ─── */}
+      <aside className="hidden md:flex flex-col w-60 h-screen sticky top-0 bg-chess-dark border-r border-[#3c3a37] z-50 flex-shrink-0">
+        {/* Sidebar Logo */}
+        <div className="p-5 border-b border-[#3c3a37]">
+          <Link
+            to="/"
+            className="flex items-center space-x-2 text-lg font-black tracking-wider text-white hover:text-chess-green transition-colors"
+            data-testid="logo-link"
+          >
+            <span className="text-2xl text-chess-green">♚</span>
+            <span>CHESSMASTER</span>
+          </Link>
+        </div>
 
-            <nav className="hidden md:flex space-x-1">
-              {navItems.map((item) => {
-                const Icon = item.icon
-                const active = isActive(item.path)
-                return (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    data-testid={item.testId}
-                    className={`flex items-center space-x-1.5 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
-                      active
-                        ? 'bg-purple-600/20 text-purple-300 border-b-2 border-purple-500 rounded-b-none'
-                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    <span>{item.label}</span>
-                  </Link>
-                )
-              })}
-            </nav>
-
-            <div className="flex items-center space-x-3">
-              <button
-                data-testid="btn-notifications"
-                className="p-1.5 rounded-full text-slate-400 hover:text-slate-200 hover:bg-slate-800/80 transition-all"
-                title="Notifications"
-              >
-                <span className="sr-only">Notifications</span>
-                🔔
-              </button>
+        {/* Sidebar Nav Links */}
+        <nav className="flex-1 px-3 py-4 space-y-1">
+          {navItems.map((item) => {
+            const Icon = item.icon
+            const active = isActive(item.path)
+            return (
               <Link
-                to="/profile"
-                data-testid="nav-avatar"
-                className="flex items-center space-x-2 p-1 rounded-full hover:bg-slate-800 transition-all"
+                key={item.path}
+                to={item.path}
+                data-testid={item.testId}
+                className={`flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-bold transition-all duration-150 group ${
+                  active
+                    ? 'bg-[#3c3a37] text-white border-l-4 border-chess-green pl-3'
+                    : 'text-[#bababa] hover:text-white hover:bg-[#3c3a37]/50'
+                }`}
               >
-                <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-between text-white font-bold text-sm justify-center border border-purple-400">
-                  GM
-                </div>
+                <Icon className={`w-5 h-5 transition-colors ${active ? 'text-chess-green' : 'text-[#bababa] group-hover:text-white'}`} />
+                <span>{item.label}</span>
               </Link>
+            )
+          })}
+        </nav>
+
+        {/* Sidebar Bottom Profile/Actions */}
+        <div className="p-4 border-t border-[#3c3a37] bg-chess-darker flex items-center justify-between">
+          <Link
+            to="/profile"
+            data-testid="nav-avatar"
+            className="flex items-center space-x-3 group"
+          >
+            <div className="w-9 h-9 rounded-md bg-chess-green flex items-center justify-center text-white font-extrabold text-sm border-b-2 border-chess-green-dark">
+              GM
             </div>
-          </div>
+            <div className="text-left">
+              <p className="text-xs font-bold text-white leading-none">Grandmaster</p>
+              <p className="text-[10px] text-[#bababa] leading-none mt-1">View Profile</p>
+            </div>
+          </Link>
+
+          <button
+            data-testid="btn-notifications"
+            className="p-1.5 rounded-md text-[#bababa] hover:text-white hover:bg-[#3c3a37] transition-all relative"
+            title="Notifications"
+          >
+            🔔
+            <span className="absolute top-1 right-1 w-2 h-2 bg-chess-green rounded-full"></span>
+          </button>
+        </div>
+      </aside>
+
+      {/* ─── MOBILE TOP HEADER ─── */}
+      <header className="md:hidden h-14 bg-chess-dark border-b border-[#3c3a37] flex items-center justify-between px-4 sticky top-0 z-40 w-full flex-shrink-0">
+        <Link
+          to="/"
+          className="flex items-center space-x-1.5 text-sm font-black tracking-wider text-white"
+          data-testid="logo-link-mobile"
+        >
+          <span className="text-xl text-chess-green">♚</span>
+          <span>CHESSMASTER</span>
+        </Link>
+
+        <div className="flex items-center space-x-3">
+          <button
+            data-testid="btn-notifications-mobile"
+            className="p-1 text-[#bababa] hover:text-white"
+            title="Notifications"
+          >
+            🔔
+          </button>
+          <Link
+            to="/profile"
+            data-testid="nav-avatar-mobile"
+            className="w-8 h-8 rounded-md bg-chess-green flex items-center justify-center text-white font-bold text-xs border-b-2 border-chess-green-dark"
+          >
+            GM
+          </Link>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Outlet />
-      </main>
+      {/* ─── MAIN CONTENT AREA ─── */}
+      <div className="flex-grow flex flex-col min-w-0 min-h-screen">
+        <main className="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 md:pb-6">
+          <Outlet />
+        </main>
 
-      {/* Footer */}
-      <footer className="border-t border-slate-900 bg-slate-950 py-6 text-center text-slate-500 text-sm">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between">
-          <p>© 2026 Chessmaster Pro. All rights reserved.</p>
-          <div className="flex space-x-4 mt-2 sm:mt-0">
-            <a href="#" className="hover:text-slate-400" data-testid="footer-link-privacy">
-              Privacy
-            </a>
-            <a href="#" className="hover:text-slate-400" data-testid="footer-link-terms">
-              Terms
-            </a>
-            <a href="#" className="hover:text-slate-400" data-testid="footer-link-support">
-              Support
-            </a>
-          </div>
-        </div>
-      </footer>
+        {/* ─── MOBILE BOTTOM NAV BAR ─── */}
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-chess-dark border-t border-[#3c3a37] flex items-center justify-around z-40 px-2 shadow-lg shadow-black/55">
+          {navItems.map((item) => {
+            const Icon = item.icon
+            const active = isActive(item.path)
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                data-testid={`${item.testId}-mobile`}
+                className={`flex flex-col items-center justify-center py-1.5 px-2 rounded-md transition-colors w-12 ${
+                  active ? 'text-chess-green' : 'text-[#bababa] active:text-white'
+                }`}
+              >
+                <Icon className="w-5 h-5" />
+                <span className="text-[9px] font-bold mt-1 tracking-tight truncate max-w-full">
+                  {item.label.replace('Play ', '')}
+                </span>
+              </Link>
+            )
+          })}
+        </nav>
+      </div>
     </div>
   )
 }

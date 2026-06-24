@@ -31,47 +31,63 @@ export const CHESSCOM_NAV = [
           { icon: '🔥', label: 'Custom Match', desc: 'Customize bot configuration', path: '/game', state: { mode: 'ai' } },
           { icon: '🧠', label: 'Engine Practice', desc: 'Train with Stockfish engine', path: '/game', state: { mode: 'ai' } }
         ]
-      },
-      {
-        icon: '🧩',
-        label: 'Puzzles',
-        desc: 'Solve tactics, rushes & streaks',
-        path: '/puzzles',
-        isSubSection: true,
-        subSectionId: 'puzzles',
-        items: [
-          { icon: '🧩', label: 'Puzzles Hub', desc: 'Solve tactics of all levels', path: '/puzzles' },
-          { icon: '📅', label: 'Daily Challenge', desc: 'Solve the daily board challenge', path: '/puzzles/daily' },
-          { icon: '🔥', label: 'Puzzle Streak', desc: 'Endless tactics solver', path: '/puzzles/streak' },
-          { icon: '⚡', label: 'Puzzle Rush', desc: 'Race the clock under pressure', path: '/puzzles', soon: true },
-        ]
-      },
-      {
-        icon: '🎓',
-        label: 'Learn',
-        desc: 'Lessons, openings & endgames',
-        path: '/learn',
-        isSubSection: true,
-        subSectionId: 'learn',
-        items: [
-          { icon: '📖', label: 'Lessons Hub', desc: 'Interactive chess video courses', path: '/learn' },
-          { icon: '📚', label: 'Openings Explorer', desc: 'Explore lines and main theory', path: '/learn' },
-          { icon: '♜', label: 'Endgames', desc: 'Master key mating patterns', path: '/learn' },
-        ]
-      },
-      {
-        icon: '📺',
-        label: 'Watch',
-        desc: 'Watch live games & events',
-        path: '/watch',
-        isSubSection: true,
-        subSectionId: 'watch',
-        items: [
-          { icon: '🔴', label: 'Live Games', desc: 'Spectate ongoing master matches', path: '/watch' },
-          { icon: '🏆', label: 'Championships', desc: 'Official tournaments coverage', path: '/tournaments' },
-        ]
       }
-    ],
+    ]
+  },
+  {
+    id: 'puzzles',
+    icon: '🧩',
+    label: 'Puzzles',
+    path: '/puzzles',
+    items: [
+      { icon: '🧩', label: 'Puzzles Hub', desc: 'Solve tactics of all levels', path: '/puzzles' },
+      { icon: '📅', label: 'Daily Challenge', desc: 'Solve the daily board challenge', path: '/puzzles/daily' },
+      { icon: '🔥', label: 'Puzzle Streak', desc: 'Endless tactics solver', path: '/puzzles/streak' },
+      { icon: '⚡', label: 'Puzzle Rush', desc: 'Race the clock under pressure', path: '/puzzles', soon: true }
+    ]
+  },
+  {
+    id: 'learn',
+    icon: '🎓',
+    label: 'Learn',
+    path: '/learn',
+    items: [
+      { icon: '📖', label: 'Lessons Hub', desc: 'Interactive chess video courses', path: '/learn' },
+      { icon: '📚', label: 'Openings Explorer', desc: 'Explore lines and main theory', path: '/learn' },
+      { icon: '♜', label: 'Endgames', desc: 'Master key mating patterns', path: '/learn' }
+    ]
+  },
+  {
+    id: 'train',
+    icon: '💪',
+    label: 'Train',
+    path: '/other',
+    items: [
+      { icon: '🎯', label: 'Vision Trainer', desc: 'Practice coordinate naming and speed', path: '/other' },
+      { icon: '♟️', label: 'Special Moves', desc: 'Learn castling, en passant & promotion rules', path: '/other' },
+      { icon: '🏁', label: 'Draw Conditions', desc: 'Master stalemate & draw rules', path: '/other' }
+    ]
+  },
+  {
+    id: 'watch',
+    icon: '📺',
+    label: 'Watch',
+    path: '/watch',
+    items: [
+      { icon: '🔴', label: 'Live Games', desc: 'Spectate ongoing master matches', path: '/watch' },
+      { icon: '🏆', label: 'Championships', desc: 'Official tournaments coverage', path: '/tournaments' }
+    ]
+  },
+  {
+    id: 'community',
+    icon: '👥',
+    label: 'Community',
+    path: '/leaderboard',
+    items: [
+      { icon: '👥', label: 'Leaderboard', desc: 'Compare rankings against the best', path: '/leaderboard' },
+      { icon: '🏛️', label: 'Clubs', desc: 'Join groups and custom events', path: '/community', soon: true },
+      { icon: '💬', label: 'Forum', desc: 'Discuss strategy and chess topics', path: '/community', soon: true }
+    ]
   },
   {
     id: 'other',
@@ -79,19 +95,6 @@ export const CHESSCOM_NAV = [
     label: 'Other',
     path: '/other',
     items: [
-      {
-        icon: '👥',
-        label: 'Community',
-        desc: 'Players, clubs & leaderboards',
-        path: '/leaderboard',
-        isSubSection: true,
-        subSectionId: 'community',
-        items: [
-          { icon: '👥', label: 'Leaderboard', desc: 'Compare rankings against the best', path: '/leaderboard' },
-          { icon: '🏛️', label: 'Clubs', desc: 'Join groups and custom events', path: '/community', soon: true },
-          { icon: '💬', label: 'Forum', desc: 'Discuss strategy and chess topics', path: '/community', soon: true },
-        ]
-      },
       {
         icon: '🛠️',
         label: 'Tools',
@@ -126,13 +129,11 @@ export const CHESSCOM_NAV = [
         isSubSection: true,
         subSectionId: 'rules',
         items: [
-          { icon: '📋', label: 'Basic Rules', desc: 'General gameplay regulations', path: '/other' },
-          { icon: '♟️', label: 'Special Moves', desc: 'Castling, en passant & promotion', path: '/other' },
-          { icon: '🏁', label: 'Draw Conditions', desc: 'Stalemate & repeat rules', path: '/other' }
+          { icon: '📋', label: 'Basic Rules', desc: 'General gameplay regulations', path: '/other' }
         ]
-      },
-    ],
-  },
+      }
+    ]
+  }
 ];
 
 export const LANDING_BOTS = [

@@ -149,8 +149,8 @@
   border-radius: 4px;
   overflow: hidden;
   position: relative;
-  border: 3px solid #8B6914 !important; /* Wood Gold Border */
-  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  border: 1px solid rgba(0,0,0,0.15) !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
   box-sizing: border-box;
 }
 
@@ -377,4 +377,29 @@
 }
 
 /* Legacy overrides removed to prevent layout conflicts */
+
+/* Check Red Pulsing Flash */
+@keyframes checkPulseRed {
+  0% { opacity: 0; }
+  16% { opacity: 1; }
+  33% { opacity: 0; }
+  50% { opacity: 1; }
+  66% { opacity: 0; }
+  83% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.check-flash-overlay {
+  animation: checkPulseRed 600ms ease-in-out forwards;
+}
+
+/* Piece Fadeout Animation */
+@keyframes pieceFadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
 
