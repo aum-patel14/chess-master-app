@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabase';
 import { Calendar, Zap, Share2, CheckCircle, Flame } from 'lucide-react';
 import { useToast } from '../hooks/useToast';
+import { useGame, BOARD_THEMES } from '../context/GameContext';
 
 interface Puzzle {
   id: string;
@@ -33,6 +34,9 @@ function fenToGrid(fen: string) {
 export default function DailyPuzzle() {
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const { state } = useGame();
+  const theme = state?.theme || 'classic';
+  const currentTheme = BOARD_THEMES[theme] || BOARD_THEMES.classic;
   const [puzzle, setPuzzle] = useState<Puzzle | null>(null);
   const [isSolved, setIsSolved] = useState(false);
   const [streak, setStreak] = useState(0);
@@ -314,7 +318,7 @@ export default function DailyPuzzle() {
         </div>
       </div>
 
-      <div className="thumbnail-board">
+      <div className="thumbnail-board" style={{ background: currentTheme.dark }}>
         {grid.map((row, rIdx) =>
           row.map((piece, cIdx) => {
             const isLight = (rIdx + cIdx) % 2 === 0;
@@ -324,7 +328,8 @@ export default function DailyPuzzle() {
             return (
               <div
                 key={`${rIdx}-${cIdx}`}
-                className={`thumbnail-square ${isLight ? 'light' : 'dark'}`}
+                className="thumbnail-square"
+                style={{ background: isLight ? currentTheme.light : currentTheme.dark }}
               >
                 {piece && (
                   <img

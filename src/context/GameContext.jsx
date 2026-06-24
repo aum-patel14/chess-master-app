@@ -55,11 +55,11 @@ const mapDifficultyToStockfishLevel = (difficulty) => {
 
 const GameContext = createContext(null);
 
-const BOARD_THEMES = {
-  classic:  { light: '#F0D9B5', dark: '#B58863', name: 'Classic', accent: '#81b64c' },
-  ocean:    { light: '#dee3e6', dark: '#8ca2ad', name: 'Ocean',   accent: '#4a728a' },
-  wood:     { light: '#f0c070', dark: '#8a4f2a', name: 'Wood',    accent: '#734122' },
-  midnight: { light: '#6f8fa4', dark: '#2e4057', name: 'Midnight',accent: '#8866ff' },
+export const BOARD_THEMES = {
+  classic:  { light: '#F0D9B5', dark: '#B58863', name: 'Classic', accent: '#81b64c', highlight: 'rgba(129, 182, 76, 0.35)', selected: 'rgba(129, 182, 76, 0.6)' },
+  ocean:    { light: '#dee3e6', dark: '#8ca2ad', name: 'Ocean',   accent: '#4a728a', highlight: 'rgba(74, 114, 138, 0.35)', selected: 'rgba(74, 114, 138, 0.6)' },
+  wood:     { light: '#f0c070', dark: '#8a4f2a', name: 'Wood',    accent: '#734122', highlight: 'rgba(115, 65, 34, 0.35)', selected: 'rgba(115, 65, 34, 0.6)' },
+  midnight: { light: '#c8ebef', dark: '#1e2836', name: 'Midnight (Neon)', accent: '#00f0ff', highlight: 'rgba(0, 240, 255, 0.25)', selected: 'rgba(0, 240, 255, 0.5)' },
 };
 
 const initialDifficulty = parseInt(localStorage.getItem('chess_difficulty')) || 3;

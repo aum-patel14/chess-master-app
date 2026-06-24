@@ -1,6 +1,6 @@
 import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import { Chess } from 'chess.js';
-import { useGame } from '../context/GameContext';
+import { useGame, BOARD_THEMES } from '../context/GameContext';
 import ChessPiece from './board/ChessPiece';
 import PromotionModal from './board/PromotionModal';
 import ParticleCanvas, { triggerCaptureEffect, triggerMoveEffect } from './board/ParticleCanvas';
@@ -59,8 +59,11 @@ export default function ChessBoard({
     fen, selectedSquare, validMoves, lastMove,
     checkSquare, showCoords, playerColor, promotionPending,
     gameMode, aiDifficulty, animationsEnabled, history,
-    hintSquares, boardFlipped, reviewFen, isAIThinking, errorSquare
+    hintSquares, boardFlipped, reviewFen, isAIThinking, errorSquare,
+    theme = 'classic'
   } = state;
+
+  const currentTheme = BOARD_THEMES[theme] || BOARD_THEMES.classic;
 
   const effectiveFen = reviewFen || fen;
   const chess = useMemo(() => {
@@ -335,21 +338,23 @@ export default function ChessBoard({
         position: 'relative',
         width: '100%',
         aspectRatio: '1',
-        background: '#B58863', // Chess.com dark squares
+        background: currentTheme.dark,
         display: 'grid',
         gridTemplateColumns: 'repeat(8, 1fr)',
         gridTemplateRows: 'repeat(8, 1fr)',
         userSelect: 'none',
         touchAction: 'none',
-        borderRadius: '4px',
+        borderRadius: '8px',
         overflow: 'hidden',
+        boxShadow: '0 16px 40px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.1)',
+        border: '1px solid rgba(255, 255, 255, 0.08)'
       }}
     >
       {/* Squares Rendering */}
       {renderedSquares.map(({ row, col, rankLabel, fileLabel, squareName, cell }) => {
         // Determine square coordinate color and active state colors
         const isLight = (row + col) % 2 !== 0; // standard alternation
-        const defaultBg = isLight ? '#F0D9B5' : '#B58863';
+        const defaultBg = isLight ? currentTheme.light : currentTheme.dark;
         
         const isSelected = selectedSquare === squareName;
         const isLastMove = lastMove && (lastMove.from === squareName || lastMove.to === squareName);
@@ -400,7 +405,7 @@ export default function ChessBoard({
                 style={{
                   position: 'absolute',
                   inset: 0,
-                  backgroundColor: 'rgba(20, 85, 30, 0.2)',
+                  backgroundColor: currentTheme.highlight,
                   pointerEvents: 'none',
                   zIndex: 1,
                 }}
@@ -413,8 +418,8 @@ export default function ChessBoard({
                 style={{
                   position: 'absolute',
                   inset: 0,
-                  backgroundColor: 'rgba(20, 85, 30, 0.5)',
-                  boxShadow: 'inset 0 0 0 2px rgb(20, 85, 30)',
+                  backgroundColor: currentTheme.selected,
+                  boxShadow: `inset 0 0 0 2px ${currentTheme.accent}`,
                   pointerEvents: 'none',
                   zIndex: 1,
                 }}
@@ -470,7 +475,7 @@ export default function ChessBoard({
                   left: '4px',
                   fontSize: '11px',
                   fontWeight: 700,
-                  color: isLight ? '#B58863' : '#F0D9B5',
+                  color: isLight ? currentTheme.dark : currentTheme.light,
                   opacity: 0.55,
                   pointerEvents: 'none',
                   zIndex: 2,
@@ -489,7 +494,7 @@ export default function ChessBoard({
                   right: '4px',
                   fontSize: '11px',
                   fontWeight: 700,
-                  color: isLight ? '#B58863' : '#F0D9B5',
+                  color: isLight ? currentTheme.dark : currentTheme.light,
                   opacity: 0.55,
                   pointerEvents: 'none',
                   zIndex: 2,

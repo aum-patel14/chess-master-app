@@ -1,7 +1,7 @@
 import './LandingPage.css';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useGame } from '../context/GameContext';
+import { useGame, BOARD_THEMES } from '../context/GameContext';
 import { LANDING_BOTS } from '../data/chesscomNav';
 import { GraduationCap, Bot, Puzzle, Binoculars, Smartphone, Zap } from 'lucide-react';
 
@@ -33,7 +33,9 @@ const LIVE_GAMES = [
 
 export default function LandingPage() {
   const navigate = useNavigate();
-  const { startNewGame } = useGame();
+  const { startNewGame, state } = useGame();
+  const theme = state?.theme || 'classic';
+  const currentTheme = BOARD_THEMES[theme] || BOARD_THEMES.classic;
   const [heroBoardHighlighted, setHeroBoardHighlighted] = useState(null);
   const [puzzleBoardHighlighted, setPuzzleBoardHighlighted] = useState(null);
   const [mobileBoardHighlighted, setMobileBoardHighlighted] = useState(null);
@@ -54,7 +56,7 @@ export default function LandingPage() {
   const renderBoard = (fen, highlightedSq, setHighlightedSq, small = false) => {
     const grid = fenToGrid(fen);
     return (
-      <div className={small ? 'phone-board' : 'board'}>
+      <div className={small ? 'phone-board' : 'board'} style={{ background: currentTheme.dark, borderColor: 'rgba(255, 255, 255, 0.08)' }}>
         {grid.map((row, rIdx) =>
           row.map((piece, cIdx) => {
             const idx = rIdx * 8 + cIdx;
@@ -65,7 +67,13 @@ export default function LandingPage() {
             return (
               <div
                 key={idx}
-                className={`sq ${isLight ? 'light' : 'dark'} ${isHighlighted ? 'highlight' : ''}`}
+                className="sq"
+                style={{
+                  background: isHighlighted
+                    ? currentTheme.selected
+                    : (isLight ? currentTheme.light : currentTheme.dark),
+                  boxShadow: isHighlighted ? `inset 0 0 0 3px ${currentTheme.accent}` : 'none',
+                }}
                 onClick={() => setHighlightedSq && setHighlightedSq(idx)}
               >
                 {piece && (

@@ -22,6 +22,7 @@ import { CHESSCOM_NAV } from '../../data/chesscomNav';
 import { SignUpModal, LoginModal } from '../Modals';
 import ShortcutsModal from '../ShortcutsModal';
 import { useAuth } from '../../context/AuthContext';
+import { useGame } from '../../context/GameContext';
 import { supabase } from '../../services/supabase';
 import './ChesscomLayout.css';
 
@@ -297,6 +298,8 @@ export default function ChesscomLayout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { userData, logout } = useAuth();
+  const { state } = useGame();
+  const theme = state?.theme || 'classic';
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileExpanded, setMobileExpanded] = useState(null);
   const [mobileSubExpanded, setMobileSubExpanded] = useState(null);
@@ -632,7 +635,7 @@ export default function ChesscomLayout({ children }) {
   );
 
   return (
-    <div className="cc-layout">
+    <div className={`cc-layout theme-${theme}`}>
       <div className="cc-mobile-header">
         <button type="button" className="cc-mobile-menu-btn" onClick={() => setMobileOpen(true)} aria-label="Menu">
           <Menu size={22} />

@@ -5,7 +5,8 @@ import confetti from 'canvas-confetti';
 import PageShell from '../components/PageShell';
 import { useToast } from '../hooks/useToast';
 import puzzlesData from '../data/puzzles.json';
-import { Calendar, Zap, Star, Swords, Target, RefreshCw, Eye, Award, HelpCircle } from 'lucide-react';
+import { useGame, BOARD_THEMES } from '../context/GameContext';
+import { Calendar, Zap, Star, Swords, Target, RefreshCw, Eye, Award, HelpCircle, Globe } from 'lucide-react';
 import { soundManager } from '../engine/soundManager';
 import { incrementPuzzlesSolved } from '../utils/chessStats';
 
@@ -27,6 +28,9 @@ const PIECE_SYMBOLS: Record<string, string> = {
 export default function PuzzlesPage() {
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const { state } = useGame();
+  const theme = state?.theme || 'classic';
+  const currentTheme = BOARD_THEMES[theme] || BOARD_THEMES.classic;
 
   // Screen state: 'menu' | 'solving' | 'rush'
   const [screen, setScreen] = useState<'menu' | 'solving' | 'rush'>('menu');
@@ -78,6 +82,58 @@ export default function PuzzlesPage() {
     localStorage.setItem('chess_puzzle_streak_date', today);
     setPuzzleStreak(next);
     setPuzzleStreakDate(today);
+  };
+
+  const [lichessInput, setLichessInput] = useState('');
+  const [loadingLichess, setLoadingLichess] = useState(false);
+
+  const handleLoadLichessPuzzle = async (inputStr: string) => {
+    let puzzleId = inputStr.trim();
+    if (!puzzleId) {
+      showToast('Please enter a Lichess Puzzle ID or URL', 'error');
+      return;
+    }
+    
+    // Parse URL if needed
+    // e.g. https://lichess.org/training/61024
+    const urlPattern = /(?:training|puzzle)(?:\/mix)?\/([a-zA-Z0-9]+)/;
+    const match = puzzleId.match(urlPattern);
+    if (match && match[1]) {
+      puzzleId = match[1];
+    }
+
+    setLoadingLichess(true);
+    showToast(`Fetching puzzle ${puzzleId} from Lichess...`, 'info');
+
+    try {
+      const response = await fetch(`https://lichess.org/api/puzzle/${puzzleId}`);
+      if (!response.ok) {
+        throw new Error('Puzzle not found or Lichess API error');
+      }
+      const data = await response.json();
+      if (data && data.puzzle && data.puzzle.fen) {
+        const mappedPuzzle: Puzzle = {
+          id: data.puzzle.id,
+          fen: data.puzzle.fen,
+          moves: data.puzzle.solution,
+          rating: data.puzzle.rating,
+          themes: data.puzzle.themes || [],
+          title: `Lichess Puzzle #${data.puzzle.id}`,
+          opponentPlaysFirst: true
+        };
+        setCurrentMode('custom');
+        loadPuzzle(mappedPuzzle);
+        setScreen('solving');
+        showToast(`Loaded Lichess puzzle #${puzzleId}!`, 'success');
+      } else {
+        throw new Error('Invalid puzzle data returned');
+      }
+    } catch (err: any) {
+      console.error(err);
+      showToast(err.message || 'Failed to load puzzle from Lichess.org', 'error');
+    } finally {
+      setLoadingLichess(false);
+    }
   };
 
   const chess = useMemo(() => {
@@ -584,7 +640,7 @@ export default function PuzzlesPage() {
                       <span style={{ fontSize: '12px', color: '#888' }}>Fetching from Lichess...</span>
                     </div>
                   ) : (
-                    <div style={{ width: '100%', aspectRatio: '1', background: '#B58863', borderRadius: '8px', overflow: 'hidden', pointerEvents: 'none', display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gridTemplateRows: 'repeat(8, 1fr)', boxShadow: 'inset 0 0 10px rgba(0,0,0,0.5)' }}>
+                    <div style={{ width: '100%', aspectRatio: '1', background: currentTheme.dark, borderRadius: '8px', overflow: 'hidden', pointerEvents: 'none', display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gridTemplateRows: 'repeat(8, 1fr)', boxShadow: 'inset 0 0 10px rgba(0,0,0,0.5)' }}>
                       {board.map((row, rIdx) =>
                         row.map((cell, cIdx) => {
                           const isLight = (rIdx + cIdx) % 2 === 0;
@@ -592,7 +648,7 @@ export default function PuzzlesPage() {
                             <div
                               key={`${rIdx}-${cIdx}`}
                               style={{
-                                background: isLight ? '#F0D9B5' : '#B58863',
+                                background: isLight ? currentTheme.light : currentTheme.dark,
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
@@ -723,6 +779,52 @@ export default function PuzzlesPage() {
                     </button>
                   </div>
 
+                  {/* Card 5: Lichess Importer */}
+                  <div className="puzzle-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                    <div>
+                      <div className="puzzle-card-header">
+                        <div className="puzzle-card-icon-container" style={{ background: 'rgba(0, 240, 255, 0.15)', color: '#00f0ff' }}>
+                          <Globe size={20} />
+                        </div>
+                        <div>
+                          <h4 className="puzzle-card-title">Lichess.org Import</h4>
+                          <p className="puzzle-card-subtitle">Solve any Lichess puzzle by ID or URL</p>
+                        </div>
+                      </div>
+                      <div style={{ marginTop: '12px' }}>
+                        <input
+                          type="text"
+                          placeholder="e.g. 61024 or URL"
+                          value={lichessInput}
+                          onChange={(e) => setLichessInput(e.target.value)}
+                          disabled={loadingLichess}
+                          style={{
+                            width: '100%',
+                            padding: '8px 12px',
+                            background: 'var(--bg-input)',
+                            border: '1px solid var(--border)',
+                            borderRadius: '6px',
+                            color: '#fff',
+                            fontSize: '13px',
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              handleLoadLichessPuzzle(lichessInput);
+                            }
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleLoadLichessPuzzle(lichessInput)}
+                      className="btn-chess-green"
+                      style={{ marginTop: '12px', background: 'var(--theme-accent, #00f0ff)', color: '#000', fontWeight: 'bold' }}
+                      disabled={loadingLichess}
+                    >
+                      {loadingLichess ? 'Loading...' : 'Import & Solve'}
+                    </button>
+                  </div>
+
                 </div>
               </div>
             </div>
@@ -773,7 +875,7 @@ export default function PuzzlesPage() {
                   style={{
                     width: '100%',
                     aspectRatio: '1',
-                    background: '#B58863',
+                    background: currentTheme.dark,
                     display: 'grid',
                     gridTemplateColumns: 'repeat(8, 1fr)',
                     gridTemplateRows: 'repeat(8, 1fr)',
@@ -802,8 +904,8 @@ export default function PuzzlesPage() {
                           onClick={() => handleSquareClick(square)}
                           style={{
                             background: isSelected
-                              ? 'rgba(20, 85, 30, 0.5)'
-                              : isLight ? '#F0D9B5' : '#B58863',
+                              ? currentTheme.selected
+                              : isLight ? currentTheme.light : currentTheme.dark,
                             position: 'relative',
                             display: 'flex',
                             alignItems: 'center',
@@ -827,12 +929,12 @@ export default function PuzzlesPage() {
 
                           {/* Coordinates inside corner squares */}
                           {cIdx === 0 && (
-                            <span style={{ position: 'absolute', top: '2px', left: '4px', fontSize: '9px', opacity: 0.5, fontWeight: 700, color: isLight ? '#B58863' : '#F0D9B5', pointerEvents: 'none' }}>
+                            <span style={{ position: 'absolute', top: '2px', left: '4px', fontSize: '9px', opacity: 0.5, fontWeight: 700, color: isLight ? currentTheme.dark : currentTheme.light, pointerEvents: 'none' }}>
                               {rank}
                             </span>
                           )}
                           {rIdx === 7 && (
-                            <span style={{ position: 'absolute', bottom: '2px', right: '4px', fontSize: '9px', opacity: 0.5, fontWeight: 700, color: isLight ? '#B58863' : '#F0D9B5', pointerEvents: 'none' }}>
+                            <span style={{ position: 'absolute', bottom: '2px', right: '4px', fontSize: '9px', opacity: 0.5, fontWeight: 700, color: isLight ? currentTheme.dark : currentTheme.light, pointerEvents: 'none' }}>
                               {file}
                             </span>
                           )}
@@ -968,7 +1070,7 @@ export default function PuzzlesPage() {
                   style={{
                     width: '100%',
                     aspectRatio: '1',
-                    background: '#B58863',
+                    background: currentTheme.dark,
                     display: 'grid',
                     gridTemplateColumns: 'repeat(8, 1fr)',
                     gridTemplateRows: 'repeat(8, 1fr)',
@@ -997,8 +1099,8 @@ export default function PuzzlesPage() {
                           onClick={() => handleSquareClick(square)}
                           style={{
                             background: isSelected
-                              ? 'rgba(20, 85, 30, 0.5)'
-                              : isLight ? '#F0D9B5' : '#B58863',
+                              ? currentTheme.selected
+                              : isLight ? currentTheme.light : currentTheme.dark,
                             position: 'relative',
                             display: 'flex',
                             alignItems: 'center',
@@ -1022,12 +1124,12 @@ export default function PuzzlesPage() {
 
                           {/* Coordinates inside corner squares */}
                           {cIdx === 0 && (
-                            <span style={{ position: 'absolute', top: '2px', left: '4px', fontSize: '9px', opacity: 0.5, fontWeight: 700, color: isLight ? '#B58863' : '#F0D9B5', pointerEvents: 'none' }}>
+                            <span style={{ position: 'absolute', top: '2px', left: '4px', fontSize: '9px', opacity: 0.5, fontWeight: 700, color: isLight ? currentTheme.dark : currentTheme.light, pointerEvents: 'none' }}>
                               {rank}
                             </span>
                           )}
                           {rIdx === 7 && (
-                            <span style={{ position: 'absolute', bottom: '2px', right: '4px', fontSize: '9px', opacity: 0.5, fontWeight: 700, color: isLight ? '#B58863' : '#F0D9B5', pointerEvents: 'none' }}>
+                            <span style={{ position: 'absolute', bottom: '2px', right: '4px', fontSize: '9px', opacity: 0.5, fontWeight: 700, color: isLight ? currentTheme.dark : currentTheme.light, pointerEvents: 'none' }}>
                               {file}
                             </span>
                           )}

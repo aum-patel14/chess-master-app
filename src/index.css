@@ -45,6 +45,39 @@
   --transition: 250ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* Stitch Theme Accent Colors Integration */
+.theme-classic {
+  --green: #81b64c;
+  --gold: #81b64c;
+  --gold-hover: #95cc58;
+  --lp-green: #81b64c;
+  --lp-green2: #95cc58;
+}
+
+.theme-ocean {
+  --green: #4a728a;
+  --gold: #4a728a;
+  --gold-hover: #5a859e;
+  --lp-green: #4a728a;
+  --lp-green2: #5a859e;
+}
+
+.theme-wood {
+  --green: #8a4f2a;
+  --gold: #8a4f2a;
+  --gold-hover: #9e5b30;
+  --lp-green: #8a4f2a;
+  --lp-green2: #9e5b30;
+}
+
+.theme-midnight {
+  --green: #00f0ff;
+  --gold: #00f0ff;
+  --gold-hover: #7df4ff;
+  --lp-green: #00f0ff;
+  --lp-green2: #7df4ff;
+}
+
 @media (prefers-color-scheme: light) {
   :root {
     --bg-base:        #f0f0f0;
