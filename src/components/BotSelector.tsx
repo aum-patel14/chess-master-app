@@ -27,6 +27,7 @@ const CATEGORY_LABELS: Record<BotCategory, string> = {
 };
 
 export const BotSelector: React.FC<BotSelectorProps> = ({ show, onClose, onBotSelected }) => {
+  const [activeEngine, setActiveEngine] = useState<'stockfish' | 'maia'>('stockfish');
   const [activeCategory, setActiveCategory] = useState<BotCategory>('beginner');
   const [selectedBot, setSelectedBot] = useState<BotConfig | null>(null);
   const [playerColor, setPlayerColor] = useState<'white' | 'black'>('white');
@@ -40,6 +41,7 @@ export const BotSelector: React.FC<BotSelectorProps> = ({ show, onClose, onBotSe
       const found = BOTS.find((b) => b.id === lastBotId);
       if (found) {
         setSelectedBot(found);
+        setActiveEngine(found.engine || 'stockfish');
         setActiveCategory(found.category);
         return;
       }
@@ -48,13 +50,21 @@ export const BotSelector: React.FC<BotSelectorProps> = ({ show, onClose, onBotSe
     const first = BOTS[0];
     if (first) {
       setSelectedBot(first);
+      setActiveEngine('stockfish');
       setActiveCategory(first.category);
     }
   }, [show]);
 
   const filteredBots = useMemo(
-    () => BOTS.filter((b) => b.category === activeCategory),
-    [activeCategory],
+    () => BOTS.filter((b) => {
+      const isMaia = b.engine === 'maia';
+      if (activeEngine === 'maia') {
+        return isMaia;
+      } else {
+        return !isMaia && b.category === activeCategory;
+      }
+    }),
+    [activeEngine, activeCategory],
   );
 
   if (!show) return null;
@@ -88,18 +98,69 @@ export const BotSelector: React.FC<BotSelectorProps> = ({ show, onClose, onBotSe
             )}
           </div>
 
-          <div className="bot-category-tabs">
-            {(Object.keys(CATEGORY_LABELS) as BotCategory[]).map((cat) => (
-              <button
-                key={cat}
-                type="button"
-                className={`bot-category-tab ${activeCategory === cat ? 'active' : ''}`}
-                onClick={() => setActiveCategory(cat)}
-              >
-                {CATEGORY_LABELS[cat]}
-              </button>
-            ))}
+          <div style={{ display: 'flex', gap: 10, margin: '14px 0 6px', padding: '0 4px' }}>
+            <button
+              type="button"
+              className={`bot-category-tab ${activeEngine === 'stockfish' ? 'active' : ''}`}
+              onClick={() => {
+                setActiveEngine('stockfish');
+                const first = BOTS.find(b => b.engine === 'stockfish');
+                if (first) setSelectedBot(first);
+              }}
+              style={{
+                flex: 1,
+                padding: '10px',
+                borderRadius: '8px',
+                border: 'none',
+                cursor: 'pointer',
+                fontWeight: 700,
+                fontSize: '14px',
+                background: activeEngine === 'stockfish' ? '#d4af37' : 'rgba(255,255,255,0.06)',
+                color: activeEngine === 'stockfish' ? '#0a0a14' : '#aaa',
+                transition: 'all 0.2s',
+              }}
+            >
+              🤖 Stockfish AI Bots
+            </button>
+            <button
+              type="button"
+              className={`bot-category-tab ${activeEngine === 'maia' ? 'active' : ''}`}
+              onClick={() => {
+                setActiveEngine('maia');
+                const first = BOTS.find(b => b.engine === 'maia');
+                if (first) setSelectedBot(first);
+              }}
+              style={{
+                flex: 1,
+                padding: '10px',
+                borderRadius: '8px',
+                border: 'none',
+                cursor: 'pointer',
+                fontWeight: 700,
+                fontSize: '14px',
+                background: activeEngine === 'maia' ? '#d4af37' : 'rgba(255,255,255,0.06)',
+                color: activeEngine === 'maia' ? '#0a0a14' : '#aaa',
+                transition: 'all 0.2s',
+              }}
+            >
+              👩‍💻 Maia AI (Human-like)
+            </button>
           </div>
+
+          {activeEngine === 'stockfish' && (
+            <div className="bot-category-tabs">
+              {(Object.keys(CATEGORY_LABELS) as BotCategory[]).map((cat) => (
+                <button
+                  key={cat}
+                  type="button"
+                  className={`bot-category-tab ${activeCategory === cat ? 'active' : ''}`}
+                  onClick={() => setActiveCategory(cat)}
+                >
+                  {CATEGORY_LABELS[cat]}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="bot-selector-body">

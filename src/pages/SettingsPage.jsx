@@ -29,6 +29,7 @@ export default function SettingsPage() {
   const [showHints, setShowHints] = useLocalStorage('chess_show_hints', true)
   const [showCoords, setShowCoords] = useLocalStorage('chess_coords', true)
   const [autoPromote, setAutoPromote] = useLocalStorage('chess_autopromote', false)
+  const [engineType, setEngineType] = useLocalStorage('chess_engine_type', 'local')
 
   const [resetOpen, setResetOpen] = useState(false)
 
@@ -83,6 +84,7 @@ export default function SettingsPage() {
       'chess_show_hints',
       'chess_coords',
       'chess_autopromote',
+      'chess_engine_type',
     ]
     keys.forEach((k) => localStorage.removeItem(k))
     showToast('Settings reset to defaults', 'info')
@@ -205,6 +207,28 @@ export default function SettingsPage() {
                   {minutes === 0 ? '∞' : `${minutes}m`}
                 </button>
               ))}
+            </div>
+            <div style={{ marginTop: '16px', marginBottom: '16px' }}>
+              <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 8 }}>Chess Engine</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                {[
+                  { id: 'local', label: 'Local AI' },
+                  { id: 'online', label: 'Online AI' },
+                  { id: 'fallback', label: 'Custom' }
+                ].map(e => (
+                  <button 
+                    key={e.id} 
+                    type="button" 
+                    style={pill(engineType === e.id)} 
+                    onClick={() => {
+                      setEngineType(e.id);
+                      showToast(`${e.label} engine selected`, 'success');
+                    }}
+                  >
+                    {e.label}
+                  </button>
+                ))}
+              </div>
             </div>
             <Switch on={showHints} onToggle={() => setShowHints(!showHints)} label="Show hints" help="In-game hint availability" />
             <Switch on={autoPromote} onToggle={() => setAutoPromote(!autoPromote)} label="Auto-promote" help="Auto-queen on promotion" />

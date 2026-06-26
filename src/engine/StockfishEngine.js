@@ -163,9 +163,9 @@ class StockfishEngine {
   }
 
   _getStockfishPath() {
-    let baseUrl = '/chess-master-app/';
+    let baseUrl = '/';
     try {
-      if (typeof import.meta !== 'undefined' && import.meta.env?.BASE_URL && import.meta.env.BASE_URL !== '/') {
+      if (typeof import.meta !== 'undefined' && import.meta.env?.BASE_URL) {
         baseUrl = import.meta.env.BASE_URL;
       } else if (typeof window !== 'undefined') {
         const match = window.location.pathname.match(/^(.*\/chess-master-app\/)/);

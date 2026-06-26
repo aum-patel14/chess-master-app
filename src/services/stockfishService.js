@@ -9,20 +9,20 @@ export const DIFFICULTY_CONFIG = {
 function resolveBase() {
   try {
     const envBase = import.meta?.env?.BASE_URL;
-    if (envBase && envBase !== '/') return envBase;
+    if (envBase) return envBase;
   } catch (_) {}
   if (typeof window !== 'undefined') {
     const m = window.location.pathname.match(/^(.*\/chess-master-app\/)/);
     if (m) return m[1];
   }
-  return '/chess-master-app/';
+  return '/';
 }
 
-// ✅ Pure-JS CDN sources — no CORS headers needed, GitHub Pages compatible
+// Prioritize local Stockfish 18 WASM (Stockfish AI) with NNUE first, fall back to CDN if local fails
 const STOCKFISH_SOURCES = [
+  `${resolveBase()}stockfish.js`,
   'https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js',
   'https://cdn.jsdelivr.net/npm/stockfish.js@10.0.2/stockfish.js',
-  `${resolveBase()}stockfish.js`,  // local fallback (pure-JS version in your public/)
 ];
 
 let workerInstance = null;
