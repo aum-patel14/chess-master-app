@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- Prevent caching of index.html so the browser always loads the latest build bundles -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <meta name="description" content="Play chess online against powerful Stockfish AI bots, solve interactive puzzles, learn chess fundamentals, and compete in multiplayer tournaments." />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://aum-patel14.github.io/chess-master-app/" />
+    <meta property="og:title" content="Chessmaster Pro — Play Chess Online" />
+    <meta property="og:description" content="Play chess online against powerful Stockfish AI bots, solve interactive puzzles, learn chess fundamentals, and compete in multiplayer tournaments." />
+    <meta property="og:image" content="https://aum-patel14.github.io/chess-master-app/og-preview.png" />
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://aum-patel14.github.io/chess-master-app/" />
+    <meta property="twitter:title" content="Chessmaster Pro — Play Chess Online" />
+    <meta property="twitter:description" content="Play chess online against powerful Stockfish AI bots, solve interactive puzzles, learn chess fundamentals, and compete in multiplayer tournaments." />
+    <meta property="twitter:image" content="https://aum-patel14.github.io/chess-master-app/og-preview.png" />
+
+    <title>Chessmaster Pro — Play Chess Online</title>
+    <!-- GitHub Pages SPA redirect restore -->
+    <script>
+      (function (l) {
+        if (l.search[1] === '/') {
+          var decoded = l.search
+            .slice(1)
+            .split('&')
+            .map(function (s) {
+              return s.replace(/~and~/g, '&');
+            })
+            .join('?');
+          window.history.replaceState(null, null, l.pathname.slice(0, -1) + decoded + l.hash);
+        }
+      })(window.location);
+    </script>
+    <!-- Clean up any active Service Worker and caches from legacy PWA version -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function (registrations) {
+          if (registrations.length > 0) {
+            for (var i = 0; i < registrations.length; i++) {
+              registrations[i].unregister();
+            }
+            if ('caches' in window) {
+              caches.keys().then(function (keys) {
+                keys.forEach(function (key) {
+                  caches.delete(key);
+                });
+              });
+            }
+            setTimeout(function () {
+              window.location.reload();
+            }, 300);
+          }
+        });
+      }
+    </script>
+    <script type="module" crossorigin src="/chess-master-app/assets/index-A2yVH4pZ.js"></script>
+    <link rel="modulepreload" crossorigin href="/chess-master-app/assets/rolldown-runtime-Bh1tDfsg.js">
+    <link rel="modulepreload" crossorigin href="/chess-master-app/assets/vendor-CAYnQymM.js">
+    <link rel="modulepreload" crossorigin href="/chess-master-app/assets/vendor-react-C3WdWrbs.js">
+    <link rel="stylesheet" crossorigin href="/chess-master-app/assets/index-JB5s57IT.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
+
