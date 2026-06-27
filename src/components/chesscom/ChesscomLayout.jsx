@@ -33,7 +33,7 @@ const NAV_ICONS = {
   train: Dumbbell,
   watch: Binoculars,
   community: Users,
-  other: MoreHorizontal,
+  settings: Settings,
 };
 
 function SubFlyoutMenu({ items, onSelect }) {
@@ -327,6 +327,12 @@ export default function ChesscomLayout({ children }) {
     document.documentElement.style.setProperty('--cc-sidebar-width', isCollapsed ? '60px' : '170px');
   }, [isCollapsed]);
 
+  useEffect(() => {
+    if (location.pathname.startsWith('/game')) {
+      setIsCollapsed(true);
+    }
+  }, [location.pathname]);
+
   const enterTimeoutRef = useRef(null);
   const leaveTimeoutRef = useRef(null);
 
@@ -437,7 +443,9 @@ export default function ChesscomLayout({ children }) {
           title={isCollapsed ? section.label : undefined}
         >
           <Icon size={18} strokeWidth={2} />
-          {!isCollapsed && (section.id === 'puzzles' && dailyStreak > 0 ? `${section.label} 🔥 ${dailyStreak}` : section.label)}
+          <span className={isCollapsed ? 'sr-only' : ''} style={isCollapsed ? { position: 'absolute', width: '1px', height: '1px', padding: 0, margin: '-1px', overflow: 'hidden', clip: 'rect(0, 0, 0, 0)', border: 0 } : {}}>
+            {section.id === 'puzzles' && dailyStreak > 0 ? `${section.label} 🔥 ${dailyStreak}` : section.label}
+          </span>
           {isCollapsed && dailyStreak > 0 && section.id === 'puzzles' && (
             <span className="cc-collapsed-streak" style={{ fontSize: '10px', marginLeft: '-2px' }}>🔥</span>
           )}
@@ -620,17 +628,6 @@ export default function ChesscomLayout({ children }) {
         </>
       )}
 
-      {/* Sidebar Expand/Collapse Toggle Button */}
-      <div className="cc-sidebar-toggle-row">
-        <button 
-          type="button" 
-          className="cc-sidebar-toggle-btn"
-          onClick={() => setIsCollapsed(!isCollapsed)}
-        >
-          <span className="cc-toggle-arrows">{isCollapsed ? '»' : '«'}</span>
-          {!isCollapsed && <span className="cc-toggle-text">Collapse Menu</span>}
-        </button>
-      </div>
     </div>
   );
 
@@ -753,6 +750,18 @@ export default function ChesscomLayout({ children }) {
         <div className="cc-logo" onClick={() => navigate('/')}>
           <div className="cc-logo-icon">♞</div>
           {!isCollapsed && <span><em>Chess</em>Master</span>}
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'center', margin: '8px 0' }}>
+          <button 
+            type="button" 
+            className="cc-sidebar-toggle-btn"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            style={{ width: isCollapsed ? '40px' : '90%', justifyContent: 'center', padding: '8px 0', borderRadius: '8px' }}
+            title={isCollapsed ? "Expand Menu" : "Collapse Menu"}
+          >
+            <span className="cc-toggle-arrows" style={{ marginRight: isCollapsed ? '0' : '8px' }}>{isCollapsed ? '»' : '«'}</span>
+            {!isCollapsed && <span className="cc-toggle-text">Collapse Menu</span>}
+          </button>
         </div>
         <nav className="cc-nav">
           {CHESSCOM_NAV.map((section) => renderNavLink(section))}

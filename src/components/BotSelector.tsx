@@ -115,8 +115,8 @@ export const BotSelector: React.FC<BotSelectorProps> = ({ show, onClose, onBotSe
                 cursor: 'pointer',
                 fontWeight: 700,
                 fontSize: '14px',
-                background: activeEngine === 'stockfish' ? '#d4af37' : 'rgba(255,255,255,0.06)',
-                color: activeEngine === 'stockfish' ? '#0a0a14' : '#aaa',
+                background: activeEngine === 'stockfish' ? '#81b64c' : '#2a2a2a',
+                color: activeEngine === 'stockfish' ? '#ffffff' : '#888888',
                 transition: 'all 0.2s',
               }}
             >
@@ -138,8 +138,8 @@ export const BotSelector: React.FC<BotSelectorProps> = ({ show, onClose, onBotSe
                 cursor: 'pointer',
                 fontWeight: 700,
                 fontSize: '14px',
-                background: activeEngine === 'maia' ? '#d4af37' : 'rgba(255,255,255,0.06)',
-                color: activeEngine === 'maia' ? '#0a0a14' : '#aaa',
+                background: activeEngine === 'maia' ? '#81b64c' : '#2a2a2a',
+                color: activeEngine === 'maia' ? '#ffffff' : '#888888',
                 transition: 'all 0.2s',
               }}
             >
@@ -220,7 +220,7 @@ export const BotSelector: React.FC<BotSelectorProps> = ({ show, onClose, onBotSe
                 <div className="color-toggle">
                   <button
                     type="button"
-                    className={`color-toggle-btn ${playerColor === 'white' ? 'active' : ''}`}
+                    className={`color-toggle-btn ${playerColor === 'white' ? 'active-white' : ''}`}
                     onClick={() => setPlayerColor('white')}
                   >
                     <span className="color-toggle-piece">♙</span>
@@ -228,7 +228,7 @@ export const BotSelector: React.FC<BotSelectorProps> = ({ show, onClose, onBotSe
                   </button>
                   <button
                     type="button"
-                    className={`color-toggle-btn ${playerColor === 'black' ? 'active' : ''}`}
+                    className={`color-toggle-btn ${playerColor === 'black' ? 'active-black' : ''}`}
                     onClick={() => setPlayerColor('black')}
                   >
                     <span className="color-toggle-piece">♟</span>

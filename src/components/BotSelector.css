@@ -1,4 +1,4 @@
-﻿.bot-selector-overlay {
+.bot-selector-overlay {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.6);
@@ -100,8 +100,8 @@
 }
 
 .bot-category-tab.active {
-  color: #22c55e;
-  border-bottom-color: #22c55e;
+  color: #81b64c;
+  border-bottom-color: #81b64c;
 }
 
 .bot-selector-body {
@@ -140,8 +140,8 @@
 }
 
 .bot-list-item.selected {
-  background: rgba(22, 163, 74, 0.15);
-  border-left-color: #22c55e;
+  background: rgba(129, 182, 76, 0.15);
+  border-left-color: #81b64c;
 }
 
 .bot-list-avatar {
@@ -176,8 +176,8 @@
 
 .bot-list-elo {
   font-size: 11px;
-  font-weight: 600;
-  color: #22c55e;
+  font-weight: 500;
+  color: #888888;
 }
 
 .bot-list-subrow {
@@ -253,15 +253,15 @@
 }
 
 .bot-preview-elo-badge {
-  background: rgba(34, 197, 94, 0.16);
-  color: #bbf7d0;
-  border: 1px solid rgba(34, 197, 94, 0.55);
+  background: transparent;
+  color: #888888;
+  border: 1px solid #333;
 }
 
 .bot-preview-style-badge {
-  background: rgba(59, 130, 246, 0.16);
-  color: #dbeafe;
-  border: 1px solid rgba(59, 130, 246, 0.55);
+  background: rgba(129, 182, 76, 0.1);
+  color: #81b64c;
+  border: 1px solid rgba(129, 182, 76, 0.3);
 }
 
 .bot-preview-quote {
@@ -321,10 +321,16 @@
   border-color: rgba(148, 163, 184, 0.9);
 }
 
-.color-toggle-btn.active {
-  background: linear-gradient(to right, #16a34a, #22c55e);
-  color: #022c22;
-  border-color: transparent;
+.color-toggle-btn.active-white {
+  background: #eeeed2;
+  color: #111;
+  border-color: #eeeed2;
+}
+
+.color-toggle-btn.active-black {
+  background: #111;
+  color: #eeeed2;
+  border-color: #111;
 }
 
 .time-pills {
@@ -335,24 +341,24 @@
 
 .time-pill {
   border-radius: 999px;
-  border: 1px solid rgba(55, 65, 81, 0.9);
-  background: rgba(15, 23, 42, 0.9);
-  color: #d1d5db;
+  border: 1px solid transparent;
+  background: #2a2a2a;
+  color: #888888;
   font-size: 12px;
   font-weight: 600;
-  padding: 6px 10px;
+  padding: 6px 14px;
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  transition: all 0.15s ease;
 }
 
 .time-pill:hover {
-  border-color: rgba(148, 163, 184, 0.9);
+  border-color: rgba(148, 163, 184, 0.5);
 }
 
 .time-pill.active {
-  background: rgba(34, 197, 94, 0.18);
-  border-color: #22c55e;
-  color: #bbf7d0;
+  background: #81b64c;
+  border-color: #81b64c;
+  color: #ffffff;
 }
 
 .play-controls {
@@ -368,20 +374,20 @@
   font-size: 15px;
   font-weight: 700;
   cursor: pointer;
-  background: linear-gradient(to right, #16a34a, #22c55e);
-  color: #022c22;
-  box-shadow: 0 10px 25px rgba(16, 185, 129, 0.45);
+  background: #81b64c;
+  color: white;
+  box-shadow: 0 10px 25px rgba(129, 182, 76, 0.4);
   transition: transform 0.1s ease, box-shadow 0.1s ease, filter 0.1s ease;
 }
 
 .play-button:hover:not(:disabled) {
+  background: #6fa33e;
   transform: translateY(-1px);
-  filter: brightness(1.05);
 }
 
 .play-button:active:not(:disabled) {
   transform: translateY(1px);
-  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+  box-shadow: 0 4px 14px rgba(129, 182, 76, 0.3);
 }
 
 .play-button:disabled {

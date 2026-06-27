@@ -11,8 +11,7 @@ export default function ChessPiece({ piece, square, isSelected, animationsEnable
   
   const prevSquareRef = useRef(square);
   const key = `${piece.color}${piece.type.toUpperCase()}`;
-  const pieceTheme = typeof localStorage !== 'undefined' ? (localStorage.getItem('chess_pieces') || 'cburnett') : 'cburnett';
-  const src = `${import.meta.env.BASE_URL}pieces/${pieceTheme}/${key}.svg`;
+  const src = `${import.meta.env.BASE_URL}pieces/cburnett/${key}.svg`;
 
   useEffect(() => {
     const prevSquare = prevSquareRef.current;
@@ -63,7 +62,7 @@ export default function ChessPiece({ piece, square, isSelected, animationsEnable
     <img
       src={src}
       alt={`${piece.color === 'w' ? 'White' : 'Black'} ${key}`}
-      draggable
+      draggable={false}
       className={`chess-piece ${isSelected ? 'piece-selected' : ''} ${isDragging ? 'piece-dragging' : ''}`}
       onClick={(e) => {
         if (onClick) onClick(e, square);
@@ -79,8 +78,9 @@ export default function ChessPiece({ piece, square, isSelected, animationsEnable
       onTransitionEnd={handleTransitionEnd}
       style={{
         ...animStyle,
-        width: '85%',
-        height: '85%',
+        width: '100%',
+        height: '100%',
+        padding: '4%',
         objectFit: 'contain',
         filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.4))',
         transition: transitionStyle,

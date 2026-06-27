@@ -405,7 +405,7 @@ export default function ChessBoard({
                 style={{
                   position: 'absolute',
                   inset: 0,
-                  backgroundColor: currentTheme.highlight,
+                  backgroundColor: 'rgba(129, 182, 76, 0.2)',
                   pointerEvents: 'none',
                   zIndex: 1,
                 }}
@@ -418,22 +418,20 @@ export default function ChessBoard({
                 style={{
                   position: 'absolute',
                   inset: 0,
-                  backgroundColor: currentTheme.selected,
-                  boxShadow: `inset 0 0 0 2px ${currentTheme.accent}`,
+                  boxShadow: 'inset 0 0 0 2px #81b64c',
                   pointerEvents: 'none',
                   zIndex: 1,
                 }}
               />
             )}
 
-            {/* Check overlay with red flash */}
+            {/* Check overlay with red radial gradient */}
             {isCheck && (
               <div
-                className="check-flash-overlay"
                 style={{
                   position: 'absolute',
                   inset: 0,
-                  backgroundColor: 'rgba(226, 75, 74, 0.5)',
+                  background: 'radial-gradient(circle, rgba(255, 0, 0, 0.8) 10%, rgba(255, 0, 0, 0) 70%)',
                   pointerEvents: 'none',
                   zIndex: 1,
                 }}
@@ -466,17 +464,16 @@ export default function ChessBoard({
               />
             )}
 
-            {/* Rank Label (inside, left-top, low opacity) */}
+            {/* Rank Label (inside, left-top) */}
             {showRank && (
               <span
                 style={{
                   position: 'absolute',
                   top: '2px',
                   left: '4px',
-                  fontSize: '11px',
+                  fontSize: '10px',
                   fontWeight: 700,
                   color: isLight ? currentTheme.dark : currentTheme.light,
-                  opacity: 0.55,
                   pointerEvents: 'none',
                   zIndex: 2,
                 }}
@@ -485,17 +482,16 @@ export default function ChessBoard({
               </span>
             )}
 
-            {/* File Label (inside, right-bottom, low opacity) */}
+            {/* File Label (inside, right-bottom) */}
             {showFile && (
               <span
                 style={{
                   position: 'absolute',
                   bottom: '2px',
                   right: '4px',
-                  fontSize: '11px',
+                  fontSize: '10px',
                   fontWeight: 700,
                   color: isLight ? currentTheme.dark : currentTheme.light,
-                  opacity: 0.55,
                   pointerEvents: 'none',
                   zIndex: 2,
                 }}
@@ -504,27 +500,16 @@ export default function ChessBoard({
               </span>
             )}
 
-            {/* Valid Move Indicator (Empty: small dot, Capture: green ring) */}
-            {isValidTarget && !cell && (
-              <div
-                style={{
-                  width: '16px',
-                  height: '16px',
-                  borderRadius: '50%',
-                  backgroundColor: 'rgba(20, 85, 30, 0.4)',
-                  pointerEvents: 'none',
-                  zIndex: 3,
-                }}
-              />
-            )}
-            {isValidTarget && cell && (
+            {/* Valid Move Indicator (dot in center of square: 18px circle, #81b64c, opacity 0.8) */}
+            {isValidTarget && (
               <div
                 style={{
                   position: 'absolute',
-                  width: '80%',
-                  height: '80%',
-                  border: '4px solid rgba(20, 85, 30, 0.4)',
+                  width: '18px',
+                  height: '18px',
                   borderRadius: '50%',
+                  backgroundColor: '#81b64c',
+                  opacity: 0.8,
                   pointerEvents: 'none',
                   zIndex: 3,
                 }}

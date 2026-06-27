@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGame, BOARD_THEMES } from '../context/GameContext';
 import { LANDING_BOTS } from '../data/chesscomNav';
-import { GraduationCap, Bot, Puzzle, Binoculars, Smartphone, Zap } from 'lucide-react';
+import { GraduationCap, Bot, Puzzle, Binoculars, Smartphone, Zap, LineChart, Palette, Globe } from 'lucide-react';
 
 function fenToGrid(fen) {
   const rows = fen.split(' ')[0].split('/');
@@ -117,43 +117,50 @@ export default function LandingPage() {
           
           <div className="landing-stats">
             <div className="stat-item">
-              <span className="stat-count">25,000+</span>
+              <span className="stat-count">15,200,000+</span>
               <span className="stat-label">Games Today</span>
             </div>
             <div className="stat-divider" />
             <div className="stat-item">
               <span className="stat-count">
-                <span className="live-pulse" /> 2,300+
+                <span className="live-pulse" /> 1,420,000+
               </span>
               <span className="stat-label">Playing Now</span>
             </div>
           </div>
 
           <div className="hero-cta-container">
-            <div className="hero-cta-card card-green" onClick={handlePlayDefault}>
+            <div className="hero-cta-card card-green" onClick={() => navigate('/play')}>
               <div className="cta-icon-container">
-                <Zap size={32} fill="#ffffff" stroke="#ffffff" />
+                <Globe size={32} fill="transparent" stroke="#ffffff" />
               </div>
               <div className="cta-text-container">
-                <div className="cta-title">Quick Play</div>
-                <div className="cta-subtitle">Jump into a game against a bot instantly</div>
+                <div className="cta-title">Play Online</div>
+                <div className="cta-subtitle">Play with someone at your level</div>
               </div>
             </div>
 
-            <div className="hero-cta-card card-dark" onClick={handlePlayDefault}>
+            <div className="hero-cta-card card-dark" onClick={() => navigate('/game', { state: { mode: 'ai' } })}>
               <div className="cta-icon-container">
                 <Bot size={32} />
               </div>
               <div className="cta-text-container">
-                <div className="cta-title">Play vs Computer</div>
-                <div className="cta-subtitle">Challenge custom bots or full Stockfish</div>
+                <div className="cta-title">Play Computer</div>
+                <div className="cta-subtitle">Play against custom bots & engine</div>
               </div>
             </div>
+          </div>
+
+          <div className="hero-features-row">
+            <span><Bot size={16} /> Bot personalities</span>
+            <span><Puzzle size={16} /> Puzzles</span>
+            <span><LineChart size={16} /> Move analysis</span>
+            <span><Palette size={16} /> Multiple themes</span>
           </div>
         </div>
         <div className="board-wrap">
           {renderBoard(
-            'r1bqk2r/pppp1ppp/2n2n2/2b1p3/2B1P3/3P1N2/PPP2PPP/RNBQK2R',
+            'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR',
             heroBoardHighlighted,
             setHeroBoardHighlighted
           )}

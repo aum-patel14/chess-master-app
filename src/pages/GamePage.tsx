@@ -55,7 +55,7 @@ import ChessBoard from '../components/ChessBoard';
 import GameOverDialog from '../components/game/GameOverDialog';
 import MultiplayerLobby from '../components/game/MultiplayerLobby';
 import { readElo, readStats, writeStats } from '../utils/chessStats';
-import { ArrowLeft, ArrowRight, ChevronsLeft, ChevronsRight, Flag, RefreshCw, Undo2, HelpCircle, Download, Share2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ChevronsLeft, ChevronsRight, Flag, RefreshCw, Undo2, HelpCircle, Download, Share2, Lightbulb } from 'lucide-react';
 import AnalysisPanel from '../components/game/AnalysisPanel';
 import CapturedPieces from '../components/game/CapturedPieces';
 import { downloadPgn, generatePgnString } from '../utils/pgnExporter';
@@ -242,16 +242,6 @@ export default function GamePage() {
   const [analysisResults, setAnalysisResults] = useState<any[] | null>(null);
   const [bestMoveArrow, setBestMoveArrow] = useState<{ from: string; to: string } | null>(null);
   const [retryBoardProps, setRetryBoardProps] = useState<any>(null);
-  const activeMoveRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (activeMoveRef.current) {
-      activeMoveRef.current.scrollIntoView({
-        behavior: 'smooth',
-        block: 'nearest',
-      });
-    }
-  }, [reviewIndex, state.history.length]);
 
   const handleAnalysisComplete = (results: any[]) => {
     setAnalysisResults(results);
@@ -294,22 +284,24 @@ export default function GamePage() {
     if (resume) {
       setIsPlaying(true);
       setGameState('playing');
-    } else if (paramMode === 'ai' && (paramDiff || paramBotId)) {
-      const activeBot = BOTS.find(b => b.id === paramBotId) || BOTS.find(b => b.id === localStorage.getItem('chess_bot_id')) || BOTS[0];
-      setSelectedBot(activeBot);
-      const tc = paramTimeControl ? paramTimeControl : { base: 10, increment: 0 };
-      startNewGame({
-        mode: 'vsAI',
-        playerColor: normalizeColor(paramColor),
-        difficulty: Math.max(1, Math.min(5, Math.round((Number(activeBot.skillLevel) || 3) / 3))),
-        botId: activeBot.id,
-        timeControl: tc.base > 0 ? tc : null,
-      });
-      setIsPlaying(true);
-      setGameState('playing');
     } else if (paramMode === 'ai') {
-      setIsPlaying(false);
-      setGameState('selection');
+      if (paramDiff || paramBotId) {
+        const activeBot = BOTS.find(b => b.id === paramBotId) || BOTS.find(b => b.id === localStorage.getItem('chess_bot_id')) || BOTS[0];
+        setSelectedBot(activeBot);
+        const tc = paramTimeControl ? paramTimeControl : { base: 10, increment: 0 };
+        startNewGame({
+          mode: 'vsAI',
+          playerColor: normalizeColor(paramColor),
+          difficulty: Math.max(1, Math.min(5, Math.round((Number(activeBot.skillLevel) || 3) / 3))),
+          botId: activeBot.id,
+          timeControl: tc.base > 0 ? tc : null,
+        });
+        setIsPlaying(true);
+        setGameState('playing');
+      } else {
+        setIsPlaying(false);
+        setGameState('selection');
+      }
     } else if (paramMode === 'local') {
       startNewGame({ mode: 'local' });
       setIsPlaying(true);
@@ -541,15 +533,35 @@ export default function GamePage() {
   const playerPieceIcon = state.playerColor === 'w' ? '♙' : '♟';
   const opponentPieceIcon = state.playerColor === 'w' ? '♟' : '♙';
   const isOpponentTurn = state.playerColor === 'w' ? (chess.turn() === 'b') : (chess.turn() === 'w'); // simplified ticking
+
   return (
     <PageShell>
-      <div className="game-page-container">
+      <div
+        style={{
+          background: '#302e2b',
+          minHeight: '100vh',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: isDesktop ? 'center' : 'flex-start',
+          padding: isDesktop ? '40px 20px' : '0',
+        }}
+      >
         {state.gameMode === 'online' && !state.roomCode ? (
-          <div className="lobby-card">
+          <div
+            style={{
+              width: '100%',
+              maxWidth: '430px',
+              background: '#2b2b2b',
+              borderRadius: '12px',
+              padding: '24px',
+              color: '#ffffff',
+              boxShadow: '0 8px 30px rgba(0,0,0,0.5)',
+            }}
+          >
             <MultiplayerLobby />
           </div>
         ) : (
-          <div className="game-layout-grid">
+               <div className="game-layout-grid">
             {/* Left Column: Board and Player Bars */}
             <div className="board-column">
               {state.gameMode === 'vsAI' && (
@@ -561,82 +573,89 @@ export default function GamePage() {
               )}
 
               {/* 1. OPPONENT INFO BAR */}
-              <div className={`player-bar-container ${isOpponentTurn ? 'active-turn' : ''}`}>
-                <div className="player-bar-info">
-                  {/* Avatar circle (40px) */}
+              {(() => {
+                const oppTime = state.playerColor === 'w' ? state.blackTime : state.whiteTime;
+                const isOppActive = state.playerColor === 'w' ? (chess.turn() === 'b') : (chess.turn() === 'w');
+                const opponentName = state.gameMode === 'vsAI' ? activeBot.name : state.gameMode === 'online' ? state.opponentName : 'Local Opponent';
+                const opponentRating = state.gameMode === 'vsAI' ? activeBot.elo : state.gameMode === 'online' ? state.opponentRating : '1200';
+                
+                return (
                   <div
                     style={{
-                      width: '40px',
-                      height: '40px',
-                      borderRadius: '50%',
-                      background: state.gameMode === 'vsAI' 
-                        ? 'linear-gradient(135deg, #d97706, #b45309)' // Warm amber for AI
-                        : 'linear-gradient(135deg, #707070, #4a4a4a)', // Warm gray for player
+                      background: isOppActive ? '#1e2a1e' : '#1a1a1a',
+                      borderLeft: isOppActive ? '2px solid #81b64c' : '2px solid transparent',
+                      padding: '10px 16px',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '16px',
-                      fontWeight: 'bold',
-                      color: '#ffffff',
-                      border: '1px solid rgba(255, 255, 255, 0.15)',
+                      justifyContent: 'space-between',
+                      borderRadius: '8px',
+                      margin: '8px 0',
+                      transition: 'all 0.2s ease',
                     }}
                   >
-                    {(() => {
-                      const opponentName = state.gameMode === 'vsAI' ? activeBot.name : state.gameMode === 'online' ? state.opponentName : 'Local Opponent';
-                      return opponentName ? opponentName.trim().charAt(0).toUpperCase() : '👤';
-                    })()}
-                  </div>
-                  <div>
-                    {/* Bot name & ELO */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span className="player-name-text">
-                        {state.gameMode === 'vsAI' ? activeBot.name : state.gameMode === 'online' ? state.opponentName : 'Local Opponent'}
-                      </span>
-                      {isOpponentTurn && <span className="active-dot-indicator" />}
-                      <span className="player-elo-badge">
-                        {state.gameMode === 'vsAI' ? activeBot.elo : state.gameMode === 'online' ? state.opponentRating : '1200'}
-                      </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      {/* Avatar circle (32px) */}
+                      <div
+                        style={{
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '50%',
+                          background: state.gameMode === 'vsAI' 
+                            ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)' // Warm blue for bot
+                            : 'linear-gradient(135deg, #707070, #4a4a4a)', // Warm gray for player
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '16px',
+                          color: '#ffffff',
+                          border: '1px solid rgba(255, 255, 255, 0.15)',
+                          flexShrink: 0
+                        }}
+                      >
+                        {state.gameMode === 'vsAI' ? activeBot.avatarEmoji : '👤'}
+                      </div>
+                      <div>
+                        {/* Opponent name & ELO */}
+                        <div style={{ color: '#ffffff', fontWeight: 700, fontSize: '15px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span>{opponentName}</span>
+                          <span style={{ color: '#888888', fontWeight: 500, fontSize: '12px' }}>
+                            ({opponentRating})
+                          </span>
+                        </div>
+                        {/* Captured pieces + material diff */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                          <CapturedPieces
+                            pieces={opponentCaptures}
+                            color={state.playerColor === 'w' ? 'b' : 'w'}
+                          />
+                          {advantageStats.oppAdv > 0 && (
+                            <span style={{ fontSize: '11px', color: '#aaaaaa', fontWeight: 700, marginLeft: '2px' }}>
+                              +{advantageStats.oppAdv}
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    {/* Pulsing dots under name */}
-                    {state.gameMode === 'vsAI' && state.isAIThinking && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
-                        <span style={{ fontSize: '11px', color: '#81b64c', fontWeight: 600 }}>Thinking</span>
-                        <span className="cc-thinking-dots">
-                          <span className="cc-dot" />
-                          <span className="cc-dot" />
-                          <span className="cc-dot" />
-                        </span>
+       
+                    {/* Opponent Clock Display */}
+                    {state.timeControl && (
+                      <div
+                        className="player-card-clock"
+                        style={{
+                          fontSize: '24px',
+                          fontWeight: 700,
+                          fontFamily: "'JetBrains Mono', monospace",
+                          color: isOppActive ? '#ffffff' : '#555',
+                          textAlign: 'right'
+                        }}
+                      >
+                        {formatTime(oppTime)}
                       </div>
                     )}
-                    {/* Captured pieces + material diff */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
-                      <CapturedPieces
-                        pieces={opponentCaptures}
-                        color={state.playerColor === 'w' ? 'b' : 'w'}
-                      />
-                      {advantageStats.oppAdv > 0 && (
-                        <span style={{ fontSize: '11px', color: '#aaaaaa', fontWeight: 700, marginLeft: '2px' }}>
-                          +{advantageStats.oppAdv}
-                        </span>
-                      )}
-                    </div>
                   </div>
-                </div>
- 
-                {/* Opponent Clock Display */}
-                {state.timeControl && (() => {
-                  const oppTime = state.playerColor === 'w' ? state.blackTime : state.whiteTime;
-                  const isOppUrgent = oppTime < 10;
-                  return (
-                    <div
-                      className={`game-clock-display ${isOpponentTurn ? 'active' : 'inactive'} ${isOppUrgent ? 'urgency-clock' : ''}`}
-                    >
-                      {formatTime(oppTime)}
-                    </div>
-                  );
-                })()}
-              </div>
- 
+                );
+              })()}
+
               {state.gameMode === 'vsAI' && isSimpleMode && (
                 <div style={{ marginBottom: '8px', background: 'rgba(245, 158, 11, 0.15)', border: '1px solid rgba(245, 158, 11, 0.45)', color: '#fbbf24', borderRadius: '8px', padding: '8px 10px', fontSize: '12px', fontWeight: 600 }}>
                   Engine unavailable - using fallback AI mode.
@@ -663,439 +682,326 @@ export default function GamePage() {
               />
 
               {/* 3. PLAYER INFO BAR */}
-              <div className={`player-bar-container ${!isOpponentTurn ? 'active-turn' : ''}`}>
-                <div className="player-bar-info">
-                  {/* Avatar circle (40px) */}
+              {(() => {
+                const playerTime = state.playerColor === 'w' ? state.whiteTime : state.blackTime;
+                const isPlayerActive = state.playerColor === 'w' ? (chess.turn() === 'w') : (chess.turn() === 'b');
+                
+                return (
                   <div
                     style={{
-                      width: '40px',
-                      height: '40px',
-                      borderRadius: '50%',
-                      background: 'linear-gradient(135deg, #81b64c, #5f8d37)', // Warm green for player
+                      background: isPlayerActive ? '#1e2a1e' : '#1a1a1a',
+                      borderLeft: isPlayerActive ? '2px solid #81b64c' : '2px solid transparent',
+                      padding: '10px 16px',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '16px',
-                      fontWeight: 'bold',
-                      color: '#ffffff',
-                      border: '1px solid rgba(255, 255, 255, 0.15)',
+                      justifyContent: 'space-between',
+                      borderRadius: '8px',
+                      margin: '8px 0',
+                      transition: 'all 0.2s ease',
                     }}
                   >
-                    Y
-                  </div>
-                  <div>
-                    {/* User name & ELO */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span className="player-name-text">
-                        You
-                      </span>
-                      {!isOpponentTurn && <span className="active-dot-indicator" />}
-                      <span className="player-elo-badge">
-                        {userRating}
-                      </span>
-                    </div>
-                    {/* Captured pieces + material diff */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
-                      <CapturedPieces pieces={playerCaptures} color={state.playerColor === 'w' ? 'w' : 'b'} />
-                      {advantageStats.playerAdv > 0 && (
-                        <span style={{ fontSize: '11px', color: '#aaaaaa', fontWeight: 700, marginLeft: '2px' }}>
-                          +{advantageStats.playerAdv}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
- 
-                {/* Player Clock Display */}
-                {state.timeControl && (() => {
-                  const isPlayerActive = state.playerColor === 'w' ? (chess.turn() === 'w') : (chess.turn() === 'b');
-                  const playerTime = state.playerColor === 'w' ? state.whiteTime : state.blackTime;
-                  const isPlayerUrgent = playerTime < 10;
-                  return (
-                    <div
-                      className={`game-clock-display ${isPlayerActive ? 'active' : 'inactive'} ${isPlayerUrgent ? 'urgency-clock' : ''}`}
-                    >
-                      {formatTime(playerTime)}
-                    </div>
-                  );
-                })()}
-              </div>
-            </div>
-
-            {/* Right Column: Sidebar (Desktop) or Action controls (Mobile) */}
-            {isDesktop ? (
-              <div className="sidebar-panel">
-                {showAnalysis ? (
-                  <AnalysisPanel
-                    history={state.history}
-                    onJumpToMove={handleMoveClick}
-                    onSelectArrow={(arrow: any) => setBestMoveArrow(arrow)}
-                    onCloseAnalysis={() => {
-                      setShowAnalysis(false);
-                      setBestMoveArrow(null);
-                      setReviewIndex(null);
-                      dispatch({ type: 'SET_REVIEW_FEN', payload: null });
-                      setRetryBoardProps(null);
-                    }}
-                    onAnalysisComplete={handleAnalysisComplete}
-                    activeReviewIndex={reviewIndex}
-                    onRetryBoardPropsChange={setRetryBoardProps}
-                  />
-                ) : (
-                  <>
-                    {/* Game / Opponent Header */}
-                    <div style={{ borderBottom: '1px solid var(--border)', paddingBottom: '14px', marginBottom: '16px', textAlign: 'left' }}>
-                      <h3 className="panel-header-title">
-                        {state.gameMode === 'vsAI' ? `🤖 vs ${activeBot.name}` : state.gameMode === 'online' ? `⚔️ vs ${state.opponentName || 'Online'}` : state.gameMode === 'analysis' ? '🔬 Game Analysis' : '👥 Local Game'}
-                      </h3>
-                      <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px', margin: '4px 0 0 0', lineHeight: '1.4' }}>
-                        {state.gameMode === 'vsAI' ? activeBot.description : state.gameMode === 'analysis' ? 'Analyze positions, review mistakes and explore optimal moves.' : 'Analyze positions, review mistakes and play in real time.'}
-                      </p>
-                    </div>
-
-                    {/* Move List Section */}
-                    <div className="move-list-section">
-                      <h4 style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text-muted)', margin: '0 0 8px 0', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'left' }}>
-                        Moves
-                      </h4>
-                      <div className="move-list-container">
-                        <div className="move-list-grid-header">
-                          <div>#</div>
-                          <div>White</div>
-                          <div>Black</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      {/* Avatar circle (32px) */}
+                      <div
+                        style={{
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '50%',
+                          background: 'linear-gradient(135deg, #81b64c, #5f8d37)', // Warm green for player
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '14px',
+                          fontWeight: 'bold',
+                          color: '#ffffff',
+                          border: '1px solid rgba(255, 255, 255, 0.15)',
+                          flexShrink: 0
+                        }}
+                      >
+                        Y
+                      </div>
+                      <div>
+                        {/* User name & ELO */}
+                        <div style={{ color: '#ffffff', fontWeight: 700, fontSize: '15px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span>You</span>
+                          <span style={{ color: '#888888', fontWeight: 500, fontSize: '12px' }}>
+                            ({userRating})
+                          </span>
                         </div>
-                        <div className="move-list-scroll">
-                          {state.history.length === 0 ? (
-                            <div style={{ padding: '24px 12px', color: 'var(--text-muted)', textAlign: 'center', fontSize: '13px' }}>
-                              No moves played yet.
-                            </div>
-                          ) : (
-                            (() => {
-                              const rows = [];
-                              for (let i = 0; i < state.history.length; i += 2) {
-                                const turnNum = Math.floor(i / 2) + 1;
-                                rows.push({
-                                  turnNum,
-                                  white: state.history[i],
-                                  whiteIdx: i,
-                                  black: state.history[i + 1],
-                                  blackIdx: i + 1,
-                                });
-                              }
-                              
-                              const currentActiveIdx = reviewIndex !== null ? reviewIndex : (state.history.length - 1);
-
-                              return rows.map((row) => {
-                                const isWhiteActive = currentActiveIdx === row.whiteIdx;
-                                const isBlackActive = currentActiveIdx === row.blackIdx;
-                                const isRowActive = isWhiteActive || isBlackActive;
-
-                                return (
-                                  <div
-                                    key={row.turnNum}
-                                    ref={isRowActive ? activeMoveRef : undefined}
-                                    className={`move-list-row ${isRowActive ? 'active-row' : ''}`}
-                                  >
-                                    <div style={{ color: 'var(--text-muted)' }}>{row.turnNum}</div>
-                                    <div
-                                      onClick={() => handleMoveClick(row.whiteIdx)}
-                                      className={`move-list-item-san ${isWhiteActive ? 'active-move' : ''}`}
-                                    >
-                                      {row.white.san}
-                                    </div>
-                                    <div
-                                      onClick={() => row.black && handleMoveClick(row.blackIdx)}
-                                      className={`move-list-item-san ${row.black && isBlackActive ? 'active-move' : ''}`}
-                                    >
-                                      {row.black ? row.black.san : ''}
-                                    </div>
-                                  </div>
-                                );
-                              });
-                            })()
+                        {/* Captured pieces + material diff */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                          <CapturedPieces pieces={playerCaptures} color={state.playerColor === 'w' ? 'w' : 'b'} />
+                          {advantageStats.playerAdv > 0 && (
+                            <span style={{ fontSize: '11px', color: '#aaaaaa', fontWeight: 700, marginLeft: '2px' }}>
+                              +{advantageStats.playerAdv}
+                            </span>
                           )}
                         </div>
                       </div>
- 
-                      {/* Navigation Arrows under list */}
-                      <div style={{ display: 'flex', justifyContent: 'center', gap: '14px', alignItems: 'center', marginTop: '12px' }}>
-                        <button onClick={handleFirstMove} className="nav-arrow-btn" title="First Move" aria-label="First Move">
-                          <ChevronsLeft size={16} />
-                        </button>
-                        <button onClick={handlePrevMove} className="nav-arrow-btn" title="Previous Move" aria-label="Previous Move">
-                          <ArrowLeft size={16} />
-                        </button>
-                        <button onClick={handleNextMove} className="nav-arrow-btn" title="Next Move" aria-label="Next Move">
-                          <ArrowRight size={16} />
-                        </button>
-                        <button onClick={handleLastMove} className="nav-arrow-btn" title="Last Move" aria-label="Last Move">
-                          <ChevronsRight size={16} />
-                        </button>
+                    </div>
+       
+                    {/* Player Clock Display */}
+                    {state.timeControl && (
+                      <div
+                        className="player-card-clock"
+                        style={{
+                          fontSize: '24px',
+                          fontWeight: 700,
+                          fontFamily: "'JetBrains Mono', monospace",
+                          color: isPlayerActive ? '#ffffff' : '#555',
+                          textAlign: 'right'
+                        }}
+                      >
+                        {formatTime(playerTime)}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Right Column: Sidebar (Desktop / Mobile stacked via CSS) */}
+            <div className="sidebar-panel">
+              {showAnalysis ? (
+                <AnalysisPanel
+                  history={state.history}
+                  onJumpToMove={handleMoveClick}
+                  onSelectArrow={(arrow: any) => setBestMoveArrow(arrow)}
+                  onCloseAnalysis={() => {
+                    setShowAnalysis(false);
+                    setBestMoveArrow(null);
+                    setReviewIndex(null);
+                    dispatch({ type: 'SET_REVIEW_FEN', payload: null });
+                    setRetryBoardProps(null);
+                  }}
+                  onAnalysisComplete={handleAnalysisComplete}
+                  activeReviewIndex={reviewIndex}
+                  onRetryBoardPropsChange={setRetryBoardProps}
+                />
+              ) : (
+                <>
+                  {/* Opponent Info Panel Card */}
+                  <div style={{
+                    background: '#1e1e1e',
+                    border: '1px solid #2d2d2d',
+                    borderRadius: '8px',
+                    padding: '12px 16px',
+                    marginBottom: '16px',
+                    textAlign: 'left'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                      <span style={{ fontSize: '16px', fontWeight: 700, color: '#fff' }}>
+                        {state.gameMode === 'vsAI' ? `vs ${activeBot.name}` : state.gameMode === 'online' ? `vs ${state.opponentName || 'Online'}` : state.gameMode === 'analysis' ? 'Game Analysis' : 'Local Game'}
+                      </span>
+                      {state.gameMode === 'vsAI' && (() => {
+                        const diff = activeBot.difficulty || 1;
+                        let bg = '#4a7c59';
+                        let label = 'Beginner';
+                        if (diff === 2 || activeBot.name.toLowerCase().includes('rookie') || activeBot.name.toLowerCase().includes('pawn')) {
+                          bg = '#4a7c59';
+                          label = 'Beginner';
+                        } else if (diff === 3) {
+                          bg = '#4a6b7c';
+                          label = 'Intermediate';
+                        } else if (diff === 4) {
+                          bg = '#7c4a4a';
+                          label = 'Advanced';
+                        } else if (diff >= 5) {
+                          bg = '#5a4a7c';
+                          label = 'Master';
+                        }
+                        return (
+                          <span style={{
+                            background: bg,
+                            color: '#fff',
+                            fontSize: '10px',
+                            fontWeight: 'bold',
+                            padding: '2px 8px',
+                            borderRadius: '12px',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px'
+                          }}>
+                            {label}
+                          </span>
+                        );
+                      })()}
+                    </div>
+                    <p style={{
+                      fontSize: '12px',
+                      color: '#888',
+                      lineHeight: '1.5',
+                      margin: 0,
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
+                    }}>
+                      {state.gameMode === 'vsAI' ? activeBot.description : state.gameMode === 'analysis' ? 'Analyze positions, review mistakes and explore optimal moves.' : 'Analyze positions, review mistakes and play in real time.'}
+                    </p>
+                  </div>
+
+                  {/* Move List Section */}
+                  <div className="move-list-section">
+                    <h4 style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text-muted)', margin: '0 0 8px 0', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'left' }}>
+                      Moves
+                    </h4>
+                    <div className="move-list-container">
+                      <div className="move-list-grid-header">
+                        <div>#</div>
+                        <div>White</div>
+                        <div>Black</div>
+                      </div>
+                      <div className="move-list-scroll">
+                        {state.history.length === 0 ? (
+                          <div className="move-list-empty-state">
+                            No moves played yet.
+                          </div>
+                        ) : (
+                          (() => {
+                            const rows = [];
+                            for (let i = 0; i < state.history.length; i += 2) {
+                              const turnNum = Math.floor(i / 2) + 1;
+                              rows.push({
+                                turnNum,
+                                white: state.history[i],
+                                whiteIdx: i,
+                                black: state.history[i + 1],
+                                blackIdx: i + 1,
+                              });
+                            }
+                            
+                            const currentActiveIdx = reviewIndex !== null ? reviewIndex : (state.history.length - 1);
+
+                            return rows.map((row) => {
+                              const isWhiteActive = currentActiveIdx === row.whiteIdx;
+                              const isBlackActive = currentActiveIdx === row.blackIdx;
+                              const isRowActive = isWhiteActive || isBlackActive;
+
+                              return (
+                                <div
+                                  key={row.turnNum}
+                                  ref={isRowActive ? activeMoveRef : undefined}
+                                  className={`move-list-row ${isRowActive ? 'active-row' : ''}`}
+                                >
+                                  <div style={{ color: '#555', fontWeight: 600 }}>{row.turnNum}</div>
+                                  <div
+                                    onClick={() => handleMoveClick(row.whiteIdx)}
+                                    className={`move-list-item-san ${isWhiteActive ? 'active-move' : ''}`}
+                                  >
+                                    {row.white.san}
+                                  </div>
+                                  <div
+                                    onClick={() => row.black && handleMoveClick(row.blackIdx)}
+                                    className={`move-list-item-san ${row.black && isBlackActive ? 'active-move' : ''}`}
+                                  >
+                                    {row.black ? row.black.san : ''}
+                                  </div>
+                                </div>
+                              );
+                            });
+                          })()
+                        )}
                       </div>
                     </div>
- 
-                    {/* Primary Game Action Row */}
-                    <div style={{ display: 'flex', gap: '8px', margin: '20px 0 12px 0' }}>
+
+                    {/* Navigation Arrows under list */}
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '14px', alignItems: 'center', marginTop: '12px' }}>
+                      <button onClick={handleFirstMove} className="nav-arrow-btn" title="First Move" aria-label="First Move">
+                        <ChevronsLeft size={16} />
+                      </button>
+                      <button onClick={handlePrevMove} className="nav-arrow-btn" title="Previous Move" aria-label="Previous Move">
+                        <ArrowLeft size={16} />
+                      </button>
+                      <button onClick={handleNextMove} className="nav-arrow-btn" title="Next Move" aria-label="Next Move">
+                        <ArrowRight size={16} />
+                      </button>
+                      <button onClick={handleLastMove} className="nav-arrow-btn" title="Last Move" aria-label="Last Move">
+                        <ChevronsRight size={16} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Button hierarchy & options */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', margin: '20px 0 12px 0' }}>
+                    {/* Row 1: Hint, Undo, Flip */}
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        onClick={handleHint}
+                        className="btn-hint"
+                        aria-label="Show hint"
+                      >
+                        <Lightbulb size={13} /> Hint
+                      </button>
                       <button
                         onClick={undoMove}
-                        className="btn-game-control"
+                        className="btn-undo-flip"
                         aria-label="Undo move"
                       >
                         <Undo2 size={13} /> Undo
                       </button>
                       <button
-                        onClick={handleHint}
-                        className="btn-game-hint"
-                        aria-label="Show hint"
-                      >
-                        💡 Hint
-                      </button>
-                      <button
                         onClick={handleFlip}
-                        className="btn-game-control"
+                        className="btn-undo-flip"
                         aria-label="Flip board"
                       >
                         <RefreshCw size={13} /> Flip
                       </button>
                     </div>
- 
-                    {/* Secondary actions + Resign */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <button
-                          onClick={() => {
-                            if (state.history.length > 0) {
-                              downloadPgn(state.history, state.playerColor, state.gameMode, state.opponentName || (state.gameMode === 'vsAI' ? activeBot.name : 'Local'), state.status);
-                              showToast('PGN Downloaded', 'success');
-                            } else {
-                              showToast('No moves to export', 'warning');
-                            }
-                          }}
-                          className="btn-game-control"
-                          style={{ height: '36px', fontSize: '12px' }}
-                        >
-                          <Download size={12} style={{ marginRight: '3px' }} /> PGN
-                        </button>
-                        <button
-                          onClick={() => {
-                            if (state.history.length > 0) {
-                              navigator.clipboard.writeText(generatePgnString(state.history, state.playerColor, state.gameMode, state.opponentName || (state.gameMode === 'vsAI' ? activeBot.name : 'Local'), state.status));
-                              showToast('PGN copied to clipboard', 'success');
-                            } else {
-                              showToast('No moves to copy', 'warning');
-                            }
-                          }}
-                          className="btn-game-control"
-                          style={{ height: '36px', fontSize: '12px' }}
-                        >
-                          <Share2 size={12} style={{ marginRight: '3px' }} /> Copy PGN
-                        </button>
-                        <button
-                          onClick={() => {
-                            setIsPlaying(false);
-                            setGameState('selection');
-                            navigate('/game', { state: { mode: 'ai' } });
-                          }}
-                          className="btn-game-hint"
-                          style={{ height: '36px', fontSize: '12px' }}
-                        >
-                          New Game
-                        </button>
-                      </div>
- 
+
+                    {/* Row 2: New Game, Resign */}
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        onClick={() => {
+                          setIsPlaying(false);
+                          setGameState('selection');
+                          navigate('/game', { state: { mode: 'ai' } });
+                        }}
+                        className="btn-newgame"
+                      >
+                        New Game
+                      </button>
                       <button
                         onClick={resign}
-                        className="btn-game-resign"
+                        className="btn-resign"
                       >
-                        <Flag size={14} fill="#E24B4A" stroke="#E24B4A" /> Resign
+                        Resign
                       </button>
                     </div>
-                  </>
-                )}
-              </div>
-            ) : (
-              // Mobile Bottom controls
-              showAnalysis ? (
-                <div style={{ background: 'var(--bg-sidebar)', padding: '16px', borderTop: '1px solid var(--border)', overflowY: 'auto', maxHeight: '420px', width: '100%', display: 'flex', flexDirection: 'column' }}>
-                  <AnalysisPanel
-                    history={state.history}
-                    onJumpToMove={handleMoveClick}
-                    onSelectArrow={(arrow: any) => setBestMoveArrow(arrow)}
-                    onCloseAnalysis={() => {
-                      setShowAnalysis(false);
-                      setBestMoveArrow(null);
-                      setReviewIndex(null);
-                      dispatch({ type: 'SET_REVIEW_FEN', payload: null });
-                      setRetryBoardProps(null);
-                    }}
-                    onAnalysisComplete={handleAnalysisComplete}
-                    activeReviewIndex={reviewIndex}
-                    onRetryBoardPropsChange={setRetryBoardProps}
-                  />
-                </div>
-              ) : (
-                <>
-                  {/* 4. ACTION BUTTONS */}
-                  <div className="mobile-actions-wrapper">
-                    <button
-                      onClick={undoMove}
-                      className="btn-game-control"
-                      style={{ height: '36px', padding: '10px 12px' }}
-                    >
-                      <Undo2 size={14} /> Undo
-                    </button>
-                    <button
-                      onClick={handleHint}
-                      className="btn-game-hint"
-                      style={{ height: '36px', padding: '10px 12px' }}
-                    >
-                      💡 Hint
-                    </button>
-                    <button
-                      onClick={handleFlip}
-                      className="btn-game-control"
-                      style={{ height: '36px', padding: '10px 12px' }}
-                    >
-                      <RefreshCw size={14} /> Flip
-                    </button>
-                    <button
-                      onClick={() => setHistoryExpanded(prev => !prev)}
-                      className="btn-game-control"
-                      style={{ height: '36px', padding: '10px 12px' }}
-                    >
-                      ☰ Options
-                    </button>
+
+                    {/* Links below: PGN, Copy PGN */}
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', marginTop: '4px' }}>
+                      <button
+                        onClick={() => {
+                          if (state.history.length > 0) {
+                            downloadPgn(state.history, state.playerColor, state.gameMode, state.opponentName || (state.gameMode === 'vsAI' ? activeBot.name : 'Local'), state.status);
+                            showToast('PGN Downloaded', 'success');
+                          } else {
+                            showToast('No moves to export', 'warning');
+                          }
+                        }}
+                        className="btn-link-pgn"
+                      >
+                        Export PGN
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (state.history.length > 0) {
+                            navigator.clipboard.writeText(generatePgnString(state.history, state.playerColor, state.gameMode, state.opponentName || (state.gameMode === 'vsAI' ? activeBot.name : 'Local'), state.status));
+                            showToast('PGN copied to clipboard', 'success');
+                          } else {
+                            showToast('No moves to copy', 'warning');
+                          }
+                        }}
+                        className="btn-link-pgn"
+                      >
+                        Copy PGN
+                      </button>
+                    </div>
                   </div>
-
-                  {/* 5. MOVE HISTORY (collapsible panel) */}
-                  <div style={{ background: 'var(--bg-sidebar)', borderBottom: '1px solid var(--border)' }}>
-                    <button
-                      onClick={() => setHistoryExpanded(p => !p)}
-                      style={{
-                        width: '100%',
-                        height: '36px',
-                        background: 'transparent',
-                        border: 'none',
-                        color: 'var(--text-secondary)',
-                        fontSize: '13px',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '4px',
-                      }}
-                    >
-                      Move History {historyExpanded ? '▲' : '▼'}
-                    </button>
-
-                    {historyExpanded && (
-                      <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        {/* Move string notation container */}
-                        <div
-                          style={{
-                            maxHeight: '100px',
-                            overflowY: 'auto',
-                            background: 'rgba(0,0,0,0.2)',
-                            borderRadius: '6px',
-                            padding: '8px 12px',
-                            fontSize: '13px',
-                            fontFamily: 'var(--font-mono)',
-                            color: 'var(--green)',
-                            border: '1px solid var(--border)',
-                            lineHeight: 1.5,
-                            textAlign: 'left',
-                          }}
-                        >
-                          {state.history.length === 0 ? (
-                            <span style={{ color: 'var(--text-muted)' }}>No moves made yet.</span>
-                          ) : (
-                            state.history.map((m: any, idx: number) => {
-                              const isWhiteMove = idx % 2 === 0;
-                              const turnNum = Math.floor(idx / 2) + 1;
-                              return (
-                                <span key={idx} style={{ marginRight: '8px', color: reviewIndex === idx ? 'var(--green)' : 'var(--text-primary)', fontWeight: reviewIndex === idx ? 700 : 400 }}>
-                                  {isWhiteMove && `${turnNum}. `}
-                                  {m.san}
-                                </span>
-                              );
-                            })
-                          )}
-                        </div>
-
-                        {/* Navigation arrows */}
-                        <div style={{ display: 'flex', justifyContent: 'center', gap: '14px', alignItems: 'center' }}>
-                          <button onClick={handleFirstMove} className="nav-arrow-btn" title="First Move" aria-label="First Move">
-                            <ChevronsLeft size={16} />
-                          </button>
-                          <button onClick={handlePrevMove} className="nav-arrow-btn" title="Previous Move" aria-label="Previous Move">
-                            <ArrowLeft size={16} />
-                          </button>
-                          <button onClick={handleNextMove} className="nav-arrow-btn" title="Next Move" aria-label="Next Move">
-                            <ArrowRight size={16} />
-                          </button>
-                          <button onClick={handleLastMove} className="nav-arrow-btn" title="Last Move" aria-label="Last Move">
-                            <ChevronsRight size={16} />
-                          </button>
-                        </div>
-
-                        {/* Save / Share / New buttons row */}
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                          <button
-                            onClick={() => {
-                              if (state.history.length > 0) {
-                                downloadPgn(state.history, state.playerColor, state.gameMode, state.opponentName || (state.gameMode === 'vsAI' ? activeBot.name : 'Local'), state.status);
-                                showToast('PGN Downloaded', 'success');
-                              } else {
-                                showToast('No moves to export', 'warning');
-                              }
-                            }}
-                            className="btn-game-control"
-                            style={{ height: '32px', fontSize: '12px' }}
-                          >
-                            <Download size={12} style={{ marginRight: '3px' }} /> PGN
-                          </button>
-                          <button
-                            onClick={() => {
-                              if (state.history.length > 0) {
-                                navigator.clipboard.writeText(generatePgnString(state.history, state.playerColor, state.gameMode, state.opponentName || (state.gameMode === 'vsAI' ? activeBot.name : 'Local'), state.status));
-                                showToast('PGN copied to clipboard', 'success');
-                              } else {
-                                showToast('No moves to copy', 'warning');
-                              }
-                            }}
-                            className="btn-game-control"
-                            style={{ height: '32px', fontSize: '12px' }}
-                          >
-                            <Share2 size={12} style={{ marginRight: '3px' }} /> Copy PGN
-                          </button>
-                          <button
-                            onClick={() => {
-                              setIsPlaying(false);
-                              setGameState('selection');
-                              navigate('/game', { state: { mode: 'ai' } });
-                            }}
-                            className="btn-game-hint"
-                            style={{ height: '32px', fontSize: '12px' }}
-                          >
-                            + New
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* 6. RESIGNATION BUTTON */}
-                  <button
-                    onClick={resign}
-                    className="btn-game-resign"
-                    style={{ height: '48px', marginTop: 'auto', borderRadius: '0' }}
-                  >
-                    <Flag size={16} fill="var(--red)" /> Resign
-                  </button>
                 </>
-              )
-            )}
+              )}
+            </div>
           </div>
         )}
 
@@ -1108,4 +1014,28 @@ export default function GamePage() {
   );
 }
 
+// Styling descriptors for move history subcontrols
+const navArrowStyle = {
+  width: '36px',
+  height: '36px',
+  borderRadius: '50%',
+  background: '#3a3a3a',
+  border: 'none',
+  color: '#ffffff',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  cursor: 'pointer',
+};
 
+const historySubBtnStyle = {
+  flex: 1,
+  height: '32px',
+  borderRadius: '4px',
+  background: '#2c2c2c',
+  border: '1px solid #444',
+  color: '#aaaaaa',
+  fontSize: '12px',
+  fontWeight: 600,
+  cursor: 'pointer',
+};

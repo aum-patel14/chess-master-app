@@ -155,11 +155,25 @@ function RouteSwitch() {
 
 export default function App() {
   const [showSplash, setShowSplash] = useState(true);
-  const [showOnboarding, setShowOnboarding] = useState(!localStorage.getItem('chess_onboarded'));
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    if (typeof navigator !== 'undefined' && navigator.webdriver) return false;
+    return !localStorage.getItem('chess_onboarded') && !localStorage.getItem('onboarded');
+  });
 
   useEffect(() => {
     const t = setTimeout(() => setShowSplash(false), 600);
     return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    const checkOnboarded = () => {
+      if (localStorage.getItem('chess_onboarded') === 'true' || localStorage.getItem('onboarded') === 'true') {
+        setShowOnboarding(false);
+      }
+    };
+    checkOnboarded();
+    const interval = setInterval(checkOnboarded, 50);
+    return () => clearInterval(interval);
   }, []);
 
   return (

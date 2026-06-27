@@ -90,10 +90,10 @@ export const CHESSCOM_NAV = [
     ]
   },
   {
-    id: 'other',
-    icon: '•••',
+    id: 'settings',
+    icon: '⚙️',
     label: 'Other',
-    path: '/other',
+    path: '/settings',
     items: [
       {
         icon: '🛠️',
