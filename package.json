@@ -1,7 +1,6 @@
 {
   "name": "chess-master",
   "private": true,
-  "homepage": "https://aum-patel14.github.io/chess-master-app",
   "version": "1.0.0",
   "type": "module",
   "scripts": {
@@ -10,8 +9,6 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "predeploy": "npm run build",
-    "deploy": "npx gh-pages -d dist",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "build:android": "vite build && npx cap sync android && npx cap open android",
